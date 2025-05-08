@@ -72,14 +72,19 @@ async def handle_order_confirmation(bot, message, admin_member):
         f"{player.mention} your trader is ready for pick up! Please pay the trader {admin_member.mention} (${total_value:,}) to complete the order!"
     )
 
-    # Store order state
-    orders[user_id] = {
+    # Store multi-order entry
+    order_entry = {
+        "order_id": f"msg_{message.id}",
         "confirmed": True,
         "paid": False,
         "confirmed_by": admin_member.id,
         "total": total_value,
-        "order_message_id": message.id
+        "order_message_id": message.id,
+        "payment_message_id": None
     }
+
+    orders.setdefault(user_id, [])
+    orders[user_id].append(order_entry)
     save_orders(orders)
 
 # --------- PAYMENT CONFIRMATION --------- #
@@ -91,9 +96,16 @@ async def handle_payment_confirmation(bot, message, admin_member):
     # Confirm payment message
     await message.edit(content=message.content + f"\n✅ Payment confirmed by {admin_member.mention}.")
 
+    # Link payment message to latest unpaid confirmed order
+    user_orders = orders.get(user_id, [])
+    latest_unpaid = next((o for o in reversed(user_orders) if o["confirmed"] and not o["paid"]), None)
+    if latest_unpaid:
+        latest_unpaid["paid"] = True
+        latest_unpaid["payment_message_id"] = message.id
+        save_orders(orders)
+
     # Send container/shed button prompt
     view = View(timeout=120)
-
     for i in range(1, 7):
         view.add_item(Button(label=f"Container {i}", style=discord.ButtonStyle.primary, custom_id=f"container_{i}"))
     for i in range(1, 5):
