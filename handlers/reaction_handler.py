@@ -1,7 +1,9 @@
 import discord
 import json
 import asyncio
+from discord.ui import View, Button
 
+# Load config
 with open("config.json") as f:
     config = json.load(f)
 
@@ -24,9 +26,7 @@ def save_orders(data):
 def setup_reaction_handler(bot):
     @bot.event
     async def on_raw_reaction_add(payload):
-        if payload.channel_id != TRADER_ORDERS_CHANNEL_ID:
-            return
-        if str(payload.emoji.name) != "✅":
+        if payload.channel_id != TRADER_ORDERS_CHANNEL_ID or str(payload.emoji.name) != "✅":
             return
 
         guild = bot.get_guild(payload.guild_id)
@@ -37,108 +37,103 @@ def setup_reaction_handler(bot):
         channel = bot.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
 
-        # Ignore bot reacting to itself
         if payload.user_id == bot.user.id:
-            return
+            return  # Ignore bot reactions
 
-        # Already confirmed?
         if "✅ Confirmed by" in message.content or "✅ Payment confirmed by" in message.content:
-            return
+            return  # Already confirmed
 
         await message.remove_reaction("🔴", bot.user)
         await message.add_reaction("✅")
 
-        orders = load_orders()
-
-        # HANDLE ORDER CONFIRMATION
         if message.content.startswith("Order for"):
-            player_mention = message.content.splitlines()[0].split("Order for ")[1].rstrip(":")
-            total_line = [line for line in message.content.splitlines() if "Total:" in line][0]
-            total_value = total_line.replace("**Total: $", "").replace("**", "").replace(",", "").strip()
+            await handle_order_confirmation(bot, message, member)
+        elif "payment has been sent from" in message.content:
+            await handle_payment_confirmation(bot, message, member)
 
-            # Edit message
-            new_content = message.content.replace(
-                "Order for", f"✅ Confirmed by {member.mention} — Order is ready for trader.\nOrder for"
-            )
-            await message.edit(content=new_content)
+# --------- ORDER CONFIRMATION --------- #
+async def handle_order_confirmation(bot, message, admin_member):
+    orders = load_orders()
+    player = message.mentions[0]
+    user_id = str(player.id)
 
-            # Notify player
-            economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
-            await economy_channel.send(
-                f"{player_mention} your trader is ready for pick up! Please pay the trader {member.mention} (${int(total_value):,}) to complete the order!"
-            )
+    total_line = next((line for line in message.content.splitlines() if "Total:" in line), None)
+    total_value = int(total_line.replace("**Total: $", "").replace("**", "").replace(",", "").strip())
 
-            # Save to orders.json
-            user_id = message.mentions[0].id
-            orders[str(user_id)] = {
-                "confirmed": True,
-                "paid": False,
-                "confirmed_by": member.id,
-                "total": int(total_value),
-                "order_message_id": message.id
-            }
-            save_orders(orders)
+    # Edit message
+    new_content = message.content.replace(
+        "Order for", f"✅ Confirmed by {admin_member.mention} — Order is ready for trader.\nOrder for"
+    )
+    await message.edit(content=new_content)
+
+    # Notify player
+    economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
+    await economy_channel.send(
+        f"{player.mention} your trader is ready for pick up! Please pay the trader {admin_member.mention} (${total_value:,}) to complete the order!"
+    )
+
+    # Store order state
+    orders[user_id] = {
+        "confirmed": True,
+        "paid": False,
+        "confirmed_by": admin_member.id,
+        "total": total_value,
+        "order_message_id": message.id
+    }
+    save_orders(orders)
+
+# --------- PAYMENT CONFIRMATION --------- #
+async def handle_payment_confirmation(bot, message, admin_member):
+    orders = load_orders()
+    player = message.mentions[1]  # Second mention is player
+    user_id = str(player.id)
+
+    # Confirm payment message
+    await message.edit(content=message.content + f"\n✅ Payment confirmed by {admin_member.mention}.")
+
+    # Send container/shed button prompt
+    view = View(timeout=120)
+
+    for i in range(1, 7):
+        view.add_item(Button(label=f"Container {i}", style=discord.ButtonStyle.primary, custom_id=f"container_{i}"))
+    for i in range(1, 5):
+        view.add_item(Button(label=f"Shed {i}", style=discord.ButtonStyle.secondary, custom_id=f"shed_{i}"))
+    view.add_item(Button(label="Skip", style=discord.ButtonStyle.danger, custom_id="skip_delivery"))
+
+    await message.reply(f"{admin_member.mention} please choose where the order is stored:", view=view)
+
+    async def on_button_click(interaction: discord.Interaction):
+        if interaction.user.id != admin_member.id:
+            await interaction.response.send_message("You aren’t authorized to complete this delivery.", ephemeral=True)
             return
 
-        # HANDLE PAYMENT CONFIRMATION
-        if "payment has been sent from" in message.content:
-            player_mention = message.mentions[1]
-            admin_mention = message.mentions[0]
+        choice = interaction.data["custom_id"]
+        if choice.startswith("container_") or choice.startswith("shed_"):
+            location = choice.replace("_", " ").capitalize()
+            await interaction.response.send_message(f"Please enter the 4-digit code for **{location}**:", ephemeral=True)
 
-            # Edit message to confirm
-            new_content = message.content + f"\n✅ Payment confirmed by {member.mention}."
-            await message.edit(content=new_content)
+            def check_code(msg):
+                return msg.author == admin_member and msg.channel == interaction.channel and msg.content.isdigit() and len(msg.content) == 4
 
-            # Prompt with buttons
-            view = discord.ui.View(timeout=120)
+            try:
+                msg = await bot.wait_for("message", timeout=60.0, check=check_code)
+                code = msg.content
+                try:
+                    await player.send(
+                        f"{player.mention} thanks for your purchase!\nYour order is available at the trader **({location})**.\n"
+                        f"Use code `{code}` to access your order.\n\n"
+                        f"Please leave the lock with the same code when you're done.\nSee ya next time!"
+                    )
+                    await interaction.followup.send("DM sent to player.", ephemeral=True)
+                except:
+                    await interaction.followup.send("Failed to DM the player.", ephemeral=True)
 
-            for i in range(1, 7):
-                view.add_item(discord.ui.Button(label=f"Container {i}", style=discord.ButtonStyle.primary, custom_id=f"container_{i}"))
-            for i in range(1, 5):
-                view.add_item(discord.ui.Button(label=f"Shed {i}", style=discord.ButtonStyle.secondary, custom_id=f"shed_{i}"))
-            view.add_item(discord.ui.Button(label="Skip", style=discord.ButtonStyle.danger, custom_id="skip_delivery"))
+            except asyncio.TimeoutError:
+                await interaction.followup.send("Timed out waiting for code input.", ephemeral=True)
 
-            await message.reply(f"{member.mention} please choose where the order is stored:", view=view)
+        elif choice == "skip_delivery":
+            eco_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
+            await eco_channel.send(f"{player.mention} thanks for your purchase! See ya next time!")
+            await interaction.response.send_message("Player notified in economy channel.", ephemeral=True)
 
-            async def interaction_check(interaction: discord.Interaction) -> bool:
-                return interaction.user.id == member.id
-
-            @bot.event
-            async def on_interaction(interaction: discord.Interaction):
-                if not interaction_check(interaction):
-                    await interaction.response.send_message("You aren't authorized to respond to this.", ephemeral=True)
-                    return
-
-                choice = interaction.data["custom_id"]
-                user_id = str(player_mention.id)
-                if choice.startswith("container_") or choice.startswith("shed_"):
-                    location = choice.replace("_", " ").capitalize()
-
-                    await interaction.response.send_message(f"Enter the 4-digit code for {location}:", ephemeral=True)
-
-                    def check(msg):
-                        return msg.author == member and msg.channel == interaction.channel and msg.content.isdigit() and len(msg.content) == 4
-
-                    try:
-                        msg = await bot.wait_for("message", timeout=60.0, check=check)
-                        code = msg.content
-
-                        # Send DM to player
-                        try:
-                            await player_mention.send(
-                                f"{player_mention.mention} thanks for your purchase!\n"
-                                f"Your order is available at the trader **({location})**.\n"
-                                f"Use code `{code}` to access your order.\n\n"
-                                f"Please leave the lock with the same code when you're done.\nSee ya next time!"
-                            )
-                            await interaction.followup.send("DM sent to player.", ephemeral=True)
-                        except:
-                            await interaction.followup.send("Could not DM the player.", ephemeral=True)
-
-                    except asyncio.TimeoutError:
-                        await interaction.followup.send("Timed out waiting for code input.", ephemeral=True)
-
-                elif choice == "skip_delivery":
-                    eco_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
-                    await eco_channel.send(f"{player_mention.mention} thanks for your purchase! See ya next time!")
-                    await interaction.response.send_message("Player notified in economy channel.", ephemeral=True)
+    bot.add_listener(on_button_click, "on_interaction")
