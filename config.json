@@ -1,0 +1,20 @@
+{
+  "token": "YOUR_BOT_TOKEN_HERE",
+
+  "trader_orders_channel_id": 1370152442183946311,
+  "economy_channel_id": 1173028001085145198,
+
+  "admin_role_ids": [
+    "1173052585830264832",  // Founder
+    "1173049392371085392",  // Admin
+    "1184921037830373468",  // Trial Admin
+    "1370152166366642297"   // Trader
+  ],
+
+  "mention_roles": [
+    "<@&1173052585830264832>",  // Founder
+    "<@&1173049392371085392>",  // Admin
+    "<@&1184921037830373468>",  // Trial Admin
+    "<@&1370152166366642297>"   // Trader
+  ]
+}
