@@ -10,9 +10,7 @@ with open("config.json") as f:
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
-ADMIN_ROLE_IDS = config["admin_role_ids"]
 
-# Track confirmed orders (basic version)
 ORDERS_FILE = os.path.join("data", "orders.json")
 
 def load_orders():
@@ -37,24 +35,29 @@ class PayTrader(commands.Cog):
 
         user_id = str(interaction.user.id)
         orders = load_orders()
-        if user_id not in orders or not orders[user_id]["confirmed"] or orders[user_id]["paid"]:
+        user_orders = orders.get(user_id, [])
+
+        # Find the most recent confirmed but unpaid order
+        latest_unpaid = next((o for o in reversed(user_orders) if o["confirmed"] and not o["paid"]), None)
+
+        if not latest_unpaid:
             await interaction.response.send_message("No confirmed unpaid order found for you.", ephemeral=True)
             return
 
-        admin_id = orders[user_id]["confirmed_by"]
-        total = orders[user_id]["total"]
+        admin_id = latest_unpaid["confirmed_by"]
+        total = latest_unpaid["total"]
         player_mention = interaction.user.mention
-
-        trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         admin_mention = f"<@{admin_id}>"
 
+        trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(
             f"{admin_mention} payment has been sent from {player_mention} for their trader order."
         )
         await msg.add_reaction("🔴")
 
-        orders[user_id]["paid"] = True
-        orders[user_id]["payment_message_id"] = msg.id
+        # Update specific order entry
+        latest_unpaid["paid"] = True
+        latest_unpaid["payment_message_id"] = msg.id
         save_orders(orders)
 
         await interaction.response.send_message("Payment sent and awaiting admin confirmation.", ephemeral=True)
