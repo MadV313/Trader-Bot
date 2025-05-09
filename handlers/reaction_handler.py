@@ -13,6 +13,7 @@ ADMIN_ROLE_IDS = config["admin_role_ids"]
 ORDERS_FILE = "data/orders.json"
 LOG_FILE = "data/order_events.log"
 
+
 def load_orders():
     try:
         with open(ORDERS_FILE, "r") as f:
@@ -20,13 +21,16 @@ def load_orders():
     except:
         return {}
 
+
 def save_orders(data):
     with open(ORDERS_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
+
 def log_event(event):
     with open(LOG_FILE, "a") as log:
         log.write(f"{event}\n")
+
 
 def setup_reaction_handler(bot):
     @bot.event
@@ -58,6 +62,7 @@ def setup_reaction_handler(bot):
         elif "payment has been sent from" in message.content:
             await handle_payment_confirmation(bot, message, member)
 
+
 # --------- ORDER CONFIRMATION --------- #
 async def handle_order_confirmation(bot, message, admin_member):
     orders = load_orders()
@@ -85,13 +90,15 @@ async def handle_order_confirmation(bot, message, admin_member):
         "confirmed_by": admin_member.id,
         "total": total_value,
         "order_message_id": message.id,
-        "payment_message_id": None
+        "payment_message_id": None,
+        "items": []  # Placeholder for item details if needed later
     }
 
     orders.setdefault(user_id, []).append(order_entry)
     save_orders(orders)
 
     log_event(f"[ORDER CONFIRMED] Admin: {admin_member.id}, Player: {player.id}, Amount: {total_value}")
+
 
 # --------- SELL CONFIRMATION --------- #
 async def handle_sell_confirmation(bot, message, admin_member):
@@ -116,13 +123,15 @@ async def handle_sell_confirmation(bot, message, admin_member):
         "confirmed_by": admin_member.id,
         "total": total_value,
         "order_message_id": message.id,
-        "payment_message_id": None
+        "payment_message_id": None,
+        "items": []  # Placeholder for item details if needed later
     }
 
     orders.setdefault(user_id, []).append(order_entry)
     save_orders(orders)
 
     log_event(f"[SELL CONFIRMED] Admin: {admin_member.id}, Player: {player.id}, Amount: {total_value}")
+
 
 # --------- PAYMENT CONFIRMATION --------- #
 async def handle_payment_confirmation(bot, message, admin_member):
@@ -172,11 +181,19 @@ async def handle_payment_confirmation(bot, message, admin_member):
                 msg = await bot.wait_for("message", timeout=60.0, check=check_code)
                 code = msg.content
                 try:
+                    # Include item + variant breakdown in DM
+                    order_items = latest_unpaid.get("items", [])
+                    item_details = "\n".join(
+                        f"- {i['quantity']}x {i['item']} ({i['variant']})" for i in order_items
+                    ) if order_items else "No item details available."
+
                     await player.send(
-                        f"{player.mention}, your order is stored at **{location}**.\n"
-                        f"Use code `{code}` to access it.\nPlease relock with the same code after collecting your gear."
+                        f"{player.mention}, your order is stored at **{location}**.\n\n"
+                        f"**Items:**\n{item_details}\n\n"
+                        f"Use code `{code}` to access it.\n"
+                        f"Please relock with the same code after collecting your gear."
                     )
-                    await interaction.followup.send("Code sent to player via DM.", ephemeral=True)
+                    await interaction.followup.send("Code and order details sent to player via DM.", ephemeral=True)
                 except:
                     await interaction.followup.send("Failed to DM the player.", ephemeral=True)
             except asyncio.TimeoutError:
