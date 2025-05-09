@@ -39,11 +39,12 @@ async def on_ready():
     if not extensions_loaded:
         for file in os.listdir("./commands"):
             if file.endswith(".py"):
+                print(f"[TraderBot] Attempting to load: {file}")
                 try:
                     await bot.load_extension(f"commands.{file[:-3]}")
                     print(f"[TraderBot] Loaded extension: {file}")
                 except Exception as e:
-                    print(f"[TraderBot] Failed to load {file}: {e}")
+                    print(f"[TraderBot] Failed to load {file}: {type(e).__name__} - {e}")
         extensions_loaded = True
         print("[TraderBot] All command modules loaded.")
 
@@ -51,7 +52,7 @@ async def on_ready():
         synced = await bot.tree.sync()
         print(f"[TraderBot] Synced {len(synced)} slash command(s).")
     except Exception as e:
-        print(f"[TraderBot] Slash command sync failed: {e}")
+        print(f"[TraderBot] Slash command sync failed: {type(e).__name__} - {e}")
 
     start_reminder_task(bot)
 
@@ -66,6 +67,18 @@ async def on_resumed():
     print("[TraderBot] Successfully resumed session.")
 
 
+# Diagnostic Command: Force Slash Command Sync at Runtime
+@bot.command()
+async def forcesync(ctx):
+    try:
+        synced = await bot.tree.sync()
+        await ctx.send(f"Slash commands synced! {len(synced)} commands now registered.")
+        print(f"[TraderBot] Forced sync completed. {len(synced)} commands registered.")
+    except Exception as e:
+        await ctx.send(f"Failed to sync commands: {type(e).__name__} - {e}")
+        print(f"[TraderBot] Forced sync failed: {type(e).__name__} - {e}")
+
+
 if __name__ == "__main__":
     try:
         print("[TraderBot] Starting up...")
@@ -73,4 +86,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("[TraderBot] Shutdown requested by user. Exiting gracefully.")
     except Exception as e:
-        print(f"[TraderBot] Unexpected error: {e}")
+        print(f"[TraderBot] Unexpected error: {type(e).__name__} - {e}")
