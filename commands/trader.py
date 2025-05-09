@@ -42,7 +42,7 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
+            return await interaction.response.send_message("This isnât your order session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Run `/trader` again.", ephemeral=True)
@@ -51,8 +51,10 @@ class TraderView(discord.ui.View):
         options = [discord.SelectOption(label=c, value=c) for c in categories]
 
         class CategorySelect(discord.ui.Select):
-            def __init__(self):
+            def __init__(self, bot, user_id):
                 super().__init__(placeholder="Choose a category...", options=options)
+                self.bot = bot
+                self.user_id = user_id
 
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
@@ -60,8 +62,10 @@ class TraderView(discord.ui.View):
                 item_options = [discord.SelectOption(label=i, value=i) for i in items]
 
                 class ItemSelect(discord.ui.Select):
-                    def __init__(self):
+                    def __init__(self, bot, user_id):
                         super().__init__(placeholder="Choose an item...", options=item_options)
+                        self.bot = bot
+                        self.user_id = user_id
 
                     async def callback(self, item_interaction: discord.Interaction):
                         selected_item = self.values[0]
@@ -75,8 +79,10 @@ class TraderView(discord.ui.View):
                             )
                         else:
                             class VariantSelect(discord.ui.Select):
-                                def __init__(self):
+                                def __init__(self, bot, user_id):
                                     super().__init__(placeholder="Choose a variant...", options=variant_options)
+                                    self.bot = bot
+                                    self.user_id = user_id
 
                                 async def callback(self, variant_interaction: discord.Interaction):
                                     selected_variant = self.values[0]
@@ -91,19 +97,19 @@ class TraderView(discord.ui.View):
                                     )
 
                             variant_view = discord.ui.View()
-                            variant_view.add_item(VariantSelect())
+                            variant_view.add_item(VariantSelect(self.bot, self.user_id))
                             await item_interaction.response.send_message(
                                 "Select a variant:", view=variant_view, ephemeral=True
                             )
 
                 item_view = discord.ui.View()
-                item_view.add_item(ItemSelect())
+                item_view.add_item(ItemSelect(self.bot, self.user_id))
                 await select_interaction.response.send_message(
                     "Select an item:", view=item_view, ephemeral=True
                 )
 
         category_view = discord.ui.View()
-        category_view.add_item(CategorySelect())
+        category_view.add_item(CategorySelect(self.bot, self.user_id))
         await interaction.response.send_message(
             "Select a category:", view=category_view, ephemeral=True
         )
@@ -111,7 +117,7 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
+            return await interaction.response.send_message("This isnât your order session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Run `/trader` again.", ephemeral=True)
@@ -121,14 +127,18 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Your cart is empty!", ephemeral=True)
 
         total = sum(item['subtotal'] for item in items)
-        summary = f"Order for {interaction.user.mention}:\n"
+        summary = f"Order for {interaction.user.mention}:
+"
         for item in items:
-            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}\n"
+            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}
+"
         summary += f"**Total: ${total:,}**"
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES} — an order is ready for trader!")
-        await msg.add_reaction("🔴")
+        msg = await trader_channel.send(f"{summary}
+
+{MENTION_ROLES} â an order is ready for trader!")
+        await msg.add_reaction("ð´")
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been submitted!", ephemeral=True)
@@ -136,7 +146,7 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
+            return await interaction.response.send_message("This isnât your order session.", ephemeral=True)
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True)
 
