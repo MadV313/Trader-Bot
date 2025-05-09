@@ -21,14 +21,14 @@ INTENTS.members = True
 INTENTS.reactions = True
 
 bot = commands.Bot(command_prefix=PREFIX, intents=INTENTS)
-extensions_loaded = False  # Prevent reloading on reconnect
+extensions_loaded = False
 
-# Load reaction handlers
+# Load reaction handler and reminder task
 from handlers.reaction_handler import setup_reaction_handler
+from tasks.reminder_task import start_reminder_task
+
 setup_reaction_handler(bot)
 
-# Load background reminder tasks
-from tasks.reminder_task import start_reminder_task
 
 @bot.event
 async def on_ready():
@@ -55,13 +55,16 @@ async def on_ready():
 
     start_reminder_task(bot)
 
+
 @bot.event
 async def on_disconnect():
     print("[TraderBot] Disconnected. Attempting automatic reconnect...")
 
+
 @bot.event
 async def on_resumed():
     print("[TraderBot] Successfully resumed session.")
+
 
 if __name__ == "__main__":
     try:
