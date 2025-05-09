@@ -38,7 +38,7 @@ def parse_order_lines(order_text, mode="buy"):
     for line_num, line in enumerate(order_text.strip().splitlines(), start=1):
         try:
             if " x" not in line:
-                raise ValueError("Missing 'x' quantity format")
+                raise ValueError("Missing 'x' quantity format. Use 'item:variant xQuantity'.")
 
             left, quantity_str = line.rsplit(" x", 1)
             category, item, variant = map(str.strip, left.split(":"))
@@ -47,20 +47,22 @@ def parse_order_lines(order_text, mode="buy"):
             variant = variant or "Default"
 
             if category not in data:
-                raise ValueError(f"Unknown category '{category}'")
+                raise ValueError(f"Unknown category '{category}'.")
+
             if item not in data[category]:
-                raise ValueError(f"Unknown item '{item}' in category '{category}'")
+                raise ValueError(f"Unknown item '{item}' in category '{category}'.")
 
             item_data = data[category][item]
+
             if isinstance(item_data, dict):
                 variants = variant_utils.get_variants(item_data)
                 if not variant_utils.variant_exists(variants, variant):
-                    raise ValueError(f"Unknown variant '{variant}' for item '{item}'")
+                    raise ValueError(f"Unknown variant '{variant}' for item '{item}'.")
                 variant = next(v for v in variants if v.lower() == variant.lower())
                 base_price = item_data[variant]
             else:
                 if variant.lower() != "default":
-                    raise ValueError(f"Item '{item}' does not support variants")
+                    raise ValueError(f"Item '{item}' does not support variants.")
                 base_price = item_data
 
             price = round(base_price / 3) if mode == "sell" else base_price
@@ -77,7 +79,7 @@ def parse_order_lines(order_text, mode="buy"):
             total += subtotal
 
         except Exception as e:
-            log_event(FAILED_LOG_FILE, f"Line {line_num}: '{line}' — {e}")
+            log_event(FAILED_LOG_FILE, f"Line {line_num}: '{line}' — {type(e).__name__}: {e}")
             return None, f"Error on line {line_num}: '{line}' — {e}"
 
     items_summary = ", ".join(f"{i['quantity']}x {i['item']} ({i['variant']})" for i in parsed_items)
