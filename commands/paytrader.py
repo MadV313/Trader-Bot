@@ -11,7 +11,8 @@ config = json.loads(os.environ.get("CONFIG_JSON"))
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 ORDERS_FILE = os.path.join("data", "orders.json")
-LOG_FILE = "logs/payment_submissions.log"
+LOG_DIR = os.path.join("data", "logs")
+LOG_FILE = os.path.join(LOG_DIR, "payment_submissions.log")
 
 
 def load_orders():
@@ -24,6 +25,13 @@ def load_orders():
 def save_orders(data):
     with open(ORDERS_FILE, "w") as f:
         json.dump(data, f, indent=2)
+
+
+def log_payment_submission(user_id, total):
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(LOG_FILE, "a") as log_file:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_file.write(f"[{timestamp}] Payment submitted by {user_id} for ${total}\n")
 
 
 class PayTrader(commands.Cog):
@@ -64,18 +72,12 @@ class PayTrader(commands.Cog):
         )
         await msg.add_reaction("🔴")
 
-        # Update order status
         latest_unpaid["paid"] = True
         latest_unpaid["payment_message_id"] = msg.id
         save_orders(orders)
 
-        # Log payment submission
-        os.makedirs("logs", exist_ok=True)
-        with open(LOG_FILE, "a") as log_file:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            log_file.write(f"[{timestamp}] Payment submitted by {user_id} for ${total}\n")
+        log_payment_submission(user_id, total)
 
-        # Confirm to the user
         await interaction.response.send_message("✅ Payment submitted! Awaiting admin confirmation.", ephemeral=True)
 
 
