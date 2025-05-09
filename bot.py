@@ -13,6 +13,7 @@ except (TypeError, json.JSONDecodeError):
 
 TOKEN = config["token"]
 PREFIX = "/"
+GUILD_ID = 1166441420643639348  # Your Discord Server ID
 
 INTENTS = discord.Intents.default()
 INTENTS.message_content = True
@@ -49,8 +50,17 @@ async def on_ready():
         print("[TraderBot] All command modules loaded.")
 
     try:
+        # Global Command Sync
         synced = await bot.tree.sync()
-        print(f"[TraderBot] Synced {len(synced)} slash command(s).")
+        print(f"[TraderBot] Synced {len(synced)} global slash command(s).")
+        print(f"[TraderBot] Global Synced Commands: {[cmd.name for cmd in synced]}")
+
+        # Force Guild Sync for Immediate Availability
+        guild = discord.Object(id=GUILD_ID)
+        guild_synced = await bot.tree.sync(guild=guild)
+        print(f"[TraderBot] Synced {len(guild_synced)} guild slash command(s).")
+        print(f"[TraderBot] Guild Synced Commands: {[cmd.name for cmd in guild_synced]}")
+
     except Exception as e:
         print(f"[TraderBot] Slash command sync failed: {type(e).__name__} - {e}")
 
@@ -72,8 +82,10 @@ async def on_resumed():
 async def forcesync(ctx):
     try:
         synced = await bot.tree.sync()
-        await ctx.send(f"Slash commands synced! {len(synced)} commands now registered.")
-        print(f"[TraderBot] Forced sync completed. {len(synced)} commands registered.")
+        guild = discord.Object(id=GUILD_ID)
+        guild_synced = await bot.tree.sync(guild=guild)
+        await ctx.send(f"Slash commands synced globally and to guild! {len(synced)} global, {len(guild_synced)} guild commands.")
+        print(f"[TraderBot] Forced sync completed. {len(synced)} global, {len(guild_synced)} guild commands registered.")
     except Exception as e:
         await ctx.send(f"Failed to sync commands: {type(e).__name__} - {e}")
         print(f"[TraderBot] Forced sync failed: {type(e).__name__} - {e}")
