@@ -1,11 +1,11 @@
 import discord
 import json
 import asyncio
+import os
 from discord.ui import View, Button
 
-# Load config
-with open("config.json") as f:
-    config = json.load(f)
+# Load config from Railway environment variable
+config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
@@ -62,19 +62,16 @@ async def handle_order_confirmation(bot, message, admin_member):
     total_line = next((line for line in message.content.splitlines() if "Total:" in line), None)
     total_value = int(total_line.replace("**Total: $", "").replace("**", "").replace(",", "").strip())
 
-    # Edit message
     new_content = message.content.replace(
         "Order for", f"✅ Confirmed by {admin_member.mention} — Order is ready for trader.\nOrder for"
     )
     await message.edit(content=new_content)
 
-    # Notify player
     economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
     await economy_channel.send(
         f"{player.mention} your trader is ready for pick up! Please pay the trader {admin_member.mention} (${total_value:,}) to complete the order!"
     )
 
-    # Store multi-order entry
     order_entry = {
         "type": "buy",
         "order_id": f"msg_{message.id}",
@@ -90,7 +87,7 @@ async def handle_order_confirmation(bot, message, admin_member):
     orders[user_id].append(order_entry)
     save_orders(orders)
 
-# --------- SELL CONFIRMATION (New) --------- #
+# --------- SELL CONFIRMATION --------- #
 async def handle_sell_confirmation(bot, message, admin_member):
     orders = load_orders()
     player = message.mentions[0]
@@ -99,15 +96,12 @@ async def handle_sell_confirmation(bot, message, admin_member):
     total_line = next((line for line in message.content.splitlines() if "Total Owed:" in line), None)
     total_value = int(total_line.replace("**Total Owed: $", "").replace("**", "").replace(",", "").strip())
 
-    # Edit message
     new_content = message.content + f"\n✅ Confirmed by {admin_member.mention} — Sale payout complete."
     await message.edit(content=new_content)
 
-    # Notify player
     economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
     await economy_channel.send(f"{player.mention} thanks for recycling your goods!")
 
-    # Store order entry if needed
     order_entry = {
         "type": "sell",
         "order_id": f"msg_{message.id}",
@@ -126,7 +120,7 @@ async def handle_sell_confirmation(bot, message, admin_member):
 # --------- PAYMENT CONFIRMATION --------- #
 async def handle_payment_confirmation(bot, message, admin_member):
     orders = load_orders()
-    player = message.mentions[1]  # Second mention is player
+    player = message.mentions[1]
     user_id = str(player.id)
 
     await message.edit(content=message.content + f"\n✅ Payment confirmed by {admin_member.mention}.")
@@ -172,7 +166,6 @@ async def handle_payment_confirmation(bot, message, admin_member):
                     await interaction.followup.send("DM sent to player.", ephemeral=True)
                 except:
                     await interaction.followup.send("Failed to DM the player.", ephemeral=True)
-
             except asyncio.TimeoutError:
                 await interaction.followup.send("Timed out waiting for code input.", ephemeral=True)
 
