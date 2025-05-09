@@ -181,7 +181,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             })
 
             await interaction.response.send_message(
-                f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True"
+                await interaction.response.send_message(f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True)
             )
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
