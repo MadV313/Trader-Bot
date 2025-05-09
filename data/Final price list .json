@@ -1,176 +1,88 @@
 {
-  "notes": "Sell prices are one-third of buy prices.",
   "categories": {
+    "Ammo": {
+      "12g Beanbag": 500,
+      "12g Buckshot": 500,
+      "12g Rubber": 500,
+      "12g Slugs": 500,
+      "22LR": 500,
+      "308 WIN": 500,
+      "308 WIN (Tracer)": 500,
+      "357": 500,
+      "380": 500,
+      "45": 500,
+      "5.45x39": 500,
+      "5.45x39 (Tracer)": 500,
+      "5.56x45": 500,
+      "5.56x45 (Tracer)": 500,
+      "7.62x39": 500,
+      "7.62x39 (Tracer)": 500,
+      "7.62x54": 10000,
+      "7.62x54 (Tracer)": 500,
+      "9x19": 500,
+      "9x39": 500,
+      "9x39 (AP)": 500
+    },
+    "BaseSupplies": {
+      "Barbed Wire": 1800,
+      "Code Lock": 2000,
+      "Fence Kits": 1500,
+      "Gun Cleaning Kits": 1500,
+      "Handsaw": 1600,
+      "Hatchet": 1600,
+      "Metal Wire": 1600,
+      "Nails": 1500,
+      "Pliers": 1500,
+      "Shovel": 1800,
+      "Splitting Axe": 1600
+    },
+    "CarParts": {
+      "Battery": 15000,
+      "Glow Plug": 10000,
+      "Jerry Can": 5000,
+      "Radiator": 10000,
+      "Spark Plug": 5000,
+      "Tire Repair Kits": 5000
+    },
     "Clothes": {
-      "Jacket/Pants": 1000,
-      "Field Jacket": {
-        "Green": 1000,
-        "Black": 1000
-      },
-      "Hiking Jacket": {
-        "Default": 1000
-      },
-      "Hunting Jacket": {
-        "Autumn": 1000,
-        "Spring": 1000,
-        "Summer": 1000,
-        "Winter": 1000
-      },
-      "Hunting Pants": {
-        "Autumn": 1000,
-        "Spring": 1000,
-        "Summer": 1000,
-        "Winter": 1000
-      },
-      "BDU Jacket": {
-        "Default": 1000
-      },
-      "BDU Pants": {
-        "Default": 1000
-      },
-      "CUU Jacket": {
-        "Default": 1000
-      },
-      "CUU Pants": {
-        "Default": 1000
-      },
-      "Combat Jacket": {
-        "Default": 1000
-      },
-      "Combat Pants": {
-        "Default": 1000
-      },
-      "Bushlat Jacket": {
-        "Default": 1000
-      },
-      "Rider Jacket": {
-        "Default": 1000
-      },
-      "Bomber Jacket": {
-        "Default": 1000
-      },
-      "Patrol Jacket": {
-        "Autumn": 1000,
-        "Spring": 1000,
-        "Summer": 1000,
-        "Winter": 1000
-      },
-      "Patrol Pants": {
-        "Autumn": 1000,
-        "Spring": 1000,
-        "Summer": 1000,
-        "Winter": 1000
-      },
-      "OREL Jacket": {
-        "Default": 1000
-      },
-      "OREL Pants": {
-        "Default": 1000
-      },
-      "Denim Jacket": {
-        "Default": 1000
-      },
-      "Denim Pants": {
-        "Default": 1000
-      },
-      "Hoodie": {
-        "Default": 1000
-      },
-      "OMK Jacket": {
-        "Default": 1000
-      },
-      "OMK Pants": {
-        "Default": 1000
-      },
-      "Holster": {
-        "Black": 1000,
-        "Olive": 1000,
-        "Camo": 1000
-      },
-      "Cargo Pants": {
-        "Khaki": 1000,
-        "Black": 1000,
-        "Olive": 1000,
-        "Blue": 1000
-      },
-      "Bandana": {
-        "Black": 1000,
-        "Camo": 1000,
-        "Olive": 1000,
-        "Red": 1000
-      },
-      "Helmets": {
-        "Boonie Hat": {
-          "Black": 1000,
-          "Olive": 1000,
-          "Camo": 1000,
-          "Blue": 1000,
-          "OKM": 1000
-        },
-        "Cowboy Hat": {
-          "Default": 1000
-        },
-        "Flat Cap": {
-          "Default": 1000
-        },
-        "Headdress": {
-          "Default": 1000
-        },
-        "OKZ Cap": {
-          "Default": 1000
-        },
-        "Shemagh": {
-          "Khaki": 1000,
-          "Olive": 1000
-        },
-        "Ushanka": {
-          "Default": 1000
-        },
-        "Assault Helmet": {
-          "Black": 1000,
-          "Olive": 1000
-        },
-        "Ballistic Helmet": {
-          "Black": 1000,
-          "Olive": 1000
-        },
-        "Camo Helmet": {
-          "BDU": 1000,
-          "OKM": 1000
-        },
-        "Combat Helmet": {
-          "Default": 1000
-        },
-        "Flight Helmet": {
-          "Default": 1000
-        },
-        "Tactical Helmet": {
-          "Default": 1000
-        },
-        "Ski Mask": {
+      "Boots": {
+        "Assault Boots": {
+          "Anarchy": 1000,
           "Black": 1000,
           "Blue": 1000,
-          "Olive": 1000,
-          "Pink": 1000,
-          "Khaki": 1000,
-          "Skull": 1000
+          "Brown": 1000,
+          "Khaki": 1000
         },
-        "Balaclava": {
+        "Athletic Shoes": {
+          "Default": 1000
+        },
+        "Combat Boots": {
+          "Default": 1000
+        },
+        "Dress Shoes": {
+          "Default": 1000
+        },
+        "Hiking Boots": {
           "Black": 1000,
-          "Blue": 1000,
-          "Khaki": 1000,
+          "Brown": 1000
+        },
+        "Hunter Boots": {
+          "Black": 1000,
+          "Brown": 1000,
           "Olive": 1000
         },
-        "Hockey Mask": {
+        "Jungle Boots": {
+          "Black": 1000,
+          "Brown": 1000,
+          "Olive": 1000
+        },
+        "Sneakers": {
           "Default": 1000
         },
-        "Mime Mask": {
+        "Wellies": {
           "Default": 1000
         },
-        "Carnival Mask": {
-          "Default": 1000
-        },
-        "Payday Mask": {
+        "Work Boots": {
           "Default": 1000
         }
       },
@@ -191,255 +103,388 @@
           "Olive": 1000
         }
       },
-      "Boots": {
-        "Wellies": {
-          "Default": 1000
-        },
-        "Hiking Boots": {
+      "Helmets": {
+        "Assault Helmet": {
           "Black": 1000,
-          "Brown": 1000
+          "Olive": 1000
         },
-        "Assault Boots": {
-          "Anarchy": 1000,
+        "Balaclava": {
           "Black": 1000,
           "Blue": 1000,
-          "Brown": 1000,
-          "Khaki": 1000
-        },
-        "Athletic Shoes": {
-          "Default": 1000
-        },
-        "Combat Boots": {
-          "Default": 1000
-        },
-        "Dress Shoes": {
-          "Default": 1000
-        },
-        "Hunter Boots": {
-          "Black": 1000,
-          "Brown": 1000,
+          "Khaki": 1000,
           "Olive": 1000
         },
-        "Jungle Boots": {
+        "Ballistic Helmet": {
           "Black": 1000,
-          "Brown": 1000,
           "Olive": 1000
         },
-        "Sneakers": {
+        "Bandana": {
+          "Black": 1000,
+          "Camo": 1000,
+          "Olive": 1000,
+          "Red": 1000
+        },
+        "Boonie Hat": {
+          "Black": 1000,
+          "Blue": 1000,
+          "Camo": 1000,
+          "OKM": 1000,
+          "Olive": 1000
+        },
+        "Camo Helmet": {
+          "BDU": 1000,
+          "OKM": 1000
+        },
+        "Carnival Mask": {
           "Default": 1000
         },
-        "Work Boots": {
+        "Combat Helmet": {
           "Default": 1000
+        },
+        "Cowboy Hat": {
+          "Default": 1000
+        },
+        "Flat Cap": {
+          "Default": 1000
+        },
+        "Flight Helmet": {
+          "Default": 1000
+        },
+        "Headdress": {
+          "Default": 1000
+        },
+        "Hockey Mask": {
+          "Default": 1000
+        },
+        "Mime Mask": {
+          "Default": 1000
+        },
+        "OKZ Cap": {
+          "Default": 1000
+        },
+        "Payday Mask": {
+          "Default": 1000
+        },
+        "Shemagh": {
+          "Khaki": 1000,
+          "Olive": 1000
+        },
+        "Ski Mask": {
+          "Black": 1000,
+          "Blue": 1000,
+          "Khaki": 1000,
+          "Olive": 1000,
+          "Pink": 1000,
+          "Skull": 1000
+        },
+        "Tactical Helmet": {
+          "Default": 1000
+        },
+        "Ushanka": {
+          "Default": 1000
+        }
+      },
+      "Jackets": {
+        "BDU Jacket": {
+          "Default": 1000
+        },
+        "Bomber Jacket": {
+          "Default": 1000
+        },
+        "Bushlat Jacket": {
+          "Default": 1000
+        },
+        "CUU Jacket": {
+          "Default": 1000
+        },
+        "Combat Jacket": {
+          "Default": 1000
+        },
+        "Denim Jacket": {
+          "Default": 1000
+        },
+        "Field Jacket": {
+          "Black": 1000,
+          "Green": 1000
+        },
+        "Hiking Jacket": {
+          "Default": 1000
+        },
+        "Holster": {
+          "Black": 1000,
+          "Camo": 1000,
+          "Olive": 1000
+        },
+        "Hoodie": {
+          "Default": 1000
+        },
+        "Hunting Jacket": {
+          "Autumn": 1000,
+          "Spring": 1000,
+          "Summer": 1000,
+          "Winter": 1000
+        },
+        "Jacket/Pants": {
+          "Default": 1000
+        },
+        "OMK Jacket": {
+          "Default": 1000
+        },
+        "OREL Jacket": {
+          "Default": 1000
+        },
+        "Patrol Jacket": {
+          "Autumn": 1000,
+          "Spring": 1000,
+          "Summer": 1000,
+          "Winter": 1000
+        },
+        "Rider Jacket": {
+          "Default": 1000
+        }
+      },
+      "Pants": {
+        "BDU Pants": {
+          "Default": 1000
+        },
+        "CUU Pants": {
+          "Default": 1000
+        },
+        "Cargo Pants": {
+          "Black": 1000,
+          "Blue": 1000,
+          "Khaki": 1000,
+          "Olive": 1000
+        },
+        "Combat Pants": {
+          "Default": 1000
+        },
+        "Denim Pants": {
+          "Default": 1000
+        },
+        "Hunting Pants": {
+          "Autumn": 1000,
+          "Spring": 1000,
+          "Summer": 1000,
+          "Winter": 1000
+        },
+        "OMK Pants": {
+          "Default": 1000
+        },
+        "OREL Pants": {
+          "Default": 1000
+        },
+        "Patrol Pants": {
+          "Autumn": 1000,
+          "Spring": 1000,
+          "Summer": 1000,
+          "Winter": 1000
         }
       }
     },
-    "Weapons": {
-      "DEAGLE": {
-        "Silver": 10000,
-        "Gold": 10000
-      },
-      "DERRINGER": {
-        "Black": 2000,
-        "Pink": 2000
-      },
-      "Revolver": {
-        "Standard": 5000,
-        "Sawed-Off": 25000
-      },
-      "BK-12": {
-        "Standard": 25000,
-        "Sawed-Off": 25000
-      },
-      "BK-43": {
-        "Standard": 7000,
-        "Sawed-Off": 7000
-      },
-      "LE-MAS": {
-        "Standard": 13000,
-        "Sawed-Off": 25000
-      },
-      "M70 TUNDRA": {
-        "Standard": 30000,
-        "Black": 50000,
-        "Olive": 50000
-      },
-      "MOSIN 91/30": {
-        "Standard": 18000,
-        "Black": 18000,
-        "Camo": 50000,
-        "Sawed-Off": 18000,
-        "Olive": 50000
-      },
-      "BK-18": {
-        "Standard": 10000,
-        "Sawed-Off": 10000
-      },
-      "BLAZE": 50000,
-      "LAR": 35000,
-      "M4-A1": 50000,
-      "M16-A2": 16000,
-      "KA-101": 20000,
-      "KA-M": 25000,
-      "KA-74": 18000,
-      "KAS-74U": 12000,
-      "AUR A1": 18000,
-      "AUR AX": 28000,
-      "BIZON": 13000,
-      "SKORPION": 15000,
-      "SG5K": 25000,
-      "USG45": 20000,
-      "VIKHR": 30000,
-      "SVAL": 12000,
-      "VSS": 10000,
-      "DMR": 40000,
-      "VSD": 20000,
-      "VS-89": 25000,
-      "PIPNEER": 10000,
-      "REPEATER": 15000,
-      "SK 59/66": 9000,
-      "CR-527": 7000,
-      "CR-550": 35000,
-      "SSG-82": 35000,
-      "VAIGA": 9000,
-      "CROSS BOW": 15000,
-      "P1": 3000,
-      "IJ-70": 5000,
-      "MKII": 4000,
-      "FX-45": 15000,
-      "M-LOCK": 10000,
-      "CR-75": 5000,
-      "M79 Grenade Launcher": 500000,
-      "Longhorn": 25000,
-      "BLAZE_Sawed_Off": 25000
-    },
-    "Special": {
-      "Bunker Cards": 10000,
-      "Night Vision Goggles": 5500,
-      "Eggsperimental Capsule (Empty)": 100000,
-      "Eggsperimental Capsule (Bear)": 1000000,
-      "Eggsperimental Capsule (Mummy)": 500000
-    },
-    "BaseSupplies": {
-      "Code Lock": 2000,
-      "Metal Wire": 1600,
-      "Nails": 1500,
-      "Pliers": 1500,
-      "Fence Kits": 1500,
-      "Splitting Axe": 1600,
-      "Hatchet": 1600,
-      "Handsaw": 1600,
-      "Shovel": 1800,
-      "Barbed Wire": 1800,
-      "Gun Cleaning Kits": 1500
-    },
-    "MagsAndAmmo": {
-      "All Mags/Ammo Boxes": 500,
-      "300rd Drum Mag": 200000
-    },
-    "Ammo": {
-      "22LR": 500,
-      "7.62x39": 500,
-      "7.62x39 (Tracer)": 500,
-      "308 WIN": 500,
-      "308 WIN (Tracer)": 500,
-      "9x39": 500,
-      "9x39 (AP)": 500,
-      "7.62x54": 10000,
-      "7.62x54 (Tracer)": 500,
-      "357": 500,
-      "5.45x39": 500,
-      "5.45x39 (Tracer)": 500,
-      "5.56x45": 500,
-      "5.56x45 (Tracer)": 500,
-      "380": 500,
-      "12g Buckshot": 500,
-      "12g Slugs": 500,
-      "12g Rubber": 500,
-      "12g Beanbag": 500,
-      "9x19": 500,
-      "45": 500
-    },
-    "Sights": {
-      "RVN Sight": 300,
-      "Combat Sight": 300,
-      "Baraka Sight": 300,
-      "M4-A1 Carry Handle Sight": 100,
-      "ATOG 6x48 Scope": 500,
-      "ATOG w/ Baraka Scope": 800,
-      "Hunting Scope": 600,
-      "PSO-1 Scope": 500,
-      "P1-87-L Scope": 200
-    },
-    "Suppressors": {
-      "All Suppressors": 850,
-      "Standard Suppressor": 850,
-      "Pistol Suppressor": 850,
-      "Bottle Suppressor": 850,
-      "Normalized Suppressor": 850
-    },
-    "Medical": {
-      "All Medical Items": 0
-    },
-    "FlagsAndArmbands": {
-      "All Flags": 0,
-      "All Armbands": 0
-    },
-    "Tents": {
-      "Car Tent": 20000,
-      "Large Tent": 15000,
-      "Medium Tent": 10000,
-      "Canopy Tent": 5000
-    },
-    "CarParts": {
-      "Radiator": 10000,
-      "Spark Plug": 5000,
-      "Battery": 15000,
-      "Glow Plug": 10000,
-      "Jerry Can": 5000,
-      "Tire Repair Kits": 5000
-    },
-    "Kits": {
-      "Kit 1": {
-        "Price": 25000,
-        "Contents": "Loaded M4-A1 with mags, Plate carrier, Tactical helmet / NVGs / Battery, Clothes (Your Choice), Meds"
-      },
-      "Kit 2": {
-        "Price": 45000,
-        "Contents": "Loaded M4-A1 with mags, Tundra or CR-550 Savanna with ammo, Plate carrier, Assault helmet, Clothes (Your Choice), Meds"
-      },
-      "Kit 3": {
-        "Price": 80000,
-        "Contents": "Full ghillie suit, 2 Ghillie Wraps, Loaded M4-A1 with 6 mags, Your Choice (Snipers Only) with 4 boxes of ammo, Plate carrier, Assault helmet, Clothes (Your Choice), Meds"
-      },
-      "Building Kit": {
-        "Price": 10000,
-        "Contents": "2 of All tools, Nails, Fence & Watchtower kits, 2 Code locks, & 2 Metal wires"
-      },
-      "Builders Truck": {
-        "Price": 100000,
-        "Contents": "Everything you need and then some to build a nice base"
-      }
-    },
     "Explosives": {
-      "Po-X Vial": 100000,
-      "40mm Po-X Grenade": 100000,
+      "1-M4 Smoke Grenade": 10000,
       "40mm Explosive Grenade": 100000,
+      "40mm Po-X Grenade": 100000,
       "40mm Smoke Grenade": 100000,
-      "Plastic Explosive": 200000,
       "6-M7 Frag Grenade": 25000,
+      "8-M4 Flashbang": 20000,
+      "Claymores": 200000,
       "EGD-5 Frag Grenade": 25000,
       "Landmines": 200000,
-      "Claymores": 200000,
-      "8-M4 Flashbang": 20000,
-      "1-M4 Smoke Grenade": 10000
+      "Plastic Explosive": 200000,
+      "Po-X Vial": 100000
     },
     "Farming": {
       "Cannabis Seeds": 100000,
       "Grow Kits": 200000
     },
+    "FlagsAndArmbands": {
+      "All Armbands": 0,
+      "All Flags": 0
+    },
+    "Kits": {
+      "Builders Truck": {
+        "Contents": "Everything you need and then some to build a nice base",
+        "Price": 100000
+      },
+      "Building Kit": {
+        "Contents": "2 of All tools, Nails, Fence & Watchtower kits, 2 Code locks, & 2 Metal wires",
+        "Price": 10000
+      },
+      "Kit 1": {
+        "Contents": "Loaded M4-A1 with mags, Plate carrier, Tactical helmet / NVGs / Battery, Clothes (Your Choice), Meds",
+        "Price": 25000
+      },
+      "Kit 2": {
+        "Contents": "Loaded M4-A1 with mags, Tundra or CR-550 Savanna with ammo, Plate carrier, Assault helmet, Clothes (Your Choice), Meds",
+        "Price": 45000
+      },
+      "Kit 3": {
+        "Contents": "Full ghillie suit, 2 Ghillie Wraps, Loaded M4-A1 with 6 mags, Your Choice (Snipers Only) with 4 boxes of ammo, Plate carrier, Assault helmet, Clothes (Your Choice), Meds",
+        "Price": 80000
+      }
+    },
+    "MagsAndAmmo": {
+      "10rnd Cmag": 500,
+      "10rnd DMR": 500,
+      "10rnd MKII": 500,
+      "10rnd VSS": 500,
+      "12rnd IJ70": 500,
+      "15rnd CR75": 500,
+      "15rnd FX45": 500,
+      "15rnd MLock": 500,
+      "15rnd SG5K": 500,
+      "15rnd Sporter": 500,
+      "20rnd CR61": 500,
+      "20rnd Cmag": 500,
+      "20rnd DMR": 500,
+      "20rnd Lar": 500,
+      "20rnd SVAL": 500,
+      "20rnd drum Vaiga": 500,
+      "25rnd Lemas": 500,
+      "25rnd USG45": 500,
+      "300rd Drum Mag": 200000,
+      "30rnd Cmag": 500,
+      "30rnd KA101": 500,
+      "30rnd KA74": 500,
+      "30rnd KAM": 500,
+      "30rnd SG5K": 500,
+      "30rnd Sproter": 500,
+      "30rnd Standardized": 500,
+      "30rnd Vikhr": 500,
+      "40rnd Cmag": 500,
+      "45rnd KA74": 500,
+      "5rnd CR527": 500,
+      "5rnd SSG82": 500,
+      "5rnd Vaiga": 500,
+      "5rnd pioneer": 500,
+      "60rnd Standardized": 500,
+      "64rnd Bizon": 500,
+      "75rnd drum KAM": 500,
+      "7rnd Kolt": 500,
+      "8rnd Vaiga": 500,
+      "9rnd Deagle": 500,
+      "All Mags/Ammo Boxes": 500
+    },
+    "Medical": {
+      "All Medical Items": 0
+    },
+    "Sights": {
+      "ATOG 6x48 Scope": 500,
+      "ATOG w/ Baraka Scope": 800,
+      "Baraka Sight": 300,
+      "Combat Sight": 300,
+      "Hunting Scope": 600,
+      "M4-A1 Carry Handle Sight": 100,
+      "P1-87-L Scope": 200,
+      "PSO-1 Scope": 500,
+      "RVN Sight": 300
+    },
+    "Special": {
+      "Bunker Cards": 10000,
+      "Eggsperimental Capsule (Bear)": 1000000,
+      "Eggsperimental Capsule (Empty)": 100000,
+      "Eggsperimental Capsule (Mummy)": 500000,
+      "Night Vision Goggles": 5500
+    },
+    "Suppressors": {
+      "All Suppressors": 850,
+      "Bottle Suppressor": 850,
+      "Normalized Suppressor": 850,
+      "Pistol Suppressor": 850,
+      "Standard Suppressor": 850
+    },
+    "Tents": {
+      "Canopy Tent": 5000,
+      "Car Tent": 20000,
+      "Large Tent": 15000,
+      "Medium Tent": 10000
+    },
     "Traps": {
       "Bear Traps": 25000,
       "Lockpicks": 1000
+    },
+    "Weapons": {
+      "AUR A1": 18000,
+      "AUR AX": 28000,
+      "BIZON": 13000,
+      "BK-12": {
+        "Sawed-Off": 25000,
+        "Standard": 25000
+      },
+      "BK-133": 25000,
+      "BK-18": {
+        "Sawed-Off": 10000,
+        "Standard": 10000
+      },
+      "BK-43": {
+        "Sawed-Off": 7000,
+        "Standard": 7000
+      },
+      "BLAZE": 50000,
+      "BLAZE_Sawed_Off": 25000,
+      "CR-527": 7000,
+      "CR-550": 35000,
+      "CR-75": 5000,
+      "CROSS BOW": 15000,
+      "DEAGLE": {
+        "Gold": 10000,
+        "Silver": 10000
+      },
+      "DERRINGER": {
+        "Black": 2000,
+        "Pink": 2000
+      },
+      "DMR": 40000,
+      "FX-45": 15000,
+      "IJ-70": 5000,
+      "KA-101": 20000,
+      "KA-74": 18000,
+      "KA-M": 25000,
+      "KAS-74U": 12000,
+      "LAR": 35000,
+      "LE-MAS": {
+        "Sawed-Off": 25000,
+        "Standard": 13000
+      },
+      "Longhorn": 25000,
+      "M-LOCK": 10000,
+      "M16-A2": 16000,
+      "M4-A1": 50000,
+      "M70 TUNDRA": {
+        "Black": 50000,
+        "Olive": 50000,
+        "Standard": 30000
+      },
+      "M79 Grenade Launcher": 500000,
+      "MKII": 4000,
+      "MOSIN 91/30": {
+        "Black": 18000,
+        "Camo": 50000,
+        "Olive": 50000,
+        "Sawed-Off": 18000,
+        "Standard": 18000
+      },
+      "P1": 3000,
+      "PIPNEER": 10000,
+      "REPEATER": 15000,
+      "Revolver": {
+        "Sawed-Off": 25000,
+        "Standard": 5000
+      },
+      "SG5K": 25000,
+      "SK 59/66": 9000,
+      "SKORPION": 15000,
+      "SSG-82": 35000,
+      "SVAL": 12000,
+      "USG45": 20000,
+      "VAIGA": 9000,
+      "VIKHR": 30000,
+      "VS-89": 25000,
+      "VSD": 20000,
+      "VSS": 10000
     }
-  }
+  },
+  "notes": "Sell prices are one-third of buy prices."
 }
