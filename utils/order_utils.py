@@ -7,7 +7,7 @@ def load_price_data():
     with open(PRICE_FILE, "r") as f:
         return json.load(f)["categories"]
 
-def parse_order_lines(order_text):
+def parse_order_lines(order_text, mode="buy"):
     data = load_price_data()
     order_lines = order_text.strip().splitlines()
     parsed_items = []
@@ -25,22 +25,26 @@ def parse_order_lines(order_text):
             category, item, variant = map(str.strip, left.split(":"))
             quantity = int(quantity_str.strip())
 
-            # Validate
+            # Validate structure
             if category not in data:
                 raise ValueError(f"Unknown category '{category}'")
             if item not in data[category]:
                 raise ValueError(f"Unknown item '{item}' in category '{category}'")
+
+            # Handle variant or default
             if isinstance(data[category][item], dict):
                 if variant not in data[category][item]:
                     raise ValueError(f"Unknown variant '{variant}' for item '{item}'")
-                price = data[category][item][variant]
+                base_price = data[category][item][variant]
             else:
-                # Some entries like "BLAZE": 50000 have no variants
                 if variant.lower() != "default":
                     raise ValueError(f"Item '{item}' does not support variants")
-                price = data[category][item]
+                base_price = data[category][item]
 
+            # Adjust price if selling
+            price = round(base_price / 3) if mode == "sell" else base_price
             subtotal = price * quantity
+
             parsed_items.append({
                 "category": category,
                 "item": item,
