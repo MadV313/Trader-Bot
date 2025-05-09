@@ -9,7 +9,6 @@ config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
-
 ORDERS_FILE = os.path.join("data", "orders.json")
 
 def load_orders():
@@ -29,7 +28,9 @@ class PayTrader(commands.Cog):
     @app_commands.command(name="paytrader", description="Confirm that you paid the trader.")
     async def paytrader(self, interaction: discord.Interaction):
         if interaction.channel.id != ECONOMY_CHANNEL_ID:
-            await interaction.response.send_message("You can only use this command in the #economy channel.", ephemeral=True)
+            await interaction.response.send_message(
+                "❌ You can only use this command in the #economy channel.", ephemeral=True
+            )
             return
 
         user_id = str(interaction.user.id)
@@ -40,7 +41,7 @@ class PayTrader(commands.Cog):
         latest_unpaid = next((o for o in reversed(user_orders) if o["confirmed"] and not o["paid"]), None)
 
         if not latest_unpaid:
-            await interaction.response.send_message("No confirmed unpaid order found for you.", ephemeral=True)
+            await interaction.response.send_message("❌ No confirmed unpaid order found for you.", ephemeral=True)
             return
 
         admin_id = latest_unpaid["confirmed_by"]
@@ -49,17 +50,23 @@ class PayTrader(commands.Cog):
         admin_mention = f"<@{admin_id}>"
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
+        if not trader_channel:
+            await interaction.response.send_message(
+                "❌ Failed to locate the trader orders channel.", ephemeral=True
+            )
+            return
+
         msg = await trader_channel.send(
             f"{admin_mention} payment has been sent from {player_mention} for their trader order."
         )
         await msg.add_reaction("🔴")
 
-        # Update specific order entry
+        # Update order status
         latest_unpaid["paid"] = True
         latest_unpaid["payment_message_id"] = msg.id
         save_orders(orders)
 
-        await interaction.response.send_message("Payment sent and awaiting admin confirmation.", ephemeral=True)
+        await interaction.response.send_message("✅ Payment submitted! Awaiting admin confirmation.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(PayTrader(bot))
