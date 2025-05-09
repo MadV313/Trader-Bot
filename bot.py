@@ -4,9 +4,8 @@ import os
 import json
 import asyncio
 
-# Load config
-with open('config.json') as f:
-    config = json.load(f)
+# Load config from Railway environment variable
+config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TOKEN = config["token"]
 PREFIX = "/"
