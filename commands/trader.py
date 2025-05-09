@@ -37,7 +37,7 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isnât your order session.", ephemeral=True)
+            return await interaction.response.send_message("This isn't your order session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Run `/trader` again.", ephemeral=True)
@@ -112,7 +112,7 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isnât your order session.", ephemeral=True)
+            return await interaction.response.send_message("This isn't your order session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Run `/trader` again.", ephemeral=True)
@@ -131,7 +131,7 @@ class TraderView(discord.ui.View):
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}"
 
-{MENTION_ROLES} â an order is ready for trader!")
+await interaction.channel.send(f"{MENTION_ROLES} - an order is ready for trader!")
         await msg.add_reaction("â")
 
         session_manager.clear_session(self.user_id)
@@ -140,7 +140,7 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isnât your order session.", ephemeral=True)
+            return await interaction.response.send_message("This isn't your order session.", ephemeral=True)
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True)
 
