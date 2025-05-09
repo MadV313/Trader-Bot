@@ -4,17 +4,23 @@ from datetime import datetime, timezone, timedelta
 import json
 import os
 
-# Load config from Railway environment variable
+# Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 MENTION_ROLES = " ".join(config["mention_roles"])
 ORDER_REMINDER_HOURS = config.get("order_reminder_hours", 12)  # Fallback to 12 hours if not set
-REMINDER_LOG_FILE = "logs/reminder_events.log"
+
+LOG_DIR = "data/logs"
+REMINDER_LOG_FILE = os.path.join(LOG_DIR, "reminder_events.log")
+
+
+def ensure_log_dir():
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 
 def log_reminder_event(message):
-    os.makedirs("logs", exist_ok=True)
+    ensure_log_dir()
     with open(REMINDER_LOG_FILE, "a") as log_file:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_file.write(f"[{timestamp}] {message}\n")
@@ -41,7 +47,7 @@ def start_reminder_task(bot):
                             f"{MENTION_ROLES}\nPlease check for any incomplete trader orders!"
                         )
                         log_reminder_event("Reminder sent for incomplete trader orders.")
-                        break  # Send only one reminder per scan
+                        break  # Only send one reminder per scan
         except Exception as e:
             error_message = f"Reminder scan failed: {e}"
             print(f"[TraderBot] {error_message}")
