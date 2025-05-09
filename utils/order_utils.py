@@ -4,8 +4,13 @@ import os
 PRICE_FILE = os.path.join("data", "Final price list .json")
 
 def load_price_data():
+    if not os.path.exists(PRICE_FILE):
+        raise FileNotFoundError("Price list file not found.")
     with open(PRICE_FILE, "r") as f:
-        return json.load(f)["categories"]
+        try:
+            return json.load(f)["categories"]
+        except Exception as e:
+            raise ValueError(f"Failed to parse price list: {e}")
 
 def parse_order_lines(order_text, mode="buy"):
     data = load_price_data()
@@ -17,7 +22,6 @@ def parse_order_lines(order_text, mode="buy"):
     for line in order_lines:
         line_num += 1
         try:
-            # Format: Category:Item:Variant xQuantity
             if " x" not in line:
                 raise ValueError("Missing 'x' quantity format")
 
@@ -25,13 +29,11 @@ def parse_order_lines(order_text, mode="buy"):
             category, item, variant = map(str.strip, left.split(":"))
             quantity = int(quantity_str.strip())
 
-            # Validate structure
             if category not in data:
                 raise ValueError(f"Unknown category '{category}'")
             if item not in data[category]:
                 raise ValueError(f"Unknown item '{item}' in category '{category}'")
 
-            # Handle variant or default
             if isinstance(data[category][item], dict):
                 if variant not in data[category][item]:
                     raise ValueError(f"Unknown variant '{variant}' for item '{item}'")
@@ -41,7 +43,6 @@ def parse_order_lines(order_text, mode="buy"):
                     raise ValueError(f"Item '{item}' does not support variants")
                 base_price = data[category][item]
 
-            # Adjust price if selling
             price = round(base_price / 3) if mode == "sell" else base_price
             subtotal = price * quantity
 
