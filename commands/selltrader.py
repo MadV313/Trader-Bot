@@ -118,6 +118,9 @@ class SellTraderView(discord.ui.View):
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
         await msg.add_reaction("🔴")
 
+        # Send payout line below original message
+        await trader_channel.send(f"give user:{interaction.user.id} amount:{total} account:cash")
+
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your sell order has been submitted!", ephemeral=True)
 
