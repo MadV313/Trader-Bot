@@ -4,7 +4,7 @@ from discord import app_commands
 import json
 import os
 from utils import session_manager
-from utils.variant_utils import get_variants, variant_exists  # Corrected import
+from utils.variant_utils import get_variants, variant_exists
 
 # Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
@@ -66,7 +66,7 @@ class TraderView(discord.ui.View):
                     async def callback(self, item_interaction: discord.Interaction):
                         selected_item = self.values[0]
                         item_entry = PRICE_DATA.get(selected_category, {}).get(selected_item)
-                        variants = get_variants(item_entry)  # Correct function usage
+                        variants = get_variants(item_entry)
                         variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
                         if variants == ["Default"]:
@@ -93,19 +93,19 @@ class TraderView(discord.ui.View):
                             variant_view = discord.ui.View()
                             variant_view.add_item(VariantSelect())
                             await item_interaction.response.send_message(
-                                "Select a variant:", view=variant_view, ephemeral=True, delete_after=60
+                                "Select a variant:", view=variant_view, ephemeral=True
                             )
 
                 item_view = discord.ui.View()
                 item_view.add_item(ItemSelect())
                 await select_interaction.response.send_message(
-                    "Select an item:", view=item_view, ephemeral=True, delete_after=60
+                    "Select an item:", view=item_view, ephemeral=True
                 )
 
         category_view = discord.ui.View()
         category_view.add_item(CategorySelect())
         await interaction.response.send_message(
-            "Select a category:", view=category_view, ephemeral=True, delete_after=60
+            "Select a category:", view=category_view, ephemeral=True
         )
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
@@ -131,14 +131,14 @@ class TraderView(discord.ui.View):
         await msg.add_reaction("🔴")
 
         session_manager.clear_session(self.user_id)
-        await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
+        await interaction.response.send_message("Your order has been submitted!", ephemeral=True)
 
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
         session_manager.clear_session(self.user_id)
-        await interaction.response.send_message("Your order has been canceled.", ephemeral=True, delete_after=10)
+        await interaction.response.send_message("Your order has been canceled.", ephemeral=True)
 
 
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
@@ -160,13 +160,13 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         try:
             quantity = int(self.quantity.value)
             item_entry = PRICE_DATA.get(self.category, {}).get(self.item)
-            variants = get_variants(item_entry)  # Correct function usage
+            variants = get_variants(item_entry)
             matched_variant = next(
                 (v for v in variants if v.lower() == self.variant.lower()), self.variant
             )
             price = get_price(self.category, self.item, matched_variant)
             subtotal = price * quantity
-            self.variant = matched_variant  # Normalize case
+            self.variant = matched_variant
 
             session_manager.add_item(self.user_id, {
                 "category": self.category,
@@ -178,10 +178,10 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             })
 
             await interaction.response.send_message(
-                f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True, delete_after=10
+                f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True
             )
         except ValueError:
-            await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
+            await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
 
 class TraderCommand(commands.Cog):
