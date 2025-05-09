@@ -129,7 +129,7 @@ class TraderView(discord.ui.View):
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES} - an order is ready for trader!")
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}"
+        msg = await trader_channel.send(f"{summary}")
 
 await interaction.channel.send(f"{MENTION_ROLES} - an order is ready for trader!")
         await msg.add_reaction("â")
