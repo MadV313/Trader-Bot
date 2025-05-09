@@ -1,7 +1,6 @@
 import json
 import os
 import time
-from datetime import datetime
 
 # Load config from environment variable
 config = json.loads(os.environ.get("CONFIG_JSON"))
@@ -9,14 +8,14 @@ SESSION_TIMEOUT = config.get("session_timeout_minutes", 15) * 60  # Default to 1
 
 ORDERS_FILE = "data/orders.json"
 SESSION_CACHE = {}
-LOG_FILE = "logs/session_activity.log"
+LOG_FILE = os.path.join("data", "logs", "session_activity.log")
 
 
 def log(message):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     full_message = f"[SessionManager] [{timestamp}] {message}"
     print(full_message)
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(os.path.join("data", "logs"), exist_ok=True)
     with open(LOG_FILE, "a") as log_file:
         log_file.write(full_message + "\n")
 
@@ -80,12 +79,3 @@ def save_orders(data):
     with open(ORDERS_FILE, "w") as f:
         json.dump(data, f, indent=2)
     log("Orders file saved successfully.")
-
-
-# Optional: Auto-cleanup inactive sessions (useful if you want to periodically clear old ones)
-def cleanup_inactive_sessions():
-    inactive_users = [user_id for user_id in SESSION_CACHE if not is_session_active(user_id)]
-    for user_id in inactive_users:
-        clear_session(user_id)
-    if inactive_users:
-        log(f"Auto-cleaned inactive sessions for users: {inactive_users}")
