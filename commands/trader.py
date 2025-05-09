@@ -124,7 +124,7 @@ class TraderView(discord.ui.View):
         for item in items:
             summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}\n"
         summary += f"**Total: ${total:,}**"
-            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}
+        trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
 "
         summary += f"**Total: ${total:,}**"
 
