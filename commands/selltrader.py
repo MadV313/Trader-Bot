@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import json
 import os
 from utils import session_manager
@@ -175,16 +176,17 @@ class SellTraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="selltrader")
-    async def start_sell_session(self, ctx):
-        if ctx.channel.id != ECONOMY_CHANNEL_ID:
-            await ctx.send("This command can only be used in the #economy channel.", ephemeral=True)
+    @app_commands.command(name="selltrader", description="Start a sell session with the trader.")
+    async def selltrader(self, interaction: discord.Interaction):
+        if interaction.channel.id != ECONOMY_CHANNEL_ID:
+            await interaction.response.send_message("This command can only be used in the #economy channel.", ephemeral=True)
             return
 
-        session_manager.start_session(ctx.author.id)
-        await ctx.send(
+        session_manager.start_session(interaction.user.id)
+        await interaction.response.send_message(
             "Sell session started! Use the buttons below to add items, submit, or cancel your order.",
-            view=SellTraderView(self.bot, ctx.author.id)
+            view=SellTraderView(self.bot, interaction.user.id),
+            ephemeral=True
         )
 
 async def setup(bot):
