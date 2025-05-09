@@ -1,51 +1,41 @@
 import json
 import os
 from datetime import datetime
-from utils import variant_utils  # Centralized variant handling
+from utils import variant_utils
 
 PRICE_FILE = os.path.join("data", "Final price list .json")
-FAILED_LOG_FILE = os.path.join("logs", "failed_orders.log")
-SUCCESS_LOG_FILE = os.path.join("logs", "successful_orders.log")
+LOG_DIR = os.path.join("data", "logs")
+FAILED_LOG_FILE = os.path.join(LOG_DIR, "failed_orders.log")
+SUCCESS_LOG_FILE = os.path.join(LOG_DIR, "successful_orders.log")
+
+
+def ensure_log_dir():
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+
+def log_event(log_file, message):
+    ensure_log_dir()
+    with open(log_file, "a") as f:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        f.write(f"[{timestamp}] {message}\n")
 
 
 def load_price_data():
     if not os.path.exists(PRICE_FILE):
         raise FileNotFoundError("Price list file not found.")
     with open(PRICE_FILE, "r") as f:
-        try:
-            return json.load(f)["categories"]
-        except Exception as e:
-            raise ValueError(f"Failed to parse price list: {e}")
-
-
-def log_failed_order(line_num, line, error):
-    os.makedirs("logs", exist_ok=True)
-    with open(FAILED_LOG_FILE, "a") as log_file:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_file.write(f"[{timestamp}] Line {line_num}: '{line}' — {error}\n")
-
-
-def log_successful_order(order_data):
-    os.makedirs("logs", exist_ok=True)
-    with open(SUCCESS_LOG_FILE, "a") as log_file:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        total = order_data['total']
-        items = ", ".join(f"{i['quantity']}x {i['item']} ({i['variant']})" for i in order_data['items'])
-        log_file.write(f"[{timestamp}] Order Parsed - Total: ${total:,} | Items: {items}\n")
+        return json.load(f)["categories"]
 
 
 def parse_order_lines(order_text, mode="buy"):
     data = load_price_data()
-    order_lines = order_text.strip().splitlines()
     parsed_items = []
     total = 0
-    line_num = 0
 
-    if not order_lines:
+    if not order_text.strip():
         return None, "No items provided in the order."
 
-    for line in order_lines:
-        line_num += 1
+    for line_num, line in enumerate(order_text.strip().splitlines(), start=1):
         try:
             if " x" not in line:
                 raise ValueError("Missing 'x' quantity format")
@@ -54,8 +44,7 @@ def parse_order_lines(order_text, mode="buy"):
             category, item, variant = map(str.strip, left.split(":"))
             quantity = int(quantity_str.strip())
 
-            if not variant:
-                variant = "Default"
+            variant = variant or "Default"
 
             if category not in data:
                 raise ValueError(f"Unknown category '{category}'")
@@ -63,15 +52,12 @@ def parse_order_lines(order_text, mode="buy"):
                 raise ValueError(f"Unknown item '{item}' in category '{category}'")
 
             item_data = data[category][item]
-
             if isinstance(item_data, dict):
                 variants = variant_utils.get_variants(item_data)
                 if not variant_utils.variant_exists(variants, variant):
                     raise ValueError(f"Unknown variant '{variant}' for item '{item}'")
-                # Normalize variant case to match the stored value
-                matched_variant = next(v for v in variants if v.lower() == variant.lower())
-                base_price = item_data[matched_variant]
-                variant = matched_variant  # Correct the variant case
+                variant = next(v for v in variants if v.lower() == variant.lower())
+                base_price = item_data[variant]
             else:
                 if variant.lower() != "default":
                     raise ValueError(f"Item '{item}' does not support variants")
@@ -91,10 +77,10 @@ def parse_order_lines(order_text, mode="buy"):
             total += subtotal
 
         except Exception as e:
-            log_failed_order(line_num, line, str(e))
-            return None, f"Error on line {line_num}: '{line}' — {str(e)}"
+            log_event(FAILED_LOG_FILE, f"Line {line_num}: '{line}' — {e}")
+            return None, f"Error on line {line_num}: '{line}' — {e}"
 
-    # Log successful parsing
-    log_successful_order({"items": parsed_items, "total": total})
+    items_summary = ", ".join(f"{i['quantity']}x {i['item']} ({i['variant']})" for i in parsed_items)
+    log_event(SUCCESS_LOG_FILE, f"Order Parsed - Total: ${total:,} | Items: {items_summary}")
 
     return {"items": parsed_items, "total": total}, None
