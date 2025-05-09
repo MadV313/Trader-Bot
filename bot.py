@@ -4,8 +4,12 @@ import os
 import json
 import asyncio
 
-# Load config from Railway environment variable
-config = json.loads(os.environ.get("CONFIG_JSON"))
+# Load config from Railway environment variable or fallback to local file
+try:
+    config = json.loads(os.environ.get("CONFIG_JSON"))
+except (TypeError, json.JSONDecodeError):
+    with open("config.json") as f:
+        config = json.load(f)
 
 TOKEN = config["token"]
 PREFIX = "/"
@@ -19,11 +23,11 @@ INTENTS.reactions = True
 bot = commands.Bot(command_prefix=PREFIX, intents=INTENTS)
 extensions_loaded = False  # Prevent reloading on reconnect
 
-# Load handler (reaction listeners)
+# Load reaction handlers
 from handlers.reaction_handler import setup_reaction_handler
 setup_reaction_handler(bot)
 
-# Load background task
+# Load background reminder tasks
 from tasks.reminder_task import start_reminder_task
 
 @bot.event
@@ -47,6 +51,13 @@ async def on_ready():
 
     start_reminder_task(bot)
 
+@bot.event
+async def on_disconnect():
+    print("[TraderBot] Disconnected from Discord. Attempting reconnect...")
+
 # Run bot
 if __name__ == "__main__":
-    bot.run(TOKEN)
+    try:
+        bot.run(TOKEN)
+    except KeyboardInterrupt:
+        print("[TraderBot] Shutdown requested by user. Exiting gracefully.")
