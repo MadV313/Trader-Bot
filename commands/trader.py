@@ -4,7 +4,7 @@ from discord import app_commands
 import json
 import os
 import asyncio
-from utils import session_manager
+from utils import session_manager, variant_utils  # Centralized variant logic
 
 # Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
@@ -17,27 +17,21 @@ PRICE_FILE = os.path.join("data", "Final price list .json")
 with open(PRICE_FILE, "r") as f:
     PRICE_DATA = json.load(f)["categories"]
 
-VARIANT_ALLOWED_CATEGORIES = ["Weapons", "Clothes", "Helmets", "Boots", "Gloves"]
 
 def get_categories():
     return list(PRICE_DATA.keys())
 
+
 def get_items_in_category(category):
     return list(PRICE_DATA.get(category, {}).keys())
 
-def get_variants(category, item):
-    if category not in VARIANT_ALLOWED_CATEGORIES:
-        return ["Default"]
-    entry = PRICE_DATA.get(category, {}).get(item)
-    if isinstance(entry, dict):
-        return list(entry.keys())
-    return ["Default"]
 
 def get_price(category, item, variant):
     entry = PRICE_DATA[category][item]
     if isinstance(entry, dict):
         return entry.get(variant)
     return entry if variant.lower() == "default" else None
+
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
@@ -72,7 +66,8 @@ class TraderView(discord.ui.View):
 
                     async def callback(self, item_interaction: discord.Interaction):
                         selected_item = self.values[0]
-                        variants = get_variants(selected_category, selected_item)
+                        item_entry = PRICE_DATA.get(selected_category, {}).get(selected_item)
+                        variants = variant_utils.get_variants(item_entry)
                         variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
                         if variants == ["Default"]:
@@ -87,20 +82,32 @@ class TraderView(discord.ui.View):
                                 async def callback(self, variant_interaction: discord.Interaction):
                                     selected_variant = self.values[0]
                                     await variant_interaction.response.send_modal(
-                                        QuantityModal(self.bot, self.user_id, selected_category, selected_item, selected_variant)
+                                        QuantityModal(
+                                            self.bot,
+                                            self.user_id,
+                                            selected_category,
+                                            selected_item,
+                                            selected_variant
+                                        )
                                     )
 
                             variant_view = discord.ui.View()
                             variant_view.add_item(VariantSelect())
-                            await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True, delete_after=60)
+                            await item_interaction.response.send_message(
+                                "Select a variant:", view=variant_view, ephemeral=True, delete_after=60
+                            )
 
                 item_view = discord.ui.View()
                 item_view.add_item(ItemSelect())
-                await select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True, delete_after=60)
+                await select_interaction.response.send_message(
+                    "Select an item:", view=item_view, ephemeral=True, delete_after=60
+                )
 
         category_view = discord.ui.View()
         category_view.add_item(CategorySelect())
-        await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True, delete_after=60)
+        await interaction.response.send_message(
+            "Select a category:", view=category_view, ephemeral=True, delete_after=60
+        )
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -136,6 +143,7 @@ class TraderView(discord.ui.View):
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True, delete_after=10)
 
+
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=3)
 
@@ -154,8 +162,14 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
 
         try:
             quantity = int(self.quantity.value)
-            price = get_price(self.category, self.item, self.variant)
+            item_entry = PRICE_DATA.get(self.category, {}).get(self.item)
+            variants = variant_utils.get_variants(item_entry)
+            matched_variant = next(
+                (v for v in variants if v.lower() == self.variant.lower()), self.variant
+            )
+            price = get_price(self.category, self.item, matched_variant)
             subtotal = price * quantity
+            self.variant = matched_variant  # Normalize variant case
 
             session_manager.add_item(self.user_id, {
                 "category": self.category,
@@ -172,6 +186,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
 
+
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -179,7 +194,9 @@ class TraderCommand(commands.Cog):
     @app_commands.command(name="trader", description="Start a trader order session.")
     async def start_trader_session(self, interaction: discord.Interaction):
         if interaction.channel.id != ECONOMY_CHANNEL_ID:
-            return await interaction.response.send_message("This command can only be used in the #economy channel.", ephemeral=True)
+            return await interaction.response.send_message(
+                "This command can only be used in the #economy channel.", ephemeral=True
+            )
 
         session_manager.start_session(interaction.user.id)
         await interaction.response.send_message(
@@ -187,6 +204,7 @@ class TraderCommand(commands.Cog):
             view=TraderView(self.bot, interaction.user.id),
             ephemeral=True
         )
+
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
