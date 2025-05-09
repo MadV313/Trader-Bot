@@ -2,20 +2,25 @@ import json
 import os
 import time
 
-# Load config from environment variable
+# Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
-SESSION_TIMEOUT = config.get("session_timeout_minutes", 15) * 60  # Default to 15 minutes if not set
+SESSION_TIMEOUT = config.get("session_timeout_minutes", 15) * 60  # Default to 15 minutes
 
 ORDERS_FILE = "data/orders.json"
+LOG_DIR = "data/logs"
+LOG_FILE = os.path.join(LOG_DIR, "session_activity.log")
 SESSION_CACHE = {}
-LOG_FILE = os.path.join("data", "logs", "session_activity.log")
+
+
+def ensure_log_dir():
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 
 def log(message):
+    ensure_log_dir()
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     full_message = f"[SessionManager] [{timestamp}] {message}"
     print(full_message)
-    os.makedirs(os.path.join("data", "logs"), exist_ok=True)
     with open(LOG_FILE, "a") as log_file:
         log_file.write(full_message + "\n")
 
