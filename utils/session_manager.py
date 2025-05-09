@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from datetime import datetime
 
 # Load config from environment variable
 config = json.loads(os.environ.get("CONFIG_JSON"))
@@ -8,10 +9,17 @@ SESSION_TIMEOUT = config.get("session_timeout_minutes", 15) * 60  # Default to 1
 
 ORDERS_FILE = "data/orders.json"
 SESSION_CACHE = {}
+LOG_FILE = "logs/session_activity.log"
+
 
 def log(message):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    print(f"[SessionManager] [{timestamp}] {message}")
+    full_message = f"[SessionManager] [{timestamp}] {message}"
+    print(full_message)
+    os.makedirs("logs", exist_ok=True)
+    with open(LOG_FILE, "a") as log_file:
+        log_file.write(full_message + "\n")
+
 
 def start_session(user_id):
     SESSION_CACHE[user_id] = {
@@ -20,12 +28,14 @@ def start_session(user_id):
     }
     log(f"Session started for user {user_id}.")
 
+
 def add_item(user_id, item):
     if user_id not in SESSION_CACHE:
         start_session(user_id)
     SESSION_CACHE[user_id]["items"].append(item)
     SESSION_CACHE[user_id]["last_active"] = time.time()
     log(f"Added item to session for user {user_id}: {item}.")
+
 
 def get_session_items(user_id):
     session = SESSION_CACHE.get(user_id)
@@ -34,10 +44,12 @@ def get_session_items(user_id):
         return []
     return session["items"]
 
+
 def clear_session(user_id):
     if user_id in SESSION_CACHE:
         log(f"Session cleared for user {user_id}.")
     SESSION_CACHE.pop(user_id, None)
+
 
 def is_session_active(user_id):
     session = SESSION_CACHE.get(user_id)
@@ -48,11 +60,13 @@ def is_session_active(user_id):
         return False
     return True
 
+
 def remove_item(user_id, item_index):
     if user_id in SESSION_CACHE and 0 <= item_index < len(SESSION_CACHE[user_id]["items"]):
         removed_item = SESSION_CACHE[user_id]["items"].pop(item_index)
         SESSION_CACHE[user_id]["last_active"] = time.time()
         log(f"Removed item from session for user {user_id}: {removed_item}.")
+
 
 def load_orders():
     if not os.path.exists(ORDERS_FILE):
@@ -61,7 +75,17 @@ def load_orders():
     with open(ORDERS_FILE, "r") as f:
         return json.load(f)
 
+
 def save_orders(data):
     with open(ORDERS_FILE, "w") as f:
         json.dump(data, f, indent=2)
     log("Orders file saved successfully.")
+
+
+# Optional: Auto-cleanup inactive sessions (useful if you want to periodically clear old ones)
+def cleanup_inactive_sessions():
+    inactive_users = [user_id for user_id in SESSION_CACHE if not is_session_active(user_id)]
+    for user_id in inactive_users:
+        clear_session(user_id)
+    if inactive_users:
+        log(f"Auto-cleaned inactive sessions for users: {inactive_users}")
