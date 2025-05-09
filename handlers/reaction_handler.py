@@ -48,6 +48,8 @@ def setup_reaction_handler(bot):
 
         if message.content.startswith("Order for"):
             await handle_order_confirmation(bot, message, member)
+        elif message.content.startswith("<@") and "would like to sell" in message.content:
+            await handle_sell_confirmation(bot, message, member)
         elif "payment has been sent from" in message.content:
             await handle_payment_confirmation(bot, message, member)
 
@@ -74,9 +76,43 @@ async def handle_order_confirmation(bot, message, admin_member):
 
     # Store multi-order entry
     order_entry = {
+        "type": "buy",
         "order_id": f"msg_{message.id}",
         "confirmed": True,
         "paid": False,
+        "confirmed_by": admin_member.id,
+        "total": total_value,
+        "order_message_id": message.id,
+        "payment_message_id": None
+    }
+
+    orders.setdefault(user_id, [])
+    orders[user_id].append(order_entry)
+    save_orders(orders)
+
+# --------- SELL CONFIRMATION (New) --------- #
+async def handle_sell_confirmation(bot, message, admin_member):
+    orders = load_orders()
+    player = message.mentions[0]
+    user_id = str(player.id)
+
+    total_line = next((line for line in message.content.splitlines() if "Total Owed:" in line), None)
+    total_value = int(total_line.replace("**Total Owed: $", "").replace("**", "").replace(",", "").strip())
+
+    # Edit message
+    new_content = message.content + f"\n✅ Confirmed by {admin_member.mention} — Sale payout complete."
+    await message.edit(content=new_content)
+
+    # Notify player
+    economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
+    await economy_channel.send(f"{player.mention} thanks for recycling your goods!")
+
+    # Store order entry if needed
+    order_entry = {
+        "type": "sell",
+        "order_id": f"msg_{message.id}",
+        "confirmed": True,
+        "paid": True,
         "confirmed_by": admin_member.id,
         "total": total_value,
         "order_message_id": message.id,
@@ -93,10 +129,8 @@ async def handle_payment_confirmation(bot, message, admin_member):
     player = message.mentions[1]  # Second mention is player
     user_id = str(player.id)
 
-    # Confirm payment message
     await message.edit(content=message.content + f"\n✅ Payment confirmed by {admin_member.mention}.")
 
-    # Link payment message to latest unpaid confirmed order
     user_orders = orders.get(user_id, [])
     latest_unpaid = next((o for o in reversed(user_orders) if o["confirmed"] and not o["paid"]), None)
     if latest_unpaid:
@@ -104,7 +138,6 @@ async def handle_payment_confirmation(bot, message, admin_member):
         latest_unpaid["payment_message_id"] = message.id
         save_orders(orders)
 
-    # Send container/shed button prompt
     view = View(timeout=120)
     for i in range(1, 7):
         view.add_item(Button(label=f"Container {i}", style=discord.ButtonStyle.primary, custom_id=f"container_{i}"))
