@@ -4,7 +4,7 @@ import os
 import json
 import asyncio
 
-# Load config from Railway environment variable or fallback to local file
+# Load config from environment variable or fallback to local file
 try:
     config = json.loads(os.environ.get("CONFIG_JSON"))
 except (TypeError, json.JSONDecodeError):
@@ -34,12 +34,16 @@ from tasks.reminder_task import start_reminder_task
 async def on_ready():
     global extensions_loaded
 
-    print(f"[TraderBot] Logged in as {bot.user}")
+    print(f"[TraderBot] Logged in as {bot.user} (ID: {bot.user.id})")
 
     if not extensions_loaded:
         for file in os.listdir("./commands"):
             if file.endswith(".py"):
-                await bot.load_extension(f"commands.{file[:-3]}")
+                try:
+                    await bot.load_extension(f"commands.{file[:-3]}")
+                    print(f"[TraderBot] Loaded extension: {file}")
+                except Exception as e:
+                    print(f"[TraderBot] Failed to load {file}: {e}")
         extensions_loaded = True
         print("[TraderBot] All command modules loaded.")
 
@@ -53,11 +57,17 @@ async def on_ready():
 
 @bot.event
 async def on_disconnect():
-    print("[TraderBot] Disconnected from Discord. Attempting reconnect...")
+    print("[TraderBot] Disconnected. Attempting automatic reconnect...")
 
-# Run bot
+@bot.event
+async def on_resumed():
+    print("[TraderBot] Successfully resumed session.")
+
 if __name__ == "__main__":
     try:
+        print("[TraderBot] Starting up...")
         bot.run(TOKEN)
     except KeyboardInterrupt:
         print("[TraderBot] Shutdown requested by user. Exiting gracefully.")
+    except Exception as e:
+        print(f"[TraderBot] Unexpected error: {e}")
