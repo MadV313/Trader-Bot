@@ -11,6 +11,7 @@ TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 ADMIN_ROLE_IDS = config["admin_role_ids"]
 ORDERS_FILE = "data/orders.json"
+LOG_FILE = "data/order_events.log"
 
 def load_orders():
     try:
@@ -22,6 +23,10 @@ def load_orders():
 def save_orders(data):
     with open(ORDERS_FILE, "w") as f:
         json.dump(data, f, indent=2)
+
+def log_event(event):
+    with open(LOG_FILE, "a") as log:
+        log.write(f"{event}\n")
 
 def setup_reaction_handler(bot):
     @bot.event
@@ -69,7 +74,7 @@ async def handle_order_confirmation(bot, message, admin_member):
 
     economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
     await economy_channel.send(
-        f"{player.mention} your trader is ready for pick up! Please pay the trader {admin_member.mention} (${total_value:,}) to complete the order!"
+        f"{player.mention}, your trader is ready! Please pay {admin_member.mention} (${total_value:,}) to complete your order."
     )
 
     order_entry = {
@@ -87,6 +92,8 @@ async def handle_order_confirmation(bot, message, admin_member):
     orders[user_id].append(order_entry)
     save_orders(orders)
 
+    log_event(f"[ORDER CONFIRMED] Admin: {admin_member.id}, Player: {player.id}, Amount: {total_value}")
+
 # --------- SELL CONFIRMATION --------- #
 async def handle_sell_confirmation(bot, message, admin_member):
     orders = load_orders()
@@ -100,7 +107,7 @@ async def handle_sell_confirmation(bot, message, admin_member):
     await message.edit(content=new_content)
 
     economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
-    await economy_channel.send(f"{player.mention} thanks for recycling your goods!")
+    await economy_channel.send(f"{player.mention}, thanks for recycling your goods!")
 
     order_entry = {
         "type": "sell",
@@ -116,6 +123,8 @@ async def handle_sell_confirmation(bot, message, admin_member):
     orders.setdefault(user_id, [])
     orders[user_id].append(order_entry)
     save_orders(orders)
+
+    log_event(f"[SELL CONFIRMED] Admin: {admin_member.id}, Player: {player.id}, Amount: {total_value}")
 
 # --------- PAYMENT CONFIRMATION --------- #
 async def handle_payment_confirmation(bot, message, admin_member):
@@ -139,7 +148,7 @@ async def handle_payment_confirmation(bot, message, admin_member):
         view.add_item(Button(label=f"Shed {i}", style=discord.ButtonStyle.secondary, custom_id=f"shed_{i}"))
     view.add_item(Button(label="Skip", style=discord.ButtonStyle.danger, custom_id="skip_delivery"))
 
-    await message.reply(f"{admin_member.mention} please choose where the order is stored:", view=view)
+    await message.reply(f"{admin_member.mention}, please choose where the order is stored:", view=view)
 
     async def on_button_click(interaction: discord.Interaction):
         if interaction.user.id != admin_member.id:
@@ -149,7 +158,7 @@ async def handle_payment_confirmation(bot, message, admin_member):
         choice = interaction.data["custom_id"]
         if choice.startswith("container_") or choice.startswith("shed_"):
             location = choice.replace("_", " ").capitalize()
-            await interaction.response.send_message(f"Please enter the 4-digit code for **{location}**:", ephemeral=True)
+            await interaction.response.send_message(f"Enter the 4-digit code for **{location}**:", ephemeral=True)
 
             def check_code(msg):
                 return msg.author == admin_member and msg.channel == interaction.channel and msg.content.isdigit() and len(msg.content) == 4
@@ -159,11 +168,10 @@ async def handle_payment_confirmation(bot, message, admin_member):
                 code = msg.content
                 try:
                     await player.send(
-                        f"{player.mention} thanks for your purchase!\nYour order is available at the trader **({location})**.\n"
-                        f"Use code `{code}` to access your order.\n\n"
-                        f"Please leave the lock with the same code when you're done.\nSee ya next time!"
+                        f"{player.mention}, thanks for your purchase!\nYour order is stored at **{location}**.\n"
+                        f"Use code `{code}` to access it. Please leave the lock set to the same code after you're done."
                     )
-                    await interaction.followup.send("DM sent to player.", ephemeral=True)
+                    await interaction.followup.send("Code sent to player via DM.", ephemeral=True)
                 except:
                     await interaction.followup.send("Failed to DM the player.", ephemeral=True)
             except asyncio.TimeoutError:
@@ -171,7 +179,7 @@ async def handle_payment_confirmation(bot, message, admin_member):
 
         elif choice == "skip_delivery":
             eco_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
-            await eco_channel.send(f"{player.mention} thanks for your purchase! See ya next time!")
+            await eco_channel.send(f"{player.mention}, thanks for your purchase! See you next time!")
             await interaction.response.send_message("Player notified in economy channel.", ephemeral=True)
 
     bot.add_listener(on_button_click, "on_interaction")
