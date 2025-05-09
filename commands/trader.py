@@ -120,10 +120,10 @@ class TraderView(discord.ui.View):
         if not items:
             return await interaction.response.send_message("Your cart is empty!", ephemeral=True)
 
-        total = sum(item['subtotal'] for item in items)
-        summary = f"Order for {interaction.user.mention}:
-"
+        summary = f"Order for {interaction.user.mention}:\n"
         for item in items:
+            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}\n"
+        summary += f"**Total: ${total:,}**"
             summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}
 "
         summary += f"**Total: ${total:,}**"
