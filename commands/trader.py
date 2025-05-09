@@ -3,7 +3,8 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-from utils import session_manager, variant_utils
+from utils import session_manager
+from utils.variant_utils import get_variants, variant_exists  # Corrected import
 
 # Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
@@ -65,7 +66,7 @@ class TraderView(discord.ui.View):
                     async def callback(self, item_interaction: discord.Interaction):
                         selected_item = self.values[0]
                         item_entry = PRICE_DATA.get(selected_category, {}).get(selected_item)
-                        variants = variant_utils.get_variants(item_entry)
+                        variants = get_variants(item_entry)  # Correct function usage
                         variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
                         if variants == ["Default"]:
@@ -159,7 +160,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         try:
             quantity = int(self.quantity.value)
             item_entry = PRICE_DATA.get(self.category, {}).get(self.item)
-            variants = variant_utils.get_variants(item_entry)
+            variants = get_variants(item_entry)  # Correct function usage
             matched_variant = next(
                 (v for v in variants if v.lower() == self.variant.lower()), self.variant
             )
