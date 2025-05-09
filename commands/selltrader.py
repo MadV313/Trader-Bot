@@ -3,15 +3,37 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-from utils.order_utils import parse_order_lines
 
-# Load config from Railway environment
+# Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 MENTION_ROLES = " ".join(config["mention_roles"])
 ORDERS_FILE = "data/orders.json"
+
+# Load item data
+PRICE_FILE = os.path.join("data", "Final price list .json")
+with open(PRICE_FILE, "r") as f:
+    PRICE_DATA = json.load(f)["categories"]
+
+def get_categories():
+    return list(PRICE_DATA.keys())
+
+def get_items_in_category(category):
+    return list(PRICE_DATA.get(category, {}).keys())
+
+def get_variants(category, item):
+    entry = PRICE_DATA.get(category, {}).get(item)
+    if isinstance(entry, dict):
+        return list(entry.keys())
+    return ["Default"]
+
+def get_price(category, item, variant):
+    entry = PRICE_DATA[category][item]
+    if isinstance(entry, dict):
+        return entry.get(variant)
+    return entry if variant.lower() == "default" else None
 
 def load_orders():
     if not os.path.exists(ORDERS_FILE):
@@ -27,33 +49,46 @@ class SellTrader(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="selltrader", description="Sell items to the trader.")
-    @app_commands.describe(order="Enter each item on a new line like:\nCategory:Item:Variant xQuantity")
-    async def selltrader(self, interaction: discord.Interaction, order: str):
+    @app_commands.command(name="selltrader", description="Sell a single item to the trader.")
+    @app_commands.choices(
+        category=[app_commands.Choice(name=c, value=c) for c in get_categories()]
+    )
+    async def selltrader(
+        self,
+        interaction: discord.Interaction,
+        category: app_commands.Choice[str],
+        item: str,
+        variant: str,
+        quantity: int,
+    ):
         if interaction.channel.id != ECONOMY_CHANNEL_ID:
             await interaction.response.send_message("This command can only be used in the #economy channel.", ephemeral=True)
             return
 
         await interaction.response.defer(ephemeral=True)
-        parsed, error = parse_order_lines(order)
 
-        if error:
-            await interaction.followup.send(f"Error in your sell order:\n```{error}```", ephemeral=True)
+        selected_category = category.value
+        if item not in get_items_in_category(selected_category):
+            await interaction.followup.send(f"Item `{item}` is not valid for category `{selected_category}`.", ephemeral=True)
             return
 
-        # Calculate sell value (1/3 of price)
-        summary_lines = [f"{interaction.user.mention} would like to sell the following items:"]
-        total_owed = 0
-        for item in parsed["items"]:
-            sell_price = round(item["price"] / 3)
-            subtotal = sell_price * item["quantity"]
-            summary_lines.append(f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${subtotal:,}")
-            item["sell_price"] = sell_price
-            item["subtotal"] = subtotal
-            total_owed += subtotal
+        if variant not in get_variants(selected_category, item):
+            await interaction.followup.send(f"Variant `{variant}` is not valid for item `{item}`.", ephemeral=True)
+            return
 
-        summary_lines.append(f"**Total Owed: ${total_owed:,}**")
-        summary = "\n".join(summary_lines)
+        price = get_price(selected_category, item, variant)
+        if price is None:
+            await interaction.followup.send("Invalid item/variant combo.", ephemeral=True)
+            return
+
+        sell_price = round(price / 3)
+        subtotal = sell_price * quantity
+
+        summary = (
+            f"{interaction.user.mention} would like to sell the following item:\n"
+            f"- {item} ({variant}) x{quantity} = ${subtotal:,}\n"
+            f"**Total Owed: ${subtotal:,}**"
+        )
 
         # Post to trader-orders
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
@@ -70,13 +105,30 @@ class SellTrader(commands.Cog):
             "confirmed": False,
             "paid": False,
             "confirmed_by": None,
-            "total": total_owed,
+            "total": subtotal,
             "order_message_id": msg.id,
             "payment_message_id": None
         })
         save_orders(orders)
 
         await interaction.followup.send("Your sell order has been submitted to the trader!", ephemeral=True)
+
+    # Autocomplete: Item
+    @selltrader.autocomplete("item")
+    async def item_autocomplete(self, interaction: discord.Interaction, current: str):
+        category = interaction.namespace.category.value
+        suggestions = get_items_in_category(category)
+        matches = [i for i in suggestions if current.lower() in i.lower()]
+        return [app_commands.Choice(name=i, value=i) for i in matches[:20]]
+
+    # Autocomplete: Variant
+    @selltrader.autocomplete("variant")
+    async def variant_autocomplete(self, interaction: discord.Interaction, current: str):
+        category = interaction.namespace.category.value
+        item = interaction.namespace.item
+        variants = get_variants(category, item)
+        matches = [v for v in variants if current.lower() in v.lower()]
+        return [app_commands.Choice(name=v, value=v) for v in matches[:20]]
 
 async def setup(bot):
     await bot.add_cog(SellTrader(bot))
