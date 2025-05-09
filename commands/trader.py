@@ -131,7 +131,7 @@ class TraderView(discord.ui.View):
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}")
 
-await interaction.channel.send(f"{MENTION_ROLES} - an order is ready for trader!")
+        await interaction.channel.send(f"{MENTION_ROLES} - an order is ready for trader!")
         await msg.add_reaction("â")
 
         session_manager.clear_session(self.user_id)
@@ -181,7 +181,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             })
 
             await interaction.response.send_message(
-                await interaction.response.send_message(f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True)
+            await interaction.response.send_message(f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True)
             )
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
