@@ -4,9 +4,8 @@ from discord import app_commands
 import json
 import os
 
-# Load config
-with open("config.json") as f:
-    config = json.load(f)
+# Load config from Railway environment
+config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
