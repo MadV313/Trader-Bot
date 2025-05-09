@@ -3,7 +3,8 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-from utils import session_manager, variant_utils
+from utils import session_manager
+from utils.variant_utils import get_variants, variant_exists  # Corrected import
 
 # Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
@@ -65,26 +66,35 @@ class SellTraderView(discord.ui.View):
                     async def callback(self, item_interaction: discord.Interaction):
                         selected_item = self.values[0]
                         item_entry = PRICE_DATA.get(selected_category, {}).get(selected_item)
-                        variants = variant_utils.get_variants(item_entry)
+                        variants = get_variants(item_entry)
                         variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
-                        class VariantSelect(discord.ui.Select):
-                            def __init__(self):
-                                super().__init__(placeholder="Choose a variant...", options=variant_options)
+                        if variants == ["Default"]:
+                            await item_interaction.response.send_modal(
+                                SellQuantityModal(self.bot, self.user_id, selected_category, selected_item, "Default")
+                            )
+                        else:
+                            class VariantSelect(discord.ui.Select):
+                                def __init__(self):
+                                    super().__init__(placeholder="Choose a variant...", options=variant_options)
 
-                            async def callback(self, variant_interaction: discord.Interaction):
-                                selected_variant = self.values[0]
-                                await variant_interaction.response.send_modal(
-                                    SellQuantityModal(
-                                        self.bot, self.user_id, selected_category, selected_item, selected_variant
+                                async def callback(self, variant_interaction: discord.Interaction):
+                                    selected_variant = self.values[0]
+                                    await variant_interaction.response.send_modal(
+                                        SellQuantityModal(
+                                            self.bot,
+                                            self.user_id,
+                                            selected_category,
+                                            selected_item,
+                                            selected_variant
+                                        )
                                     )
-                                )
 
-                        variant_view = discord.ui.View()
-                        variant_view.add_item(VariantSelect())
-                        await item_interaction.response.send_message(
-                            "Select a variant:", view=variant_view, ephemeral=True
-                        )
+                            variant_view = discord.ui.View()
+                            variant_view.add_item(VariantSelect())
+                            await item_interaction.response.send_message(
+                                "Select a variant:", view=variant_view, ephemeral=True
+                            )
 
                 item_view = discord.ui.View()
                 item_view.add_item(ItemSelect())
@@ -156,7 +166,7 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
                 raise ValueError("Quantity must be greater than 0.")
 
             item_entry = PRICE_DATA.get(self.category, {}).get(self.item)
-            variants = variant_utils.get_variants(item_entry)
+            variants = get_variants(item_entry)
             matched_variant = next(
                 (v for v in variants if v.lower() == self.variant.lower()), self.variant
             )
@@ -166,7 +176,7 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
 
             sell_price = round(base_price / 3)
             subtotal = sell_price * quantity
-            self.variant = matched_variant  # Normalize variant case
+            self.variant = matched_variant
 
             session_manager.add_item(self.user_id, {
                 "category": self.category,
