@@ -1,0 +1,13 @@
+{
+  "token": "YOUR_DISCORD_BOT_TOKEN_HERE",
+  "trader_orders_channel_id": 123456789012345678,
+  "economy_channel_id": 234567890123456789,
+  "admin_role_ids": [
+    "111111111111111111",
+    "222222222222222222"
+  ],
+  "mention_roles": [
+    "<@&111111111111111111>",
+    "<@&222222222222222222>"
+  ]
+}
