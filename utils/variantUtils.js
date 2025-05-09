@@ -1,4 +1,5 @@
 function getVariants(itemData) {
+    // Return all variant keys if present, otherwise default to ["Default"]
     if (itemData && typeof itemData === 'object') {
         return Object.keys(itemData);
     }
