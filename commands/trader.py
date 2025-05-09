@@ -126,7 +126,7 @@ class TraderView(discord.ui.View):
             summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}\n"
         summary += f"**Total: ${total:,}**"
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES} â an order is ready for trader!")
+        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES} - an order is ready for trader!")
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}
