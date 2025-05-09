@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import json
 import os
 from utils import session_manager
@@ -11,7 +12,6 @@ TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 MENTION_ROLES = " ".join(config["mention_roles"])
 
-# Load price data
 PRICE_FILE = os.path.join("data", "Final price list .json")
 with open(PRICE_FILE, "r") as f:
     PRICE_DATA = json.load(f)["categories"]
@@ -48,7 +48,7 @@ class TraderView(discord.ui.View):
 
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            await interaction.response.send_message("Your session has expired. Please run `/trader` again.", ephemeral=True)
+            await interaction.response.send_message("Your session expired. Please run `/trader` again.", ephemeral=True)
             return
 
         categories = get_categories()
@@ -102,7 +102,7 @@ class TraderView(discord.ui.View):
 
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            await interaction.response.send_message("Your session has expired. Please start a new order with `/trader`.", ephemeral=True)
+            await interaction.response.send_message("Your session expired. Please run `/trader` again.", ephemeral=True)
             return
 
         items = session_manager.get_session_items(self.user_id)
@@ -129,11 +129,6 @@ class TraderView(discord.ui.View):
             await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
             return
 
-        if not session_manager.is_session_active(self.user_id):
-            session_manager.clear_session(self.user_id)
-            await interaction.response.send_message("Session already expired and cleaned up.", ephemeral=True)
-            return
-
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True)
 
@@ -151,7 +146,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     async def on_submit(self, interaction: discord.Interaction):
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            await interaction.response.send_message("Your session has expired. Please run `/trader` again.", ephemeral=True)
+            await interaction.response.send_message("Your session expired. Please run `/trader` again.", ephemeral=True)
             return
 
         try:
@@ -168,7 +163,9 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
                 "subtotal": subtotal
             })
 
-            await interaction.response.send_message(f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True)
+            await interaction.response.send_message(
+                f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True
+            )
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
@@ -176,15 +173,18 @@ class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="trader")
-    async def start_trader_session(self, ctx):
-        if ctx.channel.id != ECONOMY_CHANNEL_ID:
-            await ctx.send("This command can only be used in the #economy channel.", ephemeral=True)
+    @app_commands.command(name="trader", description="Start a trader order session.")
+    async def start_trader_session(self, interaction: discord.Interaction):
+        if interaction.channel.id != ECONOMY_CHANNEL_ID:
+            await interaction.response.send_message("This command can only be used in the #economy channel.", ephemeral=True)
             return
 
-        session_manager.start_session(ctx.author.id)
-        await ctx.send("Trader session started! Use the buttons below to add items, submit, or cancel your order.",
-                       view=TraderView(self.bot, ctx.author.id))
+        session_manager.start_session(interaction.user.id)
+        await interaction.response.send_message(
+            "Trader session started! Use the buttons below to add items, submit, or cancel your order.",
+            view=TraderView(self.bot, interaction.user.id),
+            ephemeral=True
+        )
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
