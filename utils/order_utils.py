@@ -1,10 +1,11 @@
 import json
 import os
 from datetime import datetime
-from utils import variant_utils  # New import for centralized variant handling
+from utils import variant_utils  # Centralized variant handling
 
 PRICE_FILE = os.path.join("data", "Final price list .json")
 FAILED_LOG_FILE = os.path.join("logs", "failed_orders.log")
+SUCCESS_LOG_FILE = os.path.join("logs", "successful_orders.log")
 
 
 def load_price_data():
@@ -22,6 +23,15 @@ def log_failed_order(line_num, line, error):
     with open(FAILED_LOG_FILE, "a") as log_file:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_file.write(f"[{timestamp}] Line {line_num}: '{line}' — {error}\n")
+
+
+def log_successful_order(order_data):
+    os.makedirs("logs", exist_ok=True)
+    with open(SUCCESS_LOG_FILE, "a") as log_file:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        total = order_data['total']
+        items = ", ".join(f"{i['quantity']}x {i['item']} ({i['variant']})" for i in order_data['items'])
+        log_file.write(f"[{timestamp}] Order Parsed - Total: ${total:,} | Items: {items}\n")
 
 
 def parse_order_lines(order_text, mode="buy"):
@@ -43,6 +53,9 @@ def parse_order_lines(order_text, mode="buy"):
             left, quantity_str = line.rsplit(" x", 1)
             category, item, variant = map(str.strip, left.split(":"))
             quantity = int(quantity_str.strip())
+
+            if not variant:
+                variant = "Default"
 
             if category not in data:
                 raise ValueError(f"Unknown category '{category}'")
@@ -80,5 +93,8 @@ def parse_order_lines(order_text, mode="buy"):
         except Exception as e:
             log_failed_order(line_num, line, str(e))
             return None, f"Error on line {line_num}: '{line}' — {str(e)}"
+
+    # Log successful parsing
+    log_successful_order({"items": parsed_items, "total": total})
 
     return {"items": parsed_items, "total": total}, None
