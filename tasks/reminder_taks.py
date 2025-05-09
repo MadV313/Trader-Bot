@@ -2,9 +2,10 @@ import discord
 from discord.ext import tasks
 from datetime import datetime, timezone, timedelta
 import json
+import os
 
-with open("config.json") as f:
-    config = json.load(f)
+# Load config from Railway environment variable
+config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 MENTION_ROLES = " ".join(config["mention_roles"])
