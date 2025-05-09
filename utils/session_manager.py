@@ -2,9 +2,12 @@ import json
 import os
 import time
 
+# Load config from environment variable
+config = json.loads(os.environ.get("CONFIG_JSON"))
+SESSION_TIMEOUT = config.get("session_timeout_minutes", 15) * 60  # Default to 15 minutes if not set
+
 ORDERS_FILE = "data/orders.json"
 SESSION_CACHE = {}
-SESSION_TIMEOUT = 900  # 15 minutes in seconds
 
 def start_session(user_id):
     SESSION_CACHE[user_id] = {
@@ -35,7 +38,6 @@ def is_session_active(user_id):
     return (time.time() - session["last_active"]) < SESSION_TIMEOUT
 
 def remove_item(user_id, item_index):
-    """Optional: Removes an item by its index from the user's session cart."""
     if user_id in SESSION_CACHE and 0 <= item_index < len(SESSION_CACHE[user_id]["items"]):
         SESSION_CACHE[user_id]["items"].pop(item_index)
         SESSION_CACHE[user_id]["last_active"] = time.time()
