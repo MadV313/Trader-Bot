@@ -46,6 +46,11 @@ class TraderView(discord.ui.View):
             await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
             return
 
+        if not session_manager.is_session_active(self.user_id):
+            session_manager.clear_session(self.user_id)
+            await interaction.response.send_message("Your session has expired. Please run `/trader` again.", ephemeral=True)
+            return
+
         categories = get_categories()
         options = [discord.SelectOption(label=c, value=c) for c in categories]
 
@@ -55,7 +60,6 @@ class TraderView(discord.ui.View):
 
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
-                await interaction.followup.send(f"Selected category: {selected_category}", ephemeral=True)
                 items = get_items_in_category(selected_category)
                 item_options = [discord.SelectOption(label=i, value=i) for i in items]
 
@@ -74,9 +78,9 @@ class TraderView(discord.ui.View):
 
                             async def callback(self, variant_interaction: discord.Interaction):
                                 selected_variant = self.values[0]
-
-                                # Prompt for quantity
-                                await variant_interaction.response.send_modal(QuantityModal(self.bot, self.user_id, selected_category, selected_item, selected_variant))
+                                await variant_interaction.response.send_modal(
+                                    QuantityModal(self.bot, self.user_id, selected_category, selected_item, selected_variant)
+                                )
 
                         variant_view = discord.ui.View()
                         variant_view.add_item(VariantSelect())
@@ -94,6 +98,11 @@ class TraderView(discord.ui.View):
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
+            return
+
+        if not session_manager.is_session_active(self.user_id):
+            session_manager.clear_session(self.user_id)
+            await interaction.response.send_message("Your session has expired. Please start a new order with `/trader`.", ephemeral=True)
             return
 
         items = session_manager.get_session_items(self.user_id)
@@ -120,6 +129,11 @@ class TraderView(discord.ui.View):
             await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
             return
 
+        if not session_manager.is_session_active(self.user_id):
+            session_manager.clear_session(self.user_id)
+            await interaction.response.send_message("Session already expired and cleaned up.", ephemeral=True)
+            return
+
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True)
 
@@ -135,6 +149,11 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         self.variant = variant
 
     async def on_submit(self, interaction: discord.Interaction):
+        if not session_manager.is_session_active(self.user_id):
+            session_manager.clear_session(self.user_id)
+            await interaction.response.send_message("Your session has expired. Please run `/trader` again.", ephemeral=True)
+            return
+
         try:
             quantity = int(self.quantity.value)
             price = get_price(self.category, self.item, self.variant)
