@@ -6,7 +6,12 @@ function getVariants(itemData) {
 }
 
 function variantExists(variants, userChoice) {
-    return variants.some(v => v.toLowerCase() === userChoice.toLowerCase());
+    if (!userChoice) return false;
+    const choice = userChoice.toLowerCase();
+    return variants.some(v => v.toLowerCase() === choice);
 }
 
-module.exports = { getVariants, variantExists };
+module.exports = {
+    getVariants,
+    variantExists
+};
