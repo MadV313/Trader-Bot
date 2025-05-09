@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-from utils import session_manager, variant_utils  # Centralized variant handling
+from utils import session_manager, variant_utils
 
 # Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
@@ -42,10 +42,9 @@ class SellTraderView(discord.ui.View):
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn’t your sell session.", ephemeral=True)
-
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            return await interaction.response.send_message("Your session expired. Please start a new sell order.", ephemeral=True)
+            return await interaction.response.send_message("Your session expired. Start a new sell order.", ephemeral=True)
 
         categories = get_categories()
         options = [discord.SelectOption(label=c, value=c) for c in categories]
@@ -103,10 +102,9 @@ class SellTraderView(discord.ui.View):
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn’t your sell session.", ephemeral=True)
-
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            return await interaction.response.send_message("Your session expired. Please start a new sell order.", ephemeral=True)
+            return await interaction.response.send_message("Your session expired. Start a new sell order.", ephemeral=True)
 
         items = session_manager.get_session_items(self.user_id)
         if not items:
@@ -122,7 +120,7 @@ class SellTraderView(discord.ui.View):
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
         await msg.add_reaction("🔴")
 
-        # Admin payout instruction
+        # Admin payout automation
         await trader_channel.send(f"give user:{interaction.user.id} amount:{total} account:cash")
 
         session_manager.clear_session(self.user_id)
@@ -132,7 +130,6 @@ class SellTraderView(discord.ui.View):
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn’t your sell session.", ephemeral=True)
-
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your sell order has been canceled.", ephemeral=True)
 
@@ -151,7 +148,7 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
     async def on_submit(self, interaction: discord.Interaction):
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            return await interaction.response.send_message("Your session expired. Please start a new sell order.", ephemeral=True)
+            return await interaction.response.send_message("Your session expired. Start a new sell order.", ephemeral=True)
 
         try:
             quantity = int(self.quantity.value)
@@ -166,6 +163,7 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
             base_price = get_price(self.category, self.item, matched_variant)
             if base_price is None:
                 raise ValueError("Invalid item or variant selected.")
+
             sell_price = round(base_price / 3)
             subtotal = sell_price * quantity
             self.variant = matched_variant  # Normalize variant case
