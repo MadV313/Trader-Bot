@@ -21,7 +21,7 @@
   "session_timeout_minutes": 15,
   "order_reminder_hours": 12,
 
-  "log_file_path": "data/order_events.log",
-  "max_order_items_per_session": 20,  // Example for session limit control if needed
-  "cleanup_after_submission": true   // Auto-remove command messages after submission
+  "log_file_path": "data/logs/order_events.log",
+  "max_order_items_per_session": 20,
+  "cleanup_after_submission": true
 }
