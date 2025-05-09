@@ -1,0 +1,15 @@
+# Ignore secrets
+config.json
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE / OS files
+.vscode/
+.env
+.DS_Store
+
+# Data & logs
+data/orders.json
+data/logs/
