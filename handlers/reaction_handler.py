@@ -2,6 +2,7 @@ import discord
 import json
 import asyncio
 import os
+from datetime import datetime
 from discord.ui import View, Button
 
 # Load config
@@ -11,7 +12,19 @@ TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 ADMIN_ROLE_IDS = config["admin_role_ids"]
 ORDERS_FILE = "data/orders.json"
-LOG_FILE = "data/order_events.log"
+LOG_DIR = "data/logs"
+LOG_FILE = os.path.join(LOG_DIR, "order_events.log")
+
+
+def ensure_log_dir():
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+
+def log_event(event):
+    ensure_log_dir()
+    with open(LOG_FILE, "a") as log:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log.write(f"[{timestamp}] {event}\n")
 
 
 def load_orders():
@@ -25,11 +38,6 @@ def load_orders():
 def save_orders(data):
     with open(ORDERS_FILE, "w") as f:
         json.dump(data, f, indent=2)
-
-
-def log_event(event):
-    with open(LOG_FILE, "a") as log:
-        log.write(f"{event}\n")
 
 
 def setup_reaction_handler(bot):
@@ -63,7 +71,7 @@ def setup_reaction_handler(bot):
             await handle_payment_confirmation(bot, message, member)
 
 
-# --------- ORDER CONFIRMATION --------- #
+# --- ORDER CONFIRMATION ---
 async def handle_order_confirmation(bot, message, admin_member):
     orders = load_orders()
     player = message.mentions[0]
@@ -91,7 +99,7 @@ async def handle_order_confirmation(bot, message, admin_member):
         "total": total_value,
         "order_message_id": message.id,
         "payment_message_id": None,
-        "items": []  # Placeholder for item details if needed later
+        "items": []
     }
 
     orders.setdefault(user_id, []).append(order_entry)
@@ -100,7 +108,7 @@ async def handle_order_confirmation(bot, message, admin_member):
     log_event(f"[ORDER CONFIRMED] Admin: {admin_member.id}, Player: {player.id}, Amount: {total_value}")
 
 
-# --------- SELL CONFIRMATION --------- #
+# --- SELL CONFIRMATION ---
 async def handle_sell_confirmation(bot, message, admin_member):
     orders = load_orders()
     player = message.mentions[0]
@@ -124,7 +132,7 @@ async def handle_sell_confirmation(bot, message, admin_member):
         "total": total_value,
         "order_message_id": message.id,
         "payment_message_id": None,
-        "items": []  # Placeholder for item details if needed later
+        "items": []
     }
 
     orders.setdefault(user_id, []).append(order_entry)
@@ -133,7 +141,7 @@ async def handle_sell_confirmation(bot, message, admin_member):
     log_event(f"[SELL CONFIRMED] Admin: {admin_member.id}, Player: {player.id}, Amount: {total_value}")
 
 
-# --------- PAYMENT CONFIRMATION --------- #
+# --- PAYMENT CONFIRMATION ---
 async def handle_payment_confirmation(bot, message, admin_member):
     orders = load_orders()
     player = message.mentions[1]
@@ -147,7 +155,6 @@ async def handle_payment_confirmation(bot, message, admin_member):
         latest_unpaid["paid"] = True
         latest_unpaid["payment_message_id"] = message.id
         save_orders(orders)
-
         log_event(f"[PAYMENT CONFIRMED] Admin: {admin_member.id}, Player: {player.id}, Amount: {latest_unpaid['total']}")
 
     view = View(timeout=120)
@@ -181,7 +188,6 @@ async def handle_payment_confirmation(bot, message, admin_member):
                 msg = await bot.wait_for("message", timeout=60.0, check=check_code)
                 code = msg.content
                 try:
-                    # Include item + variant breakdown in DM
                     order_items = latest_unpaid.get("items", [])
                     item_details = "\n".join(
                         f"- {i['quantity']}x {i['item']} ({i['variant']})" for i in order_items
@@ -190,8 +196,7 @@ async def handle_payment_confirmation(bot, message, admin_member):
                     await player.send(
                         f"{player.mention}, your order is stored at **{location}**.\n\n"
                         f"**Items:**\n{item_details}\n\n"
-                        f"Use code `{code}` to access it.\n"
-                        f"Please relock with the same code after collecting your gear."
+                        f"Use code `{code}` to access it.\nPlease relock with the same code after collecting your gear."
                     )
                     await interaction.followup.send("Code and order details sent to player via DM.", ephemeral=True)
                 except:
