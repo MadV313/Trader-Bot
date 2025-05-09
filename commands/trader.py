@@ -85,7 +85,7 @@ class TraderView(discord.ui.View):
                                         )
                                     )
 
-                            variant_view = discord.ui.View()
+                            variant_view = discord.ui.View(timeout=None)
                             variant_view.bot = item_interaction.view.bot
                             variant_view.user_id = item_interaction.view.user_id
                             variant_view.add_item(VariantSelect())
@@ -93,7 +93,7 @@ class TraderView(discord.ui.View):
                                 "Select a variant:", view=variant_view, ephemeral=True
                             )
 
-                item_view = discord.ui.View()
+                item_view = discord.ui.View(timeout=None)
                 item_view.bot = select_interaction.view.bot
                 item_view.user_id = select_interaction.view.user_id
                 item_view.add_item(ItemSelect())
@@ -101,7 +101,7 @@ class TraderView(discord.ui.View):
                     "Select an item:", view=item_view, ephemeral=True
                 )
 
-        category_view = discord.ui.View()
+        category_view = discord.ui.View(timeout=None)
         category_view.bot = interaction.view.bot if hasattr(interaction.view, 'bot') else self.bot
         category_view.user_id = interaction.view.user_id if hasattr(interaction.view, 'user_id') else self.user_id
         category_view.add_item(CategorySelect())
