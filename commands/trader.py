@@ -3,8 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-import asyncio
-from utils import session_manager, variant_utils  # Centralized variant logic
+from utils import session_manager, variant_utils
 
 # Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
@@ -43,7 +42,6 @@ class TraderView(discord.ui.View):
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
-
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Run `/trader` again.", ephemeral=True)
@@ -113,7 +111,6 @@ class TraderView(discord.ui.View):
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
-
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Run `/trader` again.", ephemeral=True)
@@ -139,7 +136,6 @@ class TraderView(discord.ui.View):
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn’t your order session.", ephemeral=True)
-
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True, delete_after=10)
 
@@ -169,7 +165,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             )
             price = get_price(self.category, self.item, matched_variant)
             subtotal = price * quantity
-            self.variant = matched_variant  # Normalize variant case
+            self.variant = matched_variant  # Normalize case
 
             session_manager.add_item(self.user_id, {
                 "category": self.category,
