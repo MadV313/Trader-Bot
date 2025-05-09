@@ -3,13 +3,11 @@ from discord.ext import commands
 import json
 import os
 
+# Load config from Railway environment
+config = json.loads(os.environ.get("CONFIG_JSON"))
+
 ORDERS_FILE = "data/orders.json"
-ADMIN_ROLE_IDS = [
-    "1173052585830264832",  # Founder
-    "1173049392371085392",  # Admin
-    "1184921037830373468",  # Trial Admin
-    "1370152166366642297"   # Trader
-]
+ADMIN_ROLE_IDS = config["admin_role_ids"]
 
 class ClearOrders(commands.Cog):
     def __init__(self, bot):
