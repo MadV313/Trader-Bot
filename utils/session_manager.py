@@ -84,3 +84,29 @@ def save_orders(data):
     with open(ORDERS_FILE, "w") as f:
         json.dump(data, f, indent=2)
     log("Orders file saved successfully.")
+
+
+def validate_session(user_id):
+    """Ensure the session is active and reset timeout."""
+    current_time = time.time()
+    session = SESSION_CACHE.get(user_id)
+    if session and (current_time - session['last_active'] < SESSION_TIMEOUT):
+        SESSION_CACHE[user_id]['last_active'] = current_time
+        return True
+    else:
+        end_session(user_id)
+        return False
+
+def end_session(user_id):
+    """End the user's session and remove from cache."""
+    if user_id in SESSION_CACHE:
+        log(f"Session ended for user {user_id}.")
+        del SESSION_CACHE[user_id]
+
+def cleanup_inactive_sessions():
+    """Optionally call this periodically to remove expired sessions."""
+    current_time = time.time()
+    expired_users = [user_id for user_id, session in SESSION_CACHE.items()
+                     if current_time - session['last_active'] >= SESSION_TIMEOUT]
+    for user_id in expired_users:
+        end_session(user_id)
