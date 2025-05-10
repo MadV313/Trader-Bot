@@ -29,7 +29,7 @@ def get_price(category, item, variant):
         return entry.get(variant)
     return entry if variant.lower() == "default" else None
 
-class SellTraderView(discord.ui.View):
+class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=300)
         self.bot = bot
@@ -38,10 +38,10 @@ class SellTraderView(discord.ui.View):
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isnât your sell session.", ephemeral=True)
+            return await interaction.response.send_message("This isn't your session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            return await interaction.response.send_message("Your session expired. Start a new sell order.", ephemeral=True)
+            return await interaction.response.send_message("Your session expired. Start a new order.", ephemeral=True)
 
         categories = get_categories()
         options = [discord.SelectOption(label=c, value=c) for c in categories]
@@ -60,12 +60,19 @@ class SellTraderView(discord.ui.View):
                         super().__init__(placeholder="Choose an item...", options=item_options)
                         self.bot = bot
                         self.user_id = user_id
-                        super().__init__(placeholder="Choose an item...", options=item_options)
 
                     async def callback(self, item_interaction: discord.Interaction):
                         selected_item = self.values[0]
                         item_entry = PRICE_DATA.get(selected_category, {}).get(selected_item)
                         variants = variant_utils.get_variants(item_entry)
+
+                        # Skip variant selection if only Default
+                        if variants == ["Default"]:
+                            await item_interaction.response.send_modal(
+                                QuantityModal(self.bot, self.user_id, selected_category, selected_item, "Default")
+                            )
+                            return
+
                         variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
                         class VariantSelect(discord.ui.Select):
@@ -73,14 +80,11 @@ class SellTraderView(discord.ui.View):
                                 super().__init__(placeholder="Choose a variant...", options=variant_options)
                                 self.bot = bot
                                 self.user_id = user_id
-                                super().__init__(placeholder="Choose a variant...", options=variant_options)
 
                             async def callback(self, variant_interaction: discord.Interaction):
                                 selected_variant = self.values[0]
                                 await variant_interaction.response.send_modal(
-                                    SellQuantityModal(
-                                        self.bot, self.user_id, selected_category, selected_item, selected_variant
-                                    )
+                                    QuantityModal(self.bot, self.user_id, selected_category, selected_item, selected_variant)
                                 )
 
                         variant_view = discord.ui.View()
@@ -101,42 +105,43 @@ class SellTraderView(discord.ui.View):
             "Select a category:", view=category_view, ephemeral=True
         )
 
-    @discord.ui.button(label="Submit Sell Order", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isnât your sell session.", ephemeral=True)
+            return await interaction.response.send_message("This isn't your session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            return await interaction.response.send_message("Your session expired. Start a new sell order.", ephemeral=True)
+            return await interaction.response.send_message("Your session expired. Start a new order.", ephemeral=True)
 
         items = session_manager.get_session_items(self.user_id)
         if not items:
-            return await interaction.response.send_message("Your sell cart is empty!", ephemeral=True)
+            return await interaction.response.send_message("Your cart is empty!", ephemeral=True)
 
         total = sum(item['subtotal'] for item in items)
-        summary = f"{interaction.user.mention} would like to sell the following items:\n"
+        summary = f"{interaction.user.mention} wants to purchase:
+"
         for item in items:
-            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}\n"
-        summary += f"**Total Owed: ${total:,}**"
+            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}
+"
+        summary += f"**Total: ${total:,}**"
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
-        await msg.add_reaction("ð´")
+        msg = await trader_channel.send(f"{summary}
 
-        # Admin payout automation
-        await trader_channel.send(f"give user:{interaction.user.id} amount:{total} account:cash")
+{MENTION_ROLES}")
+        await msg.add_reaction("â")
 
         session_manager.clear_session(self.user_id)
-        await interaction.response.send_message("Your sell order has been submitted!", ephemeral=True)
+        await interaction.response.send_message("Your order has been submitted!", ephemeral=True)
 
-    @discord.ui.button(label="Cancel Sell Order", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isnât your sell session.", ephemeral=True)
+            return await interaction.response.send_message("This isn't your session.", ephemeral=True)
         session_manager.clear_session(self.user_id)
-        await interaction.response.send_message("Your sell order has been canceled.", ephemeral=True)
+        await interaction.response.send_message("Your order has been canceled.", ephemeral=True)
 
-class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
+class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
     def __init__(self, bot, user_id, category, item, variant):
@@ -150,7 +155,7 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
     async def on_submit(self, interaction: discord.Interaction):
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
-            return await interaction.response.send_message("Your session expired. Start a new sell order.", ephemeral=True)
+            return await interaction.response.send_message("Your session expired. Start a new order.", ephemeral=True)
 
         try:
             quantity = int(self.quantity.value)
@@ -166,8 +171,7 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
             if base_price is None:
                 raise ValueError("Invalid item or variant selected.")
 
-            sell_price = round(base_price / 3)
-            subtotal = sell_price * quantity
+            subtotal = base_price * quantity
             self.variant = matched_variant  # Normalize variant case
 
             session_manager.add_item(self.user_id, {
@@ -175,22 +179,22 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
                 "item": self.item,
                 "variant": self.variant,
                 "quantity": quantity,
-                "price": sell_price,
+                "price": base_price,
                 "subtotal": subtotal
             })
 
             await interaction.response.send_message(
-                f"Added {self.item} ({self.variant}) x{quantity} to your sell order.", ephemeral=True
+                f"Added {self.item} ({self.variant}) x{quantity} to your order.", ephemeral=True
             )
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
-class SellTraderCommand(commands.Cog):
+class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="selltrader", description="Start a sell session with the trader.")
-    async def selltrader(self, interaction: discord.Interaction):
+    @app_commands.command(name="trader", description="Start a buying session with the trader.")
+    async def trader(self, interaction: discord.Interaction):
         if interaction.channel.id != ECONOMY_CHANNEL_ID:
             return await interaction.response.send_message(
                 "This command can only be used in the #economy channel.", ephemeral=True
@@ -198,10 +202,10 @@ class SellTraderCommand(commands.Cog):
 
         session_manager.start_session(interaction.user.id)
         await interaction.response.send_message(
-            "Sell session started! Use the buttons below to add items, submit, or cancel your order.",
-            view=SellTraderView(self.bot, interaction.user.id),
+            "Buying session started! Use the buttons below to add items, submit, or cancel your order.",
+            view=TraderView(self.bot, interaction.user.id),
             ephemeral=True
         )
 
 async def setup(bot):
-    await bot.add_cog(SellTraderCommand(bot))
+    await bot.add_cog(TraderCommand(bot))
