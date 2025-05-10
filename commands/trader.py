@@ -194,6 +194,7 @@ class TraderCommand(commands.Cog):
         await interaction.response.send_message(
             "Sell session started! Use the buttons below to add items, submit, or cancel your order.",
             view=TraderView(self.bot, interaction.user.id),
+            ephemeral=True
         )
 
 async def setup(bot):
