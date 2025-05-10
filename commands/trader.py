@@ -179,7 +179,7 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
-class SellTraderCommand(commands.Cog):
+class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -198,4 +198,4 @@ class SellTraderCommand(commands.Cog):
         )
 
 async def setup(bot):
-    await bot.add_cog(SellTraderCommand(bot))
+    await bot.add_cog(TraderCommand(bot))
