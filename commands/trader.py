@@ -24,19 +24,12 @@ def get_items_in_category(category):
     return list(PRICE_DATA.get(category, {}).keys())
 
 def get_price(category, item, variant):
-        if isinstance(entry, dict) and len(entry) > 1:
-            variants = list(entry.keys())
-            # Code to show variants dropdown would go here
-        else:
-            variants = ["Default"]
-        # Code to ask for quantity before proceeding
-
     entry = PRICE_DATA[category][item]
     if isinstance(entry, dict):
         return entry.get(variant)
     return entry if variant.lower() == "default" else None
 
-    class TraderView(discord.ui.View):
+class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=300)
         self.bot = bot
@@ -137,7 +130,7 @@ def get_price(category, item, variant):
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your sell order has been canceled.", ephemeral=True)
 
-    class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
+class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
     def __init__(self, bot, user_id, category, item, variant):
@@ -186,7 +179,7 @@ def get_price(category, item, variant):
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
-    class SellTraderCommand(commands.Cog):
+class SellTraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -204,5 +197,5 @@ def get_price(category, item, variant):
             ephemeral=True
         )
 
-    async def setup(bot):
+async def setup(bot):
     await bot.add_cog(SellTraderCommand(bot))
