@@ -13,7 +13,7 @@ TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 MENTION_ROLES = " ".join(config["mention_roles"])
 
-PRICE_FILE = os.path.join("data", "Final price list.json")
+PRICE_FILE = os.path.join("data", "Final price list .json")
 with open(PRICE_FILE, "r") as f:
     PRICE_DATA = json.load(f)["categories"]
 
@@ -29,7 +29,7 @@ def get_price(category, item, variant):
         return entry.get(variant)
     return entry if variant.lower() == "default" else None
 
-class TraderView(discord.ui.View):
+class SellTraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=300)
         self.bot = bot
@@ -56,23 +56,16 @@ class TraderView(discord.ui.View):
                 item_options = [discord.SelectOption(label=i, value=i) for i in items]
 
                 class ItemSelect(discord.ui.Select):
-                    def __init__(self):
+                    def __init__(self, bot, user_id):
+                        super().__init__(placeholder="Choose an item...", options=item_options)
+                        self.bot = bot
+                        self.user_id = user_id
                         super().__init__(placeholder="Choose an item...", options=item_options)
 
                     async def callback(self, item_interaction: discord.Interaction):
                         selected_item = self.values[0]
                         item_entry = PRICE_DATA.get(selected_category, {}).get(selected_item)
                         variants = variant_utils.get_variants(item_entry)
-                        
-                        # Skip variant selection if only "Default" exists
-                        if variants == ["Default"]:
-                            await item_interaction.response.send_modal(
-                                SellQuantityModal(
-                                    self.bot, self.user_id, selected_category, selected_item, "Default"
-                                )
-                            )
-                            return
-
                         variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
                         class VariantSelect(discord.ui.Select):
@@ -80,8 +73,6 @@ class TraderView(discord.ui.View):
                                 super().__init__(placeholder="Choose a variant...", options=variant_options)
                                 self.bot = bot
                                 self.user_id = user_id
-
-                            def __init__(self):
                                 super().__init__(placeholder="Choose a variant...", options=variant_options)
 
                             async def callback(self, variant_interaction: discord.Interaction):
@@ -99,7 +90,7 @@ class TraderView(discord.ui.View):
                         )
 
                 item_view = discord.ui.View()
-                item_view.add_item(ItemSelect())
+                item_view.add_item(ItemSelect(self.bot, self.user_id))
                 await select_interaction.response.send_message(
                     "Select an item:", view=item_view, ephemeral=True
                 )
@@ -194,11 +185,11 @@ class SellQuantityModal(discord.ui.Modal, title="Enter Quantity to Sell"):
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
-class TraderCommand(commands.Cog):
+class SellTraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="trader", description="Start a sell session with the trader.")
+    @app_commands.command(name="selltrader", description="Start a sell session with the trader.")
     async def selltrader(self, interaction: discord.Interaction):
         if interaction.channel.id != ECONOMY_CHANNEL_ID:
             return await interaction.response.send_message(
@@ -208,9 +199,9 @@ class TraderCommand(commands.Cog):
         session_manager.start_session(interaction.user.id)
         await interaction.response.send_message(
             "Sell session started! Use the buttons below to add items, submit, or cancel your order.",
-            view=TraderView(self.bot, interaction.user.id),
+            view=SellTraderView(self.bot, interaction.user.id),
             ephemeral=True
         )
 
 async def setup(bot):
-    await bot.add_cog(TraderCommand(bot))
+    await bot.add_cog(SellTraderCommand(bot))
