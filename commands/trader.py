@@ -13,7 +13,7 @@ TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 MENTION_ROLES = " ".join(config["mention_roles"])
 
-PRICE_FILE = os.path.join("data", "Final price list .json")
+PRICE_FILE = os.path.join("data", "Final price list.json")
 with open(PRICE_FILE, "r") as f:
     PRICE_DATA = json.load(f)["categories"]
 
