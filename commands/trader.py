@@ -66,7 +66,6 @@ class TraderView(discord.ui.View):
                         item_entry = PRICE_DATA.get(selected_category, {}).get(selected_item)
                         variants = variant_utils.get_variants(item_entry)
 
-                        # Skip variant selection if only Default
                         if variants == ["Default"]:
                             await item_interaction.response.send_modal(
                                 QuantityModal(self.bot, self.user_id, selected_category, selected_item, "Default")
@@ -118,17 +117,13 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Your cart is empty!", ephemeral=True)
 
         total = sum(item['subtotal'] for item in items)
-        summary = f"{interaction.user.mention} wants to purchase:
-"
+        summary = f"{interaction.user.mention} wants to purchase:\n"
         for item in items:
-            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}
-"
+            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}\n"
         summary += f"**Total: ${total:,}**"
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}
-
-{MENTION_ROLES}")
+        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
         await msg.add_reaction("â")
 
         session_manager.clear_session(self.user_id)
@@ -172,7 +167,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
                 raise ValueError("Invalid item or variant selected.")
 
             subtotal = base_price * quantity
-            self.variant = matched_variant  # Normalize variant case
+            self.variant = matched_variant
 
             session_manager.add_item(self.user_id, {
                 "category": self.category,
