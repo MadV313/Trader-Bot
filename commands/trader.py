@@ -55,7 +55,7 @@ class TraderView(discord.ui.View):
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
                 items = get_items_in_category(selected_category)
-                item_options = [discord.SelectOption(label=i, value=i) for i in items]
+                item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
 
                 class ItemSelect(discord.ui.Select):
                     def __init__(self, bot, user_id):
