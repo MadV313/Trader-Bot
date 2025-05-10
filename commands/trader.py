@@ -63,9 +63,24 @@ class TraderView(discord.ui.View):
                         selected_item = self.values[0]
                         item_entry = PRICE_DATA.get(selected_category, {}).get(selected_item)
                         variants = variant_utils.get_variants(item_entry)
+                        
+                        # Skip variant selection if only "Default" exists
+                        if variants == ["Default"]:
+                            await item_interaction.response.send_modal(
+                                SellQuantityModal(
+                                    self.bot, self.user_id, selected_category, selected_item, "Default"
+                                )
+                            )
+                            return
+
                         variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
                         class VariantSelect(discord.ui.Select):
+                            def __init__(self, bot, user_id):
+                                super().__init__(placeholder="Choose a variant...", options=variant_options)
+                                self.bot = bot
+                                self.user_id = user_id
+
                             def __init__(self):
                                 super().__init__(placeholder="Choose a variant...", options=variant_options)
 
@@ -78,7 +93,7 @@ class TraderView(discord.ui.View):
                                 )
 
                         variant_view = discord.ui.View()
-                        variant_view.add_item(VariantSelect())
+                        variant_view.add_item(VariantSelect(self.bot, self.user_id))
                         await item_interaction.response.send_message(
                             "Select a variant:", view=variant_view, ephemeral=True
                         )
