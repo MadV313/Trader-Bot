@@ -47,8 +47,10 @@ class TraderView(discord.ui.View):
         options = [discord.SelectOption(label=c, value=c) for c in categories]
 
         class CategorySelect(discord.ui.Select):
-            def __init__(self):
+            def __init__(self, bot, user_id):
                 super().__init__(placeholder="Choose a category...", options=options)
+                self.bot = bot
+                self.user_id = user_id
 
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
@@ -99,7 +101,7 @@ class TraderView(discord.ui.View):
                 )
 
         category_view = discord.ui.View()
-        category_view.add_item(CategorySelect())
+        category_view.add_item(CategorySelect(self.bot, self.user_id))
         await interaction.response.send_message(
             "Select a category:", view=category_view, ephemeral=True
         )
