@@ -183,7 +183,7 @@ class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="selltrader", description="Start a sell session with the trader.")
+    @app_commands.command(name="trader", description="Start a sell session with the trader.")
     async def selltrader(self, interaction: discord.Interaction):
         if interaction.channel.id != ECONOMY_CHANNEL_ID:
             return await interaction.response.send_message(
