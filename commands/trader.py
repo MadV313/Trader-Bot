@@ -198,3 +198,8 @@ class TraderCommand(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
+
+
+@bot.event
+async def on_ready():
+    await bot.tree.sync()
