@@ -202,3 +202,5 @@ class TraderCommand(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
+
+commands.Cog.listener()(TraderCommand)
