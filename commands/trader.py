@@ -142,12 +142,11 @@ class TraderCommand(commands.Cog):
         await self.bot.wait_until_ready()
         try:
             await self.bot.tree.sync()
-            print("[TraderCommand] Slash commands synced successfully.")
+            print("[TraderCommand] Slash commands synced globally successfully.")
         except Exception as e:
             print(f"[TraderCommand] Failed to sync commands: {e}")
 
     @app_commands.command(name="trader", description="Start a purchase session with the trader.")
-    @app_commands.guilds(discord.Object(id=YOUR_GUILD_ID))
     async def trader(self, interaction: discord.Interaction):
         if interaction.channel.id != ECONOMY_CHANNEL_ID:
             return await interaction.response.send_message(
