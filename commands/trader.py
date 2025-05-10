@@ -1,3 +1,4 @@
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -36,7 +37,12 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn't your order session.", ephemeral=True)
+            return category_view = discord.ui.View()
+category_view.add_item(CategorySelect(self.bot, self.user_id))
+await interaction.response.send_message(
+    "Select a category:", view=category_view, ephemeral=True
+)
+await interaction.response.send_message("This isn't your order session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Run `/trader` again.", ephemeral=True)
@@ -89,12 +95,6 @@ class TraderView(discord.ui.View):
                             variant_view.user_id = self.user_id
                 item_view.user_id = self.user_id
         
-category_view = discord.ui.View()
-category_view.add_item(CategorySelect(self.bot, self.user_id))
-await interaction.response.send_message(
-    "Select a category:", view=category_view, ephemeral=True
-)
-
         category_view.user_id = interaction.view.user_id if hasattr(interaction.view, 'user_id') else self.user_id
         category_view.add_item(CategorySelect())
         await interaction.response.send_message(
