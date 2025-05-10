@@ -29,7 +29,7 @@ def get_price(category, item, variant):
         return entry.get(variant)
     return entry if variant.lower() == "default" else None
 
-class SellTraderView(discord.ui.View):
+class BuyTraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=300)
         self.bot = bot
@@ -95,7 +95,7 @@ class SellTraderView(discord.ui.View):
             "Select a category:", view=category_view, ephemeral=True
         )
 
-    @discord.ui.button(label="Submit Sell Order", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isnât your sell session.", ephemeral=True)
@@ -123,7 +123,7 @@ class SellTraderView(discord.ui.View):
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your sell order has been submitted!", ephemeral=True)
 
-    @discord.ui.button(label="Cancel Sell Order", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isnât your sell session.", ephemeral=True)
@@ -193,7 +193,7 @@ class SellTraderCommand(commands.Cog):
         session_manager.start_session(interaction.user.id)
         await interaction.response.send_message(
             "Sell session started! Use the buttons below to add items, submit, or cancel your order.",
-            view=SellTraderView(self.bot, interaction.user.id),
+            view=BuyTraderView(self.bot, interaction.user.id),
             ephemeral=True
         )
 
@@ -208,7 +208,7 @@ class Trader(commands.Cog):
 
     @app_commands.command(name="trader", description="Open the trader interface.")
     async def trader(self, interaction: discord.Interaction):
-        view = SellTraderView(self.bot, interaction.user.id)
+        view = BuyTraderView(self.bot, interaction.user.id)
         await interaction.response.send_message("Welcome to the Trader! Use the buttons below.", view=view, ephemeral=True)
 
 
