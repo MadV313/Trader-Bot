@@ -38,7 +38,7 @@ class SellTraderView(discord.ui.View):
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn’t your sell session.", ephemeral=True)
+            return await interaction.response.send_message("This isnât your sell session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Start a new sell order.", ephemeral=True)
@@ -98,7 +98,7 @@ class SellTraderView(discord.ui.View):
     @discord.ui.button(label="Submit Sell Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn’t your sell session.", ephemeral=True)
+            return await interaction.response.send_message("This isnât your sell session.", ephemeral=True)
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Your session expired. Start a new sell order.", ephemeral=True)
@@ -115,7 +115,7 @@ class SellTraderView(discord.ui.View):
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
-        await msg.add_reaction("🔴")
+        await msg.add_reaction("ð´")
 
         # Admin payout automation
         await trader_channel.send(f"give user:{interaction.user.id} amount:{total} account:cash")
@@ -126,7 +126,7 @@ class SellTraderView(discord.ui.View):
     @discord.ui.button(label="Cancel Sell Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn’t your sell session.", ephemeral=True)
+            return await interaction.response.send_message("This isnât your sell session.", ephemeral=True)
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your sell order has been canceled.", ephemeral=True)
 
@@ -199,3 +199,18 @@ class SellTraderCommand(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(SellTraderCommand(bot))
+
+
+
+class Trader(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @app_commands.command(name="trader", description="Open the trader interface.")
+    async def trader(self, interaction: discord.Interaction):
+        view = SellTraderView(self.bot, interaction.user.id)
+        await interaction.response.send_message("Welcome to the Trader! Use the buttons below.", view=view, ephemeral=True)
+
+
+async def setup(bot):
+    await bot.add_cog(Trader(bot))
