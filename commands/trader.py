@@ -22,7 +22,10 @@ def get_subcategories(category):
     return list(PRICE_DATA.get(category, {}).keys())
 
 def get_items_in_subcategory(category, subcategory):
-    return list(PRICE_DATA.get(category, {}).get(subcategory, {}).keys())
+    sub_data = PRICE_DATA.get(category, {}).get(subcategory, {})
+    if isinstance(sub_data, dict):
+        return list(sub_data.keys())
+    return []
 
 def get_variants(category, subcategory, item):
     item_entry = PRICE_DATA.get(category, {}).get(subcategory, {}).get(item)
@@ -82,15 +85,15 @@ class TraderView(discord.ui.View):
 
                                 if variants == ["Default"]:
                                     await item_interaction.response.send_modal(
-                                        QuantityModal(self.view_instance.bot, self.view_instance.user_id, selected_category, selected_subcategory, selected_item, "Default")
+                                        QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, "Default")
                                     )
                                     return
 
                                 class VariantSelect(discord.ui.Select):
-                                    def __init__(self):
+                                    def __init__(self, bot, user_id):
                                         super().__init__(placeholder="Choose a variant...", options=variant_options)
-                                        self.bot = self.view_instance.bot
-                                        self.user_id = self.view_instance.user_id
+                                        self.bot = bot
+                                        self.user_id = user_id
 
                                     async def callback(self, variant_interaction: discord.Interaction):
                                         selected_variant = self.values[0]
@@ -99,7 +102,7 @@ class TraderView(discord.ui.View):
                                         )
 
                                 variant_view = discord.ui.View()
-                                variant_view.add_item(VariantSelect())
+                                variant_view.add_item(VariantSelect(self.bot, self.user_id))
                                 await item_interaction.response.send_message(
                                     "Select a variant:", view=variant_view, ephemeral=True
                                 )
