@@ -82,13 +82,15 @@ class TraderView(discord.ui.View):
 
                                 if variants == ["Default"]:
                                     await item_interaction.response.send_modal(
-                                        QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, "Default")
+                                        QuantityModal(self.view_instance.bot, self.view_instance.user_id, selected_category, selected_subcategory, selected_item, "Default")
                                     )
                                     return
 
                                 class VariantSelect(discord.ui.Select):
                                     def __init__(self):
                                         super().__init__(placeholder="Choose a variant...", options=variant_options)
+                                        self.bot = self.view_instance.bot
+                                        self.user_id = self.view_instance.user_id
 
                                     async def callback(self, variant_interaction: discord.Interaction):
                                         selected_variant = self.values[0]
