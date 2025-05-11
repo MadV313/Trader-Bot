@@ -19,8 +19,8 @@ def variant_exists(variants, user_choice):
     """
     if not user_choice:
         return False
-    choice = user_choice.lower()
-    return any(v.lower() == choice for v in variants)
+    choice = user_choice.lower().strip()
+    return any(v.lower().strip() == choice for v in variants if isinstance(v, str))
 
 def normalize_variant(variant):
     """
@@ -46,5 +46,23 @@ def get_variant_price(item_data, selected_variant):
     for variant_key in item_data.keys():
         if normalize_variant(variant_key) == normalized_variant:
             return item_data.get(variant_key)
-    
+
     return item_data.get("Default")
+
+def get_best_variant(item_data, user_choice):
+    """
+    Returns the best-matched variant key from item_data based on user input, case-insensitive.
+    Falls back to 'Default' if no match is found.
+    :param item_data: dict
+    :param user_choice: str
+    :return: matched variant key or 'Default'
+    """
+    if not isinstance(item_data, dict) or not user_choice:
+        return "Default"
+
+    normalized_choice = normalize_variant(user_choice)
+    for variant_key in item_data.keys():
+        if normalize_variant(variant_key) == normalized_choice:
+            return variant_key
+
+    return "Default"
