@@ -42,7 +42,7 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Your session expired. Start a new order.", ephemeral=True)
 
         categories = get_categories()
-        options = [discord.SelectOption(label=c, value=c) for c in categories[:25]]
+        options = [discord.SelectOption(label=c, value=c) for c in categories]
 
         class CategorySelect(discord.ui.Select):
             def __init__(self, bot, user_id):
@@ -53,7 +53,7 @@ class TraderView(discord.ui.View):
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
                 items = get_items_in_category(selected_category)
-                item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
+                item_options = [discord.SelectOption(label=i, value=i) for i in items]
 
                 if not item_options:
                     return await select_interaction.response.send_message(
@@ -77,7 +77,7 @@ class TraderView(discord.ui.View):
                             )
                             return
 
-                        variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
+                        variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
                         class VariantSelect(discord.ui.Select):
                             def __init__(self, bot, user_id):
@@ -124,8 +124,8 @@ class TraderView(discord.ui.View):
         total = sum(item['subtotal'] for item in items)
         summary = f"{interaction.user.mention} wants to purchase:\n"
         for item in items:
-            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}\n"
-        summary += f"**Total: ${total:,}**"
+            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${{item['subtotal']:,}}\n"
+        summary += f"**Total: ${{total:,}}**"
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
