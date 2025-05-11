@@ -26,11 +26,15 @@ def get_items_in_subcategory(category, subcategory):
         return list(sub_data.keys())
     return []
 
+
 def get_variants(category, subcategory, item):
-    item_entry = PRICE_DATA.get(category, {}).get(subcategory, {}).get(item)
-    if isinstance(item_entry, dict):
-        return list(item_entry.keys())
-    return ["Default"]
+    try:
+        entry = PRICE_DATA[category][subcategory][item]
+        if isinstance(entry, dict):
+            return list(entry.keys())
+        return ["Default"]
+    except (KeyError, TypeError):
+        return ["Default"]
 
 
 def get_price(category, subcategory, item, variant):
