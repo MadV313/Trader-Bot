@@ -101,7 +101,7 @@ class TraderView(discord.ui.View):
                                 selected_item = self.values[0]
                                 variants = get_variants(selected_category, selected_subcategory, selected_item)
 
-                                # Bypass variant select if only 'Default' exists
+                                # Bypass variant selection if only Default exists
                                 if len(variants) == 1 and variants[0] == "Default":
                                     await item_interaction.response.send_modal(
                                         QuantityModal(
