@@ -6,9 +6,7 @@ import json
 import os
 from utils import session_manager, variant_utils
 
-# Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
-
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 MENTION_ROLES = " ".join(config["mention_roles"])
@@ -44,7 +42,7 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Your session expired. Start a new order.", ephemeral=True)
 
         categories = get_categories()
-        options = [discord.SelectOption(label=c, value=c) for c in categories]
+        options = [discord.SelectOption(label=c, value=c) for c in categories[:25]]
 
         class CategorySelect(discord.ui.Select):
             def __init__(self, bot, user_id):
@@ -56,6 +54,11 @@ class TraderView(discord.ui.View):
                 selected_category = self.values[0]
                 items = get_items_in_category(selected_category)
                 item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
+
+                if not item_options:
+                    return await select_interaction.response.send_message(
+                        "No items available in this category.", ephemeral=True
+                    )
 
                 class ItemSelect(discord.ui.Select):
                     def __init__(self, bot, user_id):
@@ -74,7 +77,7 @@ class TraderView(discord.ui.View):
                             )
                             return
 
-                        variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
+                        variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
 
                         class VariantSelect(discord.ui.Select):
                             def __init__(self, bot, user_id):
@@ -160,16 +163,15 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
                 raise ValueError("Quantity must be greater than 0.")
 
             item_entry = PRICE_DATA.get(self.category, {}).get(self.item)
-            variants = variant_utils.get_variants(item_entry)
-            matched_variant = next(
-                (v for v in variants if v.lower() == self.variant.lower()), self.variant
-            )
-            base_price = get_price(self.category, self.item, matched_variant)
-            if base_price is None:
+            if isinstance(item_entry, dict):
+                base_price = item_entry.get(self.variant, 0)
+            else:
+                base_price = item_entry
+
+            if base_price is None or not isinstance(base_price, (int, float)):
                 raise ValueError("Invalid item or variant selected.")
 
             subtotal = base_price * quantity
-            self.variant = matched_variant
 
             session_manager.add_item(self.user_id, {
                 "category": self.category,
