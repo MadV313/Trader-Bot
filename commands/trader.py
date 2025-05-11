@@ -70,8 +70,10 @@ class TraderView(discord.ui.View):
                 sub_options = [discord.SelectOption(label=s, value=s) for s in subcategories[:25]]
 
                 class SubcategorySelect(discord.ui.Select):
-                    def __init__(self):
+                    def __init__(self, bot, user_id):
                         super().__init__(placeholder="Choose a subcategory...", options=sub_options)
+                        self.bot = bot
+                        self.user_id = user_id
 
                     async def callback(self, sub_select_interaction: discord.Interaction):
                         selected_subcategory = self.values[0]
@@ -129,7 +131,7 @@ class TraderView(discord.ui.View):
                         )
 
                 subcategory_view = discord.ui.View()
-                subcategory_view.add_item(SubcategorySelect())
+                subcategory_view.add_item(SubcategorySelect(self.bot, self.user_id))
                 await select_interaction.response.send_message(
                     "Select a subcategory:", view=subcategory_view, ephemeral=True
                 )
