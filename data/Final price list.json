@@ -1,27 +1,32 @@
 {
   "categories": {
-    "Ammo": {
-      "12g Beanbag": 500,
-      "12g Buckshot": 500,
-      "12g Rubber": 500,
-      "12g Slugs": 500,
+    "Ammo1": {
       "22LR": 500,
-      "308 WIN": 500,
-      "308 WIN (Tracer)": 500,
       "357": 500,
-      "380": 500,
-      "45": 500,
-      "5.45x39": 500,
-      "5.45x39 (Tracer)": 500,
-      "5.56x45": 500,
-      "5.56x45 (Tracer)": 500,
-      "7.62x39": 500,
-      "7.62x39 (Tracer)": 500,
-      "7.62x54": 10000,
-      "7.62x54 (Tracer)": 500,
+      "380 ACP": 500,
+      "45 ACP": 500,
       "9x19": 500,
+      "Cupid Arrow": 500
+    },
+    "Ammo2": {
+      "308 WIN": 500,
+      "308 WIN Tracer": 500,
+      "5.45x39": 500,
+      "5.45x39 Tracer": 500,
+      "5.56x45": 500,
+      "5.56x45 Tracer": 500,
+      "7.62x39": 500,
+      "7.62x39 Tracer": 500,
+      "7.62x54": 10000,
+      "7.62x54 Tracer": 500,
       "9x39": 500,
-      "9x39 (AP)": 500
+      "9x39 AP": 500
+    },
+    "Ammo3": {
+      "12g Bean Bag": 500,
+      "12g Buck Shot": 500,
+      "12g Rubber": 500,
+      "12g Slug": 500
     },
     "BaseSupplies": {
       "Barbed Wire": 1800,
@@ -45,6 +50,53 @@
       "Tire Repair Kits": 5000
     },
     "Clothes": {
+      "Backpacks": {
+        "Army Pouch": {
+          "Default": 2000
+        },
+        "Assault Bag": {
+          "Black": 2500,
+          "Camo": 2500,
+          "Olive": 2500
+        },
+        "Burlap": {
+          "Default": 2000
+        },
+        "Buttpack": {
+          "Default": 5000
+        },
+        "Combat Bag": {
+          "OKM": 2500,
+          "Olive": 2500
+        },
+        "Dry Bag": {
+          "Default": 25000
+        },
+        "Duffle Bag": {
+          "Default": 1500
+        },
+        "Field Bag": {
+          "Black": 15000,
+          "Camo": 15000,
+          "Olive": 15000
+        },
+        "Fur": {
+          "Default": 2000
+        },
+        "Hip Pack": {
+          "Default": 1250
+        },
+        "Hunter Bag": {
+          "Default": 2500
+        },
+        "Shoulder Bag": {
+          "Default": 1500
+        },
+        "Tactical Bag": {
+          "Khaki": 5000,
+          "Olive": 5000
+        }
+      },
       "Boots": {
         "Assault Boots": {
           "Anarchy": 1000,
@@ -84,6 +136,33 @@
         },
         "Work Boots": {
           "Default": 1000
+        }
+      },
+      "Ghillies": {
+        "Ghillie Cloak": {
+          "Snow": 20000,
+          "Tan": 20000,
+          "Woodland": 20000
+        },
+        "Ghillie Hood": {
+          "Snow": 10000,
+          "Tan": 10000,
+          "Woodland": 10000
+        },
+        "Ghillie Shrug": {
+          "Snow": 15000,
+          "Tan": 15000,
+          "Woodland": 15000
+        },
+        "Ghillie Suit": {
+          "Snow": 25000,
+          "Tan": 25000,
+          "Woodland": 25000
+        },
+        "Ghillie Wrap": {
+          "Snow": 5000,
+          "Tan": 5000,
+          "Woodland": 5000
         }
       },
       "Gloves": {
@@ -280,6 +359,25 @@
           "Summer": 1000,
           "Winter": 1000
         }
+      },
+      "Vests": {
+        "Assault Vest": {
+          "Default": 6000
+        },
+        "Field Vest": {
+          "Default": 6000
+        },
+        "Plate Carrier": {
+          "Camo": 15000,
+          "Khaki": 15000,
+          "Olive": 15000
+        },
+        "Press Vest": {
+          "Default": 6000
+        },
+        "Tactical Vest": {
+          "Default": 8000
+        }
       }
     },
     "Explosives": {
@@ -325,7 +423,7 @@
         "Price": 80000
       }
     },
-    "MagsAndAmmo": {
+    "Mags1": {
       "10rnd Cmag": 500,
       "10rnd DMR": 500,
       "10rnd MKII": 500,
@@ -345,7 +443,9 @@
       "25rnd Lemas": 500,
       "25rnd USG45": 500,
       "300rd Drum Mag": 200000,
-      "30rnd Cmag": 500,
+      "30rnd Cmag": 500
+    },
+    "Mags2": {
       "30rnd KA101": 500,
       "30rnd KA74": 500,
       "30rnd KAM": 500,
@@ -367,6 +467,7 @@
       "9rnd Deagle": 500,
       "All Mags/Ammo Boxes": 500
     },
+    "Mags3": {},
     "Medical": {
       "All Medical Items": 0
     },
@@ -405,85 +506,84 @@
       "Bear Traps": 25000,
       "Lockpicks": 1000
     },
-    "Weapons": {
+    "Weapons_AssaultRifles": {
       "AUR A1": 18000,
       "AUR AX": 28000,
-      "BIZON": 13000,
-      "BK-12": {
-        "Sawed-Off": 25000,
-        "Standard": 25000
-      },
-      "BK-133": 25000,
-      "BK-18": {
-        "Sawed-Off": 10000,
-        "Standard": 10000
-      },
-      "BK-43": {
-        "Sawed-Off": 7000,
-        "Standard": 7000
-      },
-      "BLAZE": 50000,
-      "BLAZE_Sawed_Off": 25000,
-      "CR-527": 7000,
-      "CR-550": 35000,
-      "CR-75": 5000,
-      "CROSS BOW": 15000,
-      "DEAGLE": {
-        "Gold": 10000,
-        "Silver": 10000
-      },
-      "DERRINGER": {
-        "Black": 2000,
-        "Pink": 2000
-      },
-      "DMR": 40000,
-      "FX-45": 15000,
-      "IJ-70": 5000,
-      "KA-101": 20000,
-      "KA-74": 18000,
-      "KA-M": 25000,
-      "KAS-74U": 12000,
-      "LAR": 35000,
-      "LE-MAS": {
-        "Sawed-Off": 25000,
-        "Standard": 13000
-      },
+      "KA 101": 5000,
+      "KA 74": 5000,
+      "KA 74U": 5000,
+      "KAM": 5000,
+      "Le Mas": 5000,
+      "Le Mas/SawedOff": 5000,
+      "M16A2": 5000,
+      "M4A1": 5000,
+      "SVAL": 12000,
+      "VIKHR": 30000
+    },
+    "Weapons_BattleRifles": {
+      "LAR": 35000
+    },
+    "Weapons_BoltActionRifles": {
+      "CR 527": 5000,
+      "CR 550": 5000,
+      "M70 Tundra": 5000,
+      "Mosin": 5000,
+      "Mosin/SawedOff": 5000,
+      "Pioneer": 5000,
+      "SSG 82": 5000,
+      "VS 89": 5000
+    },
+    "Weapons_BreakActionRifles": {
+      "BK 18": 5000,
+      "BK 18/SawedOff": 5000,
+      "Blaze": 5000,
+      "Blaze/SawedOff": 5000
+    },
+    "Weapons_Launchers": {
+      "M79": 5000
+    },
+    "Weapons_LeverActionRifles": {
+      "Repeater": 5000
+    },
+    "Weapons_MarksmanRifles": {
+      "VSD": 20000,
+      "VSS": 10000
+    },
+    "Weapons_Pistols": {
+      "CR 75": 5000,
+      "Deagle": 5000,
+      "Derringer": 5000,
+      "FX 45": 5000,
+      "IJ 70": 5000,
+      "KOLT 1911": 5000,
       "Longhorn": 25000,
-      "M-LOCK": 10000,
-      "M16-A2": 16000,
-      "M4-A1": 50000,
-      "M70 TUNDRA": {
-        "Black": 50000,
-        "Olive": 50000,
-        "Standard": 30000
-      },
-      "M79 Grenade Launcher": 500000,
-      "MKII": 4000,
-      "MOSIN 91/30": {
-        "Black": 18000,
-        "Camo": 50000,
-        "Olive": 50000,
-        "Sawed-Off": 18000,
-        "Standard": 18000
-      },
+      "MK II": 5000,
+      "Mlock": 5000,
       "P1": 3000,
-      "PIPNEER": 10000,
-      "REPEATER": 15000,
       "Revolver": {
         "Sawed-Off": 25000,
         "Standard": 5000
       },
+      "Revolver/SawedOff": 5000
+    },
+    "Weapons_SMGs": {
+      "Bizon": 5000,
+      "CR 61 Skorpion": 5000,
       "SG5K": 25000,
-      "SK 59/66": 9000,
-      "SKORPION": 15000,
-      "SSG-82": 35000,
-      "SVAL": 12000,
-      "USG45": 20000,
-      "VAIGA": 9000,
-      "VIKHR": 30000,
-      "VS-89": 25000,
-      "VSD": 20000,
-      "VSS": 10000
+      "USG45": 20000
+    },
+    "Weapons_SemiAutoRifles": {
+      "DMR": 40000,
+      "SK 5966": 5000,
+      "Sporter 22": 5000
+    },
+    "Weapons_Shotguns": {
+      "BK 12": 5000,
+      "BK 12/SawedOff": 5000,
+      "BK 133": 5000,
+      "BK 43": 5000,
+      "BK 43/SawedOff": 5000,
+      "Vaiga": 5000
     }
   },
   "notes": "Sell prices are one-third of buy prices."
