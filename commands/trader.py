@@ -51,7 +51,7 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Your session expired. Start a new order.", ephemeral=True)
 
         categories = get_categories()
-        options = [discord.SelectOption(label=c, value=c) for c in categories]
+        options = [discord.SelectOption(label=c, value=c) for c in categories[:25]]
 
         class CategorySelect(discord.ui.Select):
             def __init__(self):
@@ -60,8 +60,7 @@ class TraderView(discord.ui.View):
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
                 subcategories = get_subcategories(selected_category)
-
-                sub_options = [discord.SelectOption(label=s, value=s) for s in subcategories]
+                sub_options = [discord.SelectOption(label=s, value=s) for s in subcategories[:25]]
 
                 class SubcategorySelect(discord.ui.Select):
                     def __init__(self):
@@ -70,8 +69,7 @@ class TraderView(discord.ui.View):
                     async def callback(self, sub_select_interaction: discord.Interaction):
                         selected_subcategory = self.values[0]
                         items = get_items_in_subcategory(selected_category, selected_subcategory)
-
-                        item_options = [discord.SelectOption(label=i, value=i) for i in items]
+                        item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
 
                         class ItemSelect(discord.ui.Select):
                             def __init__(self):
@@ -80,14 +78,13 @@ class TraderView(discord.ui.View):
                             async def callback(self, item_interaction: discord.Interaction):
                                 selected_item = self.values[0]
                                 variants = get_variants(selected_category, selected_subcategory, selected_item)
+                                variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
 
                                 if variants == ["Default"]:
                                     await item_interaction.response.send_modal(
                                         QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, "Default")
                                     )
                                     return
-
-                                variant_options = [discord.SelectOption(label=v, value=v) for v in variants]
 
                                 class VariantSelect(discord.ui.Select):
                                     def __init__(self):
