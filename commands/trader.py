@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -49,7 +48,7 @@ def get_price(category, subcategory, item, variant):
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
-        super().__init__(timeout=180)  # Faster cleanup: 3-minute timeout
+        super().__init__(timeout=180)
         self.bot = bot
         self.user_id = user_id
 
@@ -65,8 +64,10 @@ class TraderView(discord.ui.View):
         options = [discord.SelectOption(label=c, value=c) for c in categories[:25]]
 
         class CategorySelect(discord.ui.Select):
-            def __init__(self):
+            def __init__(self, bot, user_id):
                 super().__init__(placeholder="Choose a category...", options=options)
+                self.bot = bot
+                self.user_id = user_id
 
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
@@ -79,8 +80,10 @@ class TraderView(discord.ui.View):
                 sub_options = [discord.SelectOption(label=s, value=s) for s in subcategories[:25]]
 
                 class SubcategorySelect(discord.ui.Select):
-                    def __init__(self):
+                    def __init__(self, bot, user_id):
                         super().__init__(placeholder="Choose a subcategory...", options=sub_options)
+                        self.bot = bot
+                        self.user_id = user_id
 
                     async def callback(self, sub_select_interaction: discord.Interaction):
                         selected_subcategory = self.values[0]
@@ -93,8 +96,10 @@ class TraderView(discord.ui.View):
                         item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
 
                         class ItemSelect(discord.ui.Select):
-                            def __init__(self):
+                            def __init__(self, bot, user_id):
                                 super().__init__(placeholder="Choose an item...", options=item_options)
+                                self.bot = bot
+                                self.user_id = user_id
 
                             async def callback(self, item_interaction: discord.Interaction):
                                 selected_item = self.values[0]
@@ -112,8 +117,10 @@ class TraderView(discord.ui.View):
                                 variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
 
                                 class VariantSelect(discord.ui.Select):
-                                    def __init__(self):
+                                    def __init__(self, bot, user_id):
                                         super().__init__(placeholder="Choose a variant...", options=variant_options)
+                                        self.bot = bot
+                                        self.user_id = user_id
 
                                     async def callback(self, variant_interaction: discord.Interaction):
                                         selected_variant = self.values[0]
@@ -126,30 +133,29 @@ class TraderView(discord.ui.View):
                                         )
 
                                 variant_view = discord.ui.View(timeout=180)
-                                variant_view.add_item(VariantSelect())
+                                variant_view.add_item(VariantSelect(self.bot, self.user_id))
                                 await item_interaction.response.send_message(
                                     "Select a variant:", view=variant_view, ephemeral=True
                                 )
 
                         item_view = discord.ui.View(timeout=180)
-                        item_view.add_item(ItemSelect())
+                        item_view.add_item(ItemSelect(self.bot, self.user_id))
                         await sub_select_interaction.response.send_message(
                             "Select an item:", view=item_view, ephemeral=True
                         )
 
                 subcategory_view = discord.ui.View(timeout=180)
-                subcategory_view.add_item(SubcategorySelect())
+                subcategory_view.add_item(SubcategorySelect(self.bot, self.user_id))
                 await select_interaction.response.send_message(
                     "Select a subcategory:", view=subcategory_view, ephemeral=True
                 )
 
         category_view = discord.ui.View(timeout=180)
-        category_view.add_item(CategorySelect())
+        category_view.add_item(CategorySelect(self.bot, self.user_id))
         await interaction.response.send_message(
             "Select a category:", view=category_view, ephemeral=True
         )
-
-    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
+            @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
@@ -226,8 +232,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             )
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
-
-class TraderCommand(commands.Cog):
+            class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -247,4 +252,3 @@ class TraderCommand(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
-
