@@ -105,8 +105,10 @@ class TraderView(discord.ui.View):
                         item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
 
                         class ItemSelect(discord.ui.Select):
-                            def __init__(self):
+                            def __init__(self, bot, user_id):
                                 super().__init__(placeholder="Choose an item...", options=item_options)
+                                self.bot = bot
+                                self.user_id = user_id
 
                             async def callback(self, item_interaction: discord.Interaction):
                                 selected_item = self.values[0]
@@ -144,7 +146,7 @@ class TraderView(discord.ui.View):
                                 )
 
                         item_view = discord.ui.View()
-                        item_view.add_item(ItemSelect())
+                        item_view.add_item(ItemSelect(self.bot, self.user_id))
                         await sub_select_interaction.response.send_message(
                             "Select an item:", view=item_view, ephemeral=True
                         )
