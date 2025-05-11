@@ -124,8 +124,8 @@ class TraderView(discord.ui.View):
         total = sum(item['subtotal'] for item in items)
         summary = f"{interaction.user.mention} wants to purchase:\n"
         for item in items:
-            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}\n"
-        summary += f"**Total: ${total:,}**"
+            summary += f"- {item['item']} ({item['variant']}) x{item['quantity']} = ${{item['subtotal']:,}}\n"
+        summary += f"**Total: ${{total:,}}**"
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
