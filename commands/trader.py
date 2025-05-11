@@ -89,14 +89,15 @@ class TraderView(discord.ui.View):
                         if not items:
                             return await sub_select_interaction.response.send_message("No items found for this subcategory.", ephemeral=True, delete_after=10)
 
-                        if len(items) == 1 and items[0] == "Default":
-                            variants = get_variants(selected_category, selected_subcategory, "Default")
+                        if len(items) == 1:
+                            selected_item = items[0]
+                            variants = get_variants(selected_category, selected_subcategory, selected_item)
                             if len(variants) == 1 and variants[0] == "Default":
                                 await sub_select_interaction.response.send_modal(
                                     QuantityModal(
                                         self.bot, self.user_id,
                                         selected_category, selected_subcategory,
-                                        "Default", "Default"
+                                        selected_item, "Default"
                                     )
                                 )
                                 return
