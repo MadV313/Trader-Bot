@@ -110,6 +110,12 @@ class TraderView(discord.ui.View):
                                 selected_item = self.values[0]
                                 variants = get_variants(selected_category, selected_subcategory, selected_item)
                                 variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
+                                if variants == ["Default"]:
+                                    await item_interaction.response.send_modal(
+                                        QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, "Default")
+                                    )
+                                    return
+
 
                                 if variants == ["Default"]:
                                     await item_interaction.response.send_modal(
