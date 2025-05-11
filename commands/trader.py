@@ -37,11 +37,12 @@ def get_variants(category, subcategory, item):
         return ["Default"]
 
 
+
 def get_price(category, subcategory, item, variant):
     try:
         entry = PRICE_DATA[category][subcategory]
         if isinstance(entry, dict):
-            entry = entry.get(item, entry)  # If item doesn't exist, assume entry holds the price directly
+            entry = entry.get(item, entry)  # Handle cases where 'item' might not exist.
         if isinstance(entry, dict):
             return entry.get(variant, entry.get("Default"))
         return entry
