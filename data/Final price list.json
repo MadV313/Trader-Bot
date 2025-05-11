@@ -1,53 +1,131 @@
 {
   "categories": {
     "Ammo1": {
-      "22LR": 500,
-      "357": 500,
-      "380 ACP": 500,
-      "45 ACP": 500,
-      "9x19": 500,
-      "Cupid Arrow": 500
+      "22LR": {
+        "Default": 500
+      },
+      "357": {
+        "Default": 500
+      },
+      "380 ACP": {
+        "Default": 500
+      },
+      "45 ACP": {
+        "Default": 500
+      },
+      "9x19": {
+        "Default": 500
+      },
+      "Cupid Arrow": {
+        "Default": 500
+      }
     },
     "Ammo2": {
-      "308 WIN": 500,
-      "308 WIN Tracer": 500,
-      "5.45x39": 500,
-      "5.45x39 Tracer": 500,
-      "5.56x45": 500,
-      "5.56x45 Tracer": 500,
-      "7.62x39": 500,
-      "7.62x39 Tracer": 500,
-      "7.62x54": 10000,
-      "7.62x54 Tracer": 500,
-      "9x39": 500,
-      "9x39 AP": 500
+      "308 WIN": {
+        "Default": 500
+      },
+      "308 WIN Tracer": {
+        "Default": 500
+      },
+      "5.45x39": {
+        "Default": 500
+      },
+      "5.45x39 Tracer": {
+        "Default": 500
+      },
+      "5.56x45": {
+        "Default": 500
+      },
+      "5.56x45 Tracer": {
+        "Default": 500
+      },
+      "7.62x39": {
+        "Default": 500
+      },
+      "7.62x39 Tracer": {
+        "Default": 500
+      },
+      "7.62x54": {
+        "Default": 10000
+      },
+      "7.62x54 Tracer": {
+        "Default": 500
+      },
+      "9x39": {
+        "Default": 500
+      },
+      "9x39 AP": {
+        "Default": 500
+      }
     },
     "Ammo3": {
-      "12g Bean Bag": 500,
-      "12g Buck Shot": 500,
-      "12g Rubber": 500,
-      "12g Slug": 500
+      "12g Bean Bag": {
+        "Default": 500
+      },
+      "12g Buck Shot": {
+        "Default": 500
+      },
+      "12g Rubber": {
+        "Default": 500
+      },
+      "12g Slug": {
+        "Default": 500
+      }
     },
     "BaseSupplies": {
-      "Barbed Wire": 1800,
-      "Code Lock": 2000,
-      "Fence Kits": 1500,
-      "Gun Cleaning Kits": 1500,
-      "Handsaw": 1600,
-      "Hatchet": 1600,
-      "Metal Wire": 1600,
-      "Nails": 1500,
-      "Pliers": 1500,
-      "Shovel": 1800,
-      "Splitting Axe": 1600
+      "Barbed Wire": {
+        "Default": 1800
+      },
+      "Code Lock": {
+        "Default": 2000
+      },
+      "Fence Kits": {
+        "Default": 1500
+      },
+      "Gun Cleaning Kits": {
+        "Default": 1500
+      },
+      "Handsaw": {
+        "Default": 1600
+      },
+      "Hatchet": {
+        "Default": 1600
+      },
+      "Metal Wire": {
+        "Default": 1600
+      },
+      "Nails": {
+        "Default": 1500
+      },
+      "Pliers": {
+        "Default": 1500
+      },
+      "Shovel": {
+        "Default": 1800
+      },
+      "Splitting Axe": {
+        "Default": 1600
+      }
     },
     "CarParts": {
-      "Battery": 15000,
-      "Glow Plug": 10000,
-      "Jerry Can": 5000,
-      "Radiator": 10000,
-      "Spark Plug": 5000,
-      "Tire Repair Kits": 5000
+      "Battery": {
+        "Default": 15000
+      },
+      "Glow Plug": {
+        "Default": 10000
+      },
+      "Jerry Can": {
+        "Default": 5000
+      },
+      "Radiator": {
+        "Default": 10000
+      },
+      "Spark Plug": {
+        "Default": 5000
+      },
+      "Tire Repair Kits": {
+        "Default": 5000
+      }
     },
     "Clothes": {
       "Backpacks": {
@@ -381,209 +459,491 @@
       }
     },
     "Explosives": {
-      "1-M4 Smoke Grenade": 10000,
-      "40mm Explosive Grenade": 100000,
-      "40mm Po-X Grenade": 100000,
-      "40mm Smoke Grenade": 100000,
-      "6-M7 Frag Grenade": 25000,
-      "8-M4 Flashbang": 20000,
-      "Claymores": 200000,
-      "EGD-5 Frag Grenade": 25000,
-      "Landmines": 200000,
-      "Plastic Explosive": 200000,
-      "Po-X Vial": 100000
+      "1-M4 Smoke Grenade": {
+        "Default": 10000
+      },
+      "40mm Explosive Grenade": {
+        "Default": 100000
+      },
+      "40mm Po-X Grenade": {
+        "Default": 100000
+      },
+      "40mm Smoke Grenade": {
+        "Default": 100000
+      },
+      "6-M7 Frag Grenade": {
+        "Default": 25000
+      },
+      "8-M4 Flashbang": {
+        "Default": 20000
+      },
+      "Claymores": {
+        "Default": 200000
+      },
+      "EGD-5 Frag Grenade": {
+        "Default": 25000
+      },
+      "Landmines": {
+        "Default": 200000
+      },
+      "Plastic Explosive": {
+        "Default": 200000
+      },
+      "Po-X Vial": {
+        "Default": 100000
+      }
     },
     "Farming": {
-      "Cannabis Seeds": 100000,
-      "Grow Kits": 200000
+      "Cannabis Seeds": {
+        "Default": 100000
+      },
+      "Grow Kits": {
+        "Default": 200000
+      }
     },
     "FlagsAndArmbands": {
-      "All Armbands": 0,
-      "All Flags": 0
+      "All Armbands": {
+        "Default": 0
+      },
+      "All Flags": {
+        "Default": 0
+      }
     },
     "Kits": {
       "Builders Truck": {
         "Contents": "Everything you need and then some to build a nice base",
-        "Price": 100000
+        "Price": {
+          "Default": 100000
+        }
       },
       "Building Kit": {
         "Contents": "2 of All tools, Nails, Fence & Watchtower kits, 2 Code locks, & 2 Metal wires",
-        "Price": 10000
+        "Price": {
+          "Default": 10000
+        }
       },
       "Kit 1": {
         "Contents": "Loaded M4-A1 with mags, Plate carrier, Tactical helmet / NVGs / Battery, Clothes (Your Choice), Meds",
-        "Price": 25000
+        "Price": {
+          "Default": 25000
+        }
       },
       "Kit 2": {
         "Contents": "Loaded M4-A1 with mags, Tundra or CR-550 Savanna with ammo, Plate carrier, Assault helmet, Clothes (Your Choice), Meds",
-        "Price": 45000
+        "Price": {
+          "Default": 45000
+        }
       },
       "Kit 3": {
         "Contents": "Full ghillie suit, 2 Ghillie Wraps, Loaded M4-A1 with 6 mags, Your Choice (Snipers Only) with 4 boxes of ammo, Plate carrier, Assault helmet, Clothes (Your Choice), Meds",
-        "Price": 80000
+        "Price": {
+          "Default": 80000
+        }
       }
     },
     "Mags1": {
-      "10rnd Cmag": 500,
-      "10rnd DMR": 500,
-      "10rnd MKII": 500,
-      "10rnd VSS": 500,
-      "12rnd IJ70": 500,
-      "15rnd CR75": 500,
-      "15rnd FX45": 500,
-      "15rnd MLock": 500,
-      "15rnd SG5K": 500,
-      "15rnd Sporter": 500,
-      "20rnd CR61": 500,
-      "20rnd Cmag": 500,
-      "20rnd DMR": 500,
-      "20rnd Lar": 500,
-      "20rnd SVAL": 500,
-      "20rnd drum Vaiga": 500,
-      "25rnd Lemas": 500,
-      "25rnd USG45": 500,
-      "300rd Drum Mag": 200000,
-      "30rnd Cmag": 500
+      "10rnd Cmag": {
+        "Default": 500
+      },
+      "10rnd DMR": {
+        "Default": 500
+      },
+      "10rnd MKII": {
+        "Default": 500
+      },
+      "10rnd VSS": {
+        "Default": 500
+      },
+      "12rnd IJ70": {
+        "Default": 500
+      },
+      "15rnd CR75": {
+        "Default": 500
+      },
+      "15rnd FX45": {
+        "Default": 500
+      },
+      "15rnd MLock": {
+        "Default": 500
+      },
+      "15rnd SG5K": {
+        "Default": 500
+      },
+      "15rnd Sporter": {
+        "Default": 500
+      },
+      "20rnd CR61": {
+        "Default": 500
+      },
+      "20rnd Cmag": {
+        "Default": 500
+      },
+      "20rnd DMR": {
+        "Default": 500
+      },
+      "20rnd Lar": {
+        "Default": 500
+      },
+      "20rnd SVAL": {
+        "Default": 500
+      },
+      "20rnd drum Vaiga": {
+        "Default": 500
+      },
+      "25rnd Lemas": {
+        "Default": 500
+      },
+      "25rnd USG45": {
+        "Default": 500
+      },
+      "300rd Drum Mag": {
+        "Default": 200000
+      },
+      "30rnd Cmag": {
+        "Default": 500
+      }
     },
     "Mags2": {
-      "30rnd KA101": 500,
-      "30rnd KA74": 500,
-      "30rnd KAM": 500,
-      "30rnd SG5K": 500,
-      "30rnd Sproter": 500,
-      "30rnd Standardized": 500,
-      "30rnd Vikhr": 500,
-      "40rnd Cmag": 500,
-      "45rnd KA74": 500,
-      "5rnd CR527": 500,
-      "5rnd SSG82": 500,
-      "5rnd Vaiga": 500,
-      "5rnd pioneer": 500,
-      "60rnd Standardized": 500,
-      "64rnd Bizon": 500,
-      "75rnd drum KAM": 500,
-      "7rnd Kolt": 500,
-      "8rnd Vaiga": 500,
-      "9rnd Deagle": 500,
-      "All Mags/Ammo Boxes": 500
+      "30rnd KA101": {
+        "Default": 500
+      },
+      "30rnd KA74": {
+        "Default": 500
+      },
+      "30rnd KAM": {
+        "Default": 500
+      },
+      "30rnd SG5K": {
+        "Default": 500
+      },
+      "30rnd Sproter": {
+        "Default": 500
+      },
+      "30rnd Standardized": {
+        "Default": 500
+      },
+      "30rnd Vikhr": {
+        "Default": 500
+      },
+      "40rnd Cmag": {
+        "Default": 500
+      },
+      "45rnd KA74": {
+        "Default": 500
+      },
+      "5rnd CR527": {
+        "Default": 500
+      },
+      "5rnd SSG82": {
+        "Default": 500
+      },
+      "5rnd Vaiga": {
+        "Default": 500
+      },
+      "5rnd pioneer": {
+        "Default": 500
+      },
+      "60rnd Standardized": {
+        "Default": 500
+      },
+      "64rnd Bizon": {
+        "Default": 500
+      },
+      "75rnd drum KAM": {
+        "Default": 500
+      },
+      "7rnd Kolt": {
+        "Default": 500
+      },
+      "8rnd Vaiga": {
+        "Default": 500
+      },
+      "9rnd Deagle": {
+        "Default": 500
+      },
+      "All Mags/Ammo Boxes": {
+        "Default": 500
+      }
     },
     "Mags3": {},
     "Medical": {
-      "All Medical Items": 0
+      "All Medical Items": {
+        "Default": 0
+      }
     },
     "Sights": {
-      "ATOG 6x48 Scope": 500,
-      "ATOG w/ Baraka Scope": 800,
-      "Baraka Sight": 300,
-      "Combat Sight": 300,
-      "Hunting Scope": 600,
-      "M4-A1 Carry Handle Sight": 100,
-      "P1-87-L Scope": 200,
-      "PSO-1 Scope": 500,
-      "RVN Sight": 300
+      "ATOG 6x48 Scope": {
+        "Default": 500
+      },
+      "ATOG w/ Baraka Scope": {
+        "Default": 800
+      },
+      "Baraka Sight": {
+        "Default": 300
+      },
+      "Combat Sight": {
+        "Default": 300
+      },
+      "Hunting Scope": {
+        "Default": 600
+      },
+      "M4-A1 Carry Handle Sight": {
+        "Default": 100
+      },
+      "P1-87-L Scope": {
+        "Default": 200
+      },
+      "PSO-1 Scope": {
+        "Default": 500
+      },
+      "RVN Sight": {
+        "Default": 300
+      }
     },
     "Special": {
-      "Bunker Cards": 10000,
-      "Eggsperimental Capsule (Bear)": 1000000,
-      "Eggsperimental Capsule (Empty)": 100000,
-      "Eggsperimental Capsule (Mummy)": 500000,
-      "Night Vision Goggles": 5500
+      "Bunker Cards": {
+        "Default": 10000
+      },
+      "Eggsperimental Capsule (Bear)": {
+        "Default": 1000000
+      },
+      "Eggsperimental Capsule (Empty)": {
+        "Default": 100000
+      },
+      "Eggsperimental Capsule (Mummy)": {
+        "Default": 500000
+      },
+      "Night Vision Goggles": {
+        "Default": 5500
+      }
     },
     "Suppressors": {
-      "All Suppressors": 850,
-      "Bottle Suppressor": 850,
-      "Normalized Suppressor": 850,
-      "Pistol Suppressor": 850,
-      "Standard Suppressor": 850
+      "All Suppressors": {
+        "Default": 850
+      },
+      "Bottle Suppressor": {
+        "Default": 850
+      },
+      "Normalized Suppressor": {
+        "Default": 850
+      },
+      "Pistol Suppressor": {
+        "Default": 850
+      },
+      "Standard Suppressor": {
+        "Default": 850
+      }
     },
     "Tents": {
-      "Canopy Tent": 5000,
-      "Car Tent": 20000,
-      "Large Tent": 15000,
-      "Medium Tent": 10000
+      "Canopy Tent": {
+        "Default": 5000
+      },
+      "Car Tent": {
+        "Default": 20000
+      },
+      "Large Tent": {
+        "Default": 15000
+      },
+      "Medium Tent": {
+        "Default": 10000
+      }
     },
     "Traps": {
-      "Bear Traps": 25000,
-      "Lockpicks": 1000
+      "Bear Traps": {
+        "Default": 25000
+      },
+      "Lockpicks": {
+        "Default": 1000
+      }
     },
     "Weapons_AssaultRifles": {
-      "AUR A1": 18000,
-      "AUR AX": 28000,
-      "KA 101": 5000,
-      "KA 74": 5000,
-      "KA 74U": 5000,
-      "KAM": 5000,
-      "Le Mas": 5000,
-      "Le Mas/SawedOff": 5000,
-      "M16A2": 5000,
-      "M4A1": 5000,
-      "SVAL": 12000,
-      "VIKHR": 30000
+      "AUR A1": {
+        "Default": 18000
+      },
+      "AUR AX": {
+        "Default": 28000
+      },
+      "KA 101": {
+        "Default": 5000
+      },
+      "KA 74": {
+        "Default": 5000
+      },
+      "KA 74U": {
+        "Default": 5000
+      },
+      "KAM": {
+        "Default": 5000
+      },
+      "Le Mas": {
+        "Default": 5000
+      },
+      "Le Mas/SawedOff": {
+        "Default": 5000
+      },
+      "M16A2": {
+        "Default": 5000
+      },
+      "M4A1": {
+        "Default": 5000
+      },
+      "SVAL": {
+        "Default": 12000
+      },
+      "VIKHR": {
+        "Default": 30000
+      }
     },
     "Weapons_BattleRifles": {
-      "LAR": 35000
+      "LAR": {
+        "Default": 35000
+      }
     },
     "Weapons_BoltActionRifles": {
-      "CR 527": 5000,
-      "CR 550": 5000,
-      "M70 Tundra": 5000,
-      "Mosin": 5000,
-      "Mosin/SawedOff": 5000,
-      "Pioneer": 5000,
-      "SSG 82": 5000,
-      "VS 89": 5000
+      "CR 527": {
+        "Default": 5000
+      },
+      "CR 550": {
+        "Default": 5000
+      },
+      "M70 Tundra": {
+        "Default": 5000
+      },
+      "Mosin": {
+        "Default": 5000
+      },
+      "Mosin/SawedOff": {
+        "Default": 5000
+      },
+      "Pioneer": {
+        "Default": 5000
+      },
+      "SSG 82": {
+        "Default": 5000
+      },
+      "VS 89": {
+        "Default": 5000
+      }
     },
     "Weapons_BreakActionRifles": {
-      "BK 18": 5000,
-      "BK 18/SawedOff": 5000,
-      "Blaze": 5000,
-      "Blaze/SawedOff": 5000
+      "BK 18": {
+        "Default": 5000
+      },
+      "BK 18/SawedOff": {
+        "Default": 5000
+      },
+      "Blaze": {
+        "Default": 5000
+      },
+      "Blaze/SawedOff": {
+        "Default": 5000
+      }
     },
     "Weapons_Launchers": {
-      "M79": 5000
+      "M79": {
+        "Default": 5000
+      }
     },
     "Weapons_LeverActionRifles": {
-      "Repeater": 5000
+      "Repeater": {
+        "Default": 5000
+      }
     },
     "Weapons_MarksmanRifles": {
-      "VSD": 20000,
-      "VSS": 10000
+      "VSD": {
+        "Default": 20000
+      },
+      "VSS": {
+        "Default": 10000
+      }
     },
     "Weapons_Pistols": {
-      "CR 75": 5000,
-      "Deagle": 5000,
-      "Derringer": 5000,
-      "FX 45": 5000,
-      "IJ 70": 5000,
-      "KOLT 1911": 5000,
-      "Longhorn": 25000,
-      "MK II": 5000,
-      "Mlock": 5000,
-      "P1": 3000,
-      "Revolver": {
-        "Sawed-Off": 25000,
-        "Standard": 5000
+      "CR 75": {
+        "Default": 5000
       },
-      "Revolver/SawedOff": 5000
+      "Deagle": {
+        "Default": 5000
+      },
+      "Derringer": {
+        "Default": 5000
+      },
+      "FX 45": {
+        "Default": 5000
+      },
+      "IJ 70": {
+        "Default": 5000
+      },
+      "KOLT 1911": {
+        "Default": 5000
+      },
+      "Longhorn": {
+        "Default": 25000
+      },
+      "MK II": {
+        "Default": 5000
+      },
+      "Mlock": {
+        "Default": 5000
+      },
+      "P1": {
+        "Default": 3000
+      },
+      "Revolver": {
+        "Sawed-Off": {
+          "Default": 25000
+        },
+        "Standard": {
+          "Default": 5000
+        }
+      },
+      "Revolver/SawedOff": {
+        "Default": 5000
+      }
     },
     "Weapons_SMGs": {
-      "Bizon": 5000,
-      "CR 61 Skorpion": 5000,
-      "SG5K": 25000,
-      "USG45": 20000
+      "Bizon": {
+        "Default": 5000
+      },
+      "CR 61 Skorpion": {
+        "Default": 5000
+      },
+      "SG5K": {
+        "Default": 25000
+      },
+      "USG45": {
+        "Default": 20000
+      }
     },
     "Weapons_SemiAutoRifles": {
-      "DMR": 40000,
-      "SK 5966": 5000,
-      "Sporter 22": 5000
+      "DMR": {
+        "Default": 40000
+      },
+      "SK 5966": {
+        "Default": 5000
+      },
+      "Sporter 22": {
+        "Default": 5000
+      }
     },
     "Weapons_Shotguns": {
-      "BK 12": 5000,
-      "BK 12/SawedOff": 5000,
-      "BK 133": 5000,
-      "BK 43": 5000,
-      "BK 43/SawedOff": 5000,
-      "Vaiga": 5000
+      "BK 12": {
+        "Default": 5000
+      },
+      "BK 12/SawedOff": {
+        "Default": 5000
+      },
+      "BK 133": {
+        "Default": 5000
+      },
+      "BK 43": {
+        "Default": 5000
+      },
+      "BK 43/SawedOff": {
+        "Default": 5000
+      },
+      "Vaiga": {
+        "Default": 5000
+      }
     }
   },
   "notes": "Sell prices are one-third of buy prices."
