@@ -63,6 +63,10 @@ class TraderView(discord.ui.View):
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
                 subcategories = get_subcategories(selected_category)
+                if not subcategories:
+                    return await select_interaction.response.send_message(
+                        "No subcategories found for this category.", ephemeral=True
+                    )
                 sub_options = [discord.SelectOption(label=s, value=s) for s in subcategories[:25]]
 
                 class SubcategorySelect(discord.ui.Select):
@@ -72,6 +76,10 @@ class TraderView(discord.ui.View):
                     async def callback(self, sub_select_interaction: discord.Interaction):
                         selected_subcategory = self.values[0]
                         items = get_items_in_subcategory(selected_category, selected_subcategory)
+                        if not items:
+                            return await sub_select_interaction.response.send_message(
+                                "No items found for this subcategory.", ephemeral=True
+                            )
                         item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
 
                         class ItemSelect(discord.ui.Select):
