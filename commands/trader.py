@@ -89,6 +89,18 @@ class TraderView(discord.ui.View):
                         if not items:
                             return await sub_select_interaction.response.send_message("No items found for this subcategory.", ephemeral=True, delete_after=10)
 
+                        if len(items) == 1 and items[0] == "Default":
+                            variants = get_variants(selected_category, selected_subcategory, "Default")
+                            if len(variants) == 1 and variants[0] == "Default":
+                                await sub_select_interaction.response.send_modal(
+                                    QuantityModal(
+                                        self.bot, self.user_id,
+                                        selected_category, selected_subcategory,
+                                        "Default", "Default"
+                                    )
+                                )
+                                return
+
                         item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
 
                         class ItemSelect(discord.ui.Select):
@@ -101,7 +113,6 @@ class TraderView(discord.ui.View):
                                 selected_item = self.values[0]
                                 variants = get_variants(selected_category, selected_subcategory, selected_item)
 
-                                # Bypass variant selection if only Default exists
                                 if len(variants) == 1 and variants[0] == "Default":
                                     await item_interaction.response.send_modal(
                                         QuantityModal(
