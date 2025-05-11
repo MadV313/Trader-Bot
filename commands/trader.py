@@ -75,6 +75,13 @@ class TraderView(discord.ui.View):
 
                     async def callback(self, sub_select_interaction: discord.Interaction):
                         selected_subcategory = self.values[0]
+                        # Bypass for categories that don't require item selection
+                        if selected_category not in ["Weapons", "Clothes"]:
+                            await sub_select_interaction.response.send_modal(
+                                QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, "Default", "Default")
+                            )
+                            return
+
                         items = get_items_in_subcategory(selected_category, selected_subcategory)
                         if not items:
                             return await sub_select_interaction.response.send_message(
