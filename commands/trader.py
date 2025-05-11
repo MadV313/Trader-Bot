@@ -32,11 +32,17 @@ def get_variants(category, subcategory, item):
         return list(item_entry.keys())
     return ["Default"]
 
+
 def get_price(category, subcategory, item, variant):
-    entry = PRICE_DATA[category][subcategory][item]
-    if isinstance(entry, dict):
-        return entry.get(variant)
-    return entry if variant.lower() == "default" else None
+    try:
+        entry = PRICE_DATA[category][subcategory]
+        if isinstance(entry, dict):
+            entry = entry.get(item, entry)  # If item doesn't exist, assume entry holds the price directly
+        if isinstance(entry, dict):
+            return entry.get(variant, entry.get("Default"))
+        return entry
+    except (KeyError, TypeError):
+        return None
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
