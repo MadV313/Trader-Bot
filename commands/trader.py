@@ -251,35 +251,15 @@ class TraderView(discord.ui.View):
             summary += f"- {item_name} ({variant_name}) x{item['quantity']} = ${item['subtotal']:,}\n"
         summary += f"**Total: ${total:,}**"
 
-        trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a â when order is ready.")
-# Correct message flow injected by Assistant
+        
+trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
+msg = await trader_channel.send(f"{summary}
 
-        # Send the final message to trader channel
-        trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a â when order is ready.")
-        await msg.add_reaction("ð´")
+{MENTION_ROLES}")
+await msg.add_reaction("ð´")
+await msg.edit(content=f"{msg.content}
 
-        # Reaction event handling for admin confirmation
-        @self.bot.event
-        async def on_reaction_add(reaction, user):
-            if user.bot:
-                return
-
-            if reaction.message.channel.id != TRADER_ORDERS_CHANNEL_ID:
-                return
-
-            if str(reaction.emoji) == "â":
-                try:
-                    await reaction.message.clear_reaction("ð´")
-                    await reaction.message.add_reaction("â")
-                    admin_mention = user.mention
-                    new_content = f"{reaction.message.content}\n\nOrder confirmed by admin: {admin_mention}"
-                    await reaction.message.edit(content=new_content)
-                except Exception as e:
-                    print(f"Error handling reaction confirmation: {e}")
-
-        await msg.add_reaction("Ã°ÂÂÂ´")
+Please confirm this message with a â when order is ready.")
         await msg.edit(content=f"{msg.content}\nPlease confirm this message with a Ã¢ÂÂ when order is ready")
         await msg.add_reaction("Ã¢ÂÂ")
 
