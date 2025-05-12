@@ -55,7 +55,8 @@ def get_price(category, subcategory, item, variant):
         return entry
     except (KeyError, TypeError):
         return None
-        class TraderView(discord.ui.View):
+
+class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
         self.bot = bot
@@ -228,7 +229,8 @@ def get_price(category, subcategory, item, variant):
         category_view = discord.ui.View(timeout=180)
         category_view.add_item(CategorySelect(self.bot, self.user_id))
         await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True)
-            @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
+
+    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
@@ -261,7 +263,6 @@ def get_price(category, subcategory, item, variant):
             return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True, delete_after=10)
-
 
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
@@ -305,7 +306,6 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
 
-
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -321,7 +321,6 @@ class TraderCommand(commands.Cog):
             view=TraderView(self.bot, interaction.user.id),
             ephemeral=True
         )
-
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
