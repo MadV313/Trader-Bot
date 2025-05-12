@@ -45,8 +45,6 @@ def get_variants(category, subcategory, item):
     except (KeyError, TypeError):
         return ["Default"]
 
-def get_price(category, subcategory, item, variant):
-    try:
         entry = PRICE_DATA[category]
         if subcategory:
             entry = entry[subcategory]
