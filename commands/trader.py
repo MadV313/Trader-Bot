@@ -45,18 +45,18 @@ def get_variants(category, subcategory, item):
     except (KeyError, TypeError):
         return ["Default"]
 
-def get_price(category, subcategory, item, variant):
-    try:
-        entry = PRICE_DATA[category]
-        if subcategory:
-            entry = entry[subcategory]
-        entry = entry.get(item, entry)
-        if isinstance(entry, dict):
-            return entry.get(variant, entry.get("Default"))
-        return entry
-    except (KeyError, TypeError):
-        return None
 
+def get_price(category, item, variant="Default"):
+    entry = PRICE_DATA.get(category, {}).get(item, {})
+    if isinstance(entry, dict):
+        price = entry.get("Default")
+        if price is not None:
+            return price
+        if entry:
+            first_variant_price = next(iter(entry.values()))
+            return first_variant_price
+        return 0
+    return entry  # If entry is a direct value
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
