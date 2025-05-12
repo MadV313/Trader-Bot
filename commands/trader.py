@@ -123,7 +123,12 @@ class TraderView(discord.ui.View):
                                         )
                                         return
 
-                                    variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
+                                    variant_options = [
+    discord.SelectOption(
+        label=f"{v} (${get_price(selected_category, selected_subcategory, selected_item, v):,})", 
+        value=v
+    ) for v in variants[:25]
+]
 
                                     class VariantSelect(discord.ui.Select):
                                         def __init__(self, bot, user_id):
