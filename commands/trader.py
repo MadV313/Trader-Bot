@@ -217,7 +217,8 @@ class TraderView(discord.ui.View):
                                             selected_item, selected_variant
                                         )
                                     )
-                                        @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
+                                     
+    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
