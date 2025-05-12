@@ -45,19 +45,20 @@ def get_variants(category, subcategory, item):
     except (KeyError, TypeError):
         return ["Default"]
 
-
 def get_price(category, item, variant="Default"):
     entry = PRICE_DATA.get(category, {}).get(item, {})
     if isinstance(entry, dict):
+        # First, try to get the Default price
         price = entry.get("Default")
         if price is not None:
             return price
+        # If no Default, fallback to first variant price
         if entry:
             first_variant_price = next(iter(entry.values()))
             return first_variant_price
         return 0
-    return entry  # If entry is a direct value
-class TraderView(discord.ui.View):
+    # If entry is a direct value, return it (legacy handling)
+    return entry
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
         self.bot = bot
