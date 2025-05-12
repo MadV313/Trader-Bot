@@ -323,19 +323,19 @@ class TraderCommand(commands.Cog):
 @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if user.bot:
-            return
+        return
         if reaction.emoji == 'ð´' and reaction.message.channel.id == TRADER_ORDERS_CHANNEL_ID:
-            message = reaction.message
-            for react in message.reactions:
-                if react.emoji == 'ð´':
-                    await message.clear_reaction('ð´')
-            await message.add_reaction('ð´')
-            await message.edit(content=message.content + f"
+        message = reaction.message
+        for react in message.reactions:
+        if react.emoji == 'ð´':
+        await message.clear_reaction('ð´')
+        await message.add_reaction('ð´')
+        await message.edit(content=message.content + f"
 
-<@{user.id}> confirmed the order above")
-            economy_channel = self.bot.get_channel(ECONOMY_CHANNEL_ID)
-            if economy_channel:
-                await economy_channel.send(f"Order confirmed by <@{user.id}>. Proceed with the transaction.")
+        <@{user.id}> confirmed the order above")
+        economy_channel = self.bot.get_channel(ECONOMY_CHANNEL_ID)
+        if economy_channel:
+        await economy_channel.send(f"Order confirmed by <@{user.id}>. Proceed with the transaction.")
 
-async def setup(bot):
+        async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
