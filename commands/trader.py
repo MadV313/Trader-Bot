@@ -342,3 +342,30 @@ async def on_reaction_add(reaction, user):
         economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
         if economy_channel:
             await economy_channel.send(f"Order confirmed by <@{user.id}>. Proceed with the transaction.")
+
+
+class Trader(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        if user.bot:
+            return
+        if reaction.emoji == 'â' and reaction.message.channel.id == TRADER_ORDERS_CHANNEL_ID:
+            message = reaction.message
+            # Remove ð´ reaction if it exists
+            for react in message.reactions:
+                if react.emoji == 'ð´':
+                    await message.clear_reaction('ð´')
+            # Add â reaction
+            await message.add_reaction('â')
+            # Edit the message content
+            await message.edit(content=message.content + f"\n\n<@{user.id}> confirmed the order above")
+            # Send the player message in the economy channel
+            economy_channel = self.bot.get_channel(ECONOMY_CHANNEL_ID)
+            if economy_channel:
+                await economy_channel.send(f"Order confirmed by <@{user.id}>. Proceed with the transaction.")
+
+async def setup(bot):
+    await bot.add_cog(Trader(bot))
