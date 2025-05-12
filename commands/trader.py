@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -218,20 +217,7 @@ class TraderView(discord.ui.View):
                                             selected_item, selected_variant
                                         )
                                     )
-
-                            variant_view = discord.ui.View(timeout=180)
-                            variant_view.add_item(VariantSelect(self.bot, self.user_id))
-                            await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
-
-                    item_view = discord.ui.View(timeout=180)
-                    item_view.add_item(ItemSelect(self.bot, self.user_id))
-                    await select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
-
-        category_view = discord.ui.View(timeout=180)
-        category_view.add_item(CategorySelect(self.bot, self.user_id))
-        await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True)
-
-    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
+                                        @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
@@ -325,3 +311,15 @@ class TraderCommand(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
+
+                            variant_view = discord.ui.View(timeout=180)
+                            variant_view.add_item(VariantSelect(self.bot, self.user_id))
+                            await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
+
+                    item_view = discord.ui.View(timeout=180)
+                    item_view.add_item(ItemSelect(self.bot, self.user_id))
+                    await select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
+
+        category_view = discord.ui.View(timeout=180)
+        category_view.add_item(CategorySelect(self.bot, self.user_id))
+        await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True)
