@@ -55,8 +55,7 @@ def get_price(category, subcategory, item, variant):
         return entry
     except (KeyError, TypeError):
         return None
-
-class TraderView(discord.ui.View):
+        class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
         self.bot = bot
@@ -101,7 +100,12 @@ class TraderView(discord.ui.View):
                             if not items:
                                 return await sub_select_interaction.response.send_message("No items found for this subcategory.", ephemeral=True)
 
-                            item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
+                            item_options = [
+                                discord.SelectOption(
+                                    label=f"{i} (${get_price(selected_category, selected_subcategory, i, 'Default'):,})",
+                                    value=i
+                                ) for i in items[:25]
+                            ]
 
                             class ItemSelect(discord.ui.Select):
                                 def __init__(self, bot, user_id):
@@ -124,11 +128,11 @@ class TraderView(discord.ui.View):
                                         return
 
                                     variant_options = [
-    discord.SelectOption(
-        label=f"{v} (${get_price(selected_category, selected_subcategory, selected_item, v):,})", 
-        value=v
-    ) for v in variants[:25]
-]
+                                        discord.SelectOption(
+                                            label=f"{v} (${get_price(selected_category, selected_subcategory, selected_item, v):,})",
+                                            value=v
+                                        ) for v in variants[:25]
+                                    ]
 
                                     class VariantSelect(discord.ui.Select):
                                         def __init__(self, bot, user_id):
@@ -163,7 +167,12 @@ class TraderView(discord.ui.View):
                     if not items:
                         return await select_interaction.response.send_message("No items found for this category.", ephemeral=True)
 
-                    item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
+                    item_options = [
+                        discord.SelectOption(
+                            label=f"{i} (${get_price(selected_category, None, i, 'Default'):,})",
+                            value=i
+                        ) for i in items[:25]
+                    ]
 
                     class ItemSelect(discord.ui.Select):
                         def __init__(self, bot, user_id):
@@ -185,7 +194,12 @@ class TraderView(discord.ui.View):
                                 )
                                 return
 
-                            variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
+                            variant_options = [
+                                discord.SelectOption(
+                                    label=f"{v} (${get_price(selected_category, None, selected_item, v):,})",
+                                    value=v
+                                ) for v in variants[:25]
+                            ]
 
                             class VariantSelect(discord.ui.Select):
                                 def __init__(self, bot, user_id):
@@ -214,8 +228,7 @@ class TraderView(discord.ui.View):
         category_view = discord.ui.View(timeout=180)
         category_view.add_item(CategorySelect(self.bot, self.user_id))
         await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True)
-
-    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
+            @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
@@ -248,6 +261,7 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True, delete_after=10)
+
 
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
@@ -291,6 +305,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
 
+
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -306,6 +321,7 @@ class TraderCommand(commands.Cog):
             view=TraderView(self.bot, interaction.user.id),
             ephemeral=True
         )
+
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
