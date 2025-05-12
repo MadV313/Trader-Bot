@@ -1,3 +1,4 @@
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -103,7 +104,7 @@ class TraderView(discord.ui.View):
 
                             item_options = [
                                 discord.SelectOption(
-                                    label=f"{i} (${get_price(selected_category, selected_subcategory, i, 'Default'):,})",
+                                    label=f"{i} (${get_price(selected_category, selected_subcategory, i, 'Default') or 0:,})",
                                     value=i
                                 ) for i in items[:25]
                             ]
@@ -130,7 +131,7 @@ class TraderView(discord.ui.View):
 
                                     variant_options = [
                                         discord.SelectOption(
-                                            label=f"{v} (${get_price(selected_category, selected_subcategory, selected_item, v):,})",
+                                            label=f"{v} (${get_price(selected_category, selected_subcategory, selected_item, v) or 0:,})",
                                             value=v
                                         ) for v in variants[:25]
                                     ]
@@ -170,7 +171,7 @@ class TraderView(discord.ui.View):
 
                     item_options = [
                         discord.SelectOption(
-                            label=f"{i} (${get_price(selected_category, None, i, 'Default'):,})",
+                            label=f"{i} (${get_price(selected_category, None, i, 'Default') or 0:,})",
                             value=i
                         ) for i in items[:25]
                     ]
@@ -197,7 +198,7 @@ class TraderView(discord.ui.View):
 
                             variant_options = [
                                 discord.SelectOption(
-                                    label=f"{v} (${get_price(selected_category, None, selected_item, v):,})",
+                                    label=f"{v} (${get_price(selected_category, None, selected_item, v) or 0:,})",
                                     value=v
                                 ) for v in variants[:25]
                             ]
@@ -264,6 +265,7 @@ class TraderView(discord.ui.View):
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True, delete_after=10)
 
+
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
@@ -286,10 +288,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             if quantity <= 0:
                 raise ValueError("Quantity must be greater than 0.")
 
-            price = get_price(self.category, self.subcategory, self.item, self.variant)
-            if price is None or not isinstance(price, (int, float)):
-                raise ValueError("Invalid item or variant selected.")
-
+            price = get_price(self.category, self.subcategory, self.item, self.variant) or 0
             subtotal = price * quantity
 
             session_manager.add_item(self.user_id, {
@@ -306,6 +305,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
 
+
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -321,6 +321,7 @@ class TraderCommand(commands.Cog):
             view=TraderView(self.bot, interaction.user.id),
             ephemeral=True
         )
+
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
