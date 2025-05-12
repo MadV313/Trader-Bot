@@ -1,4 +1,3 @@
-So to confirm this is the new correct code?
 
 import discord
 from discord.ext import commands
