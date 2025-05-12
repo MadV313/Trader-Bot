@@ -253,7 +253,7 @@ class TraderView(discord.ui.View):
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
-        await msg.add_reaction("ð´")
+        await msg.add_reaction("â")
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
@@ -305,6 +305,51 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
 
 class TraderCommand(commands.Cog):
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        if user.bot:
+            return
+
+        # Ensure it's in the correct channel and the reaction is â
+        if reaction.message.channel.id != TRADER_ORDERS_CHANNEL_ID:
+            return
+
+        if str(reaction.emoji) == "â":
+            # Remove ð´ reaction if present
+            try:
+                for react in reaction.message.reactions:
+                    if str(react.emoji) == "ð´":
+                        await reaction.message.clear_reaction("ð´")
+            except Exception as e:
+                print(f"Error removing ð´ reaction: {e}")
+
+            # Add â reaction if not already added
+            try:
+                await reaction.message.add_reaction("â")
+            except Exception as e:
+                print(f"Error adding â reaction: {e}")
+
+            # Edit the message content to append admin confirmation
+            admin_mention = user.mention
+            new_content = f"{reaction.message.content}
+{admin_mention} confirmed the order above."
+            try:
+                await reaction.message.edit(content=new_content)
+            except Exception as e:
+                print(f"Error editing message content: {e}")
+
+            # Notify the player in the economy channel
+            try:
+                economy_channel = self.bot.get_channel(ECONOMY_CHANNEL_ID)
+                if economy_channel:
+                    # Assuming the player mention is in the original message content, try to extract it
+                    mentions = reaction.message.mentions
+                    if mentions:
+                        player_mention = mentions[0].mention
+                        await economy_channel.send(f"{player_mention}, your order is now ready!")
+            except Exception as e:
+                print(f"Error sending notification to economy channel: {e}")
+
     def __init__(self, bot):
         self.bot = bot
 
@@ -320,22 +365,5 @@ class TraderCommand(commands.Cog):
             ephemeral=True
         )
 
-@commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if user.bot:
-        return
-        if reaction.emoji == 'ð´' and reaction.message.channel.id == TRADER_ORDERS_CHANNEL_ID:
-        message = reaction.message
-        for react in message.reactions:
-        if react.emoji == 'ð´':
-        await message.clear_reaction('ð´')
-        await message.add_reaction('ð´')
-        await message.edit(content=message.content + f"
-
-        <@{user.id}> confirmed the order above")
-        economy_channel = self.bot.get_channel(ECONOMY_CHANNEL_ID)
-        if economy_channel:
-        await economy_channel.send(f"Order confirmed by <@{user.id}>. Proceed with the transaction.")
-
-        async def setup(bot):
+async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
