@@ -45,20 +45,19 @@ def get_variants(category, subcategory, item):
     except (KeyError, TypeError):
         return ["Default"]
 
-def get_price(category, item, variant="Default"):
-    entry = PRICE_DATA.get(category, {}).get(item, {})
-    if isinstance(entry, dict):
-        # First, try to get the Default price
-        price = entry.get("Default")
-        if price is not None:
-            return price
-        # If no Default, fallback to first variant price
-        if entry:
-            first_variant_price = next(iter(entry.values()))
-            return first_variant_price
-        return 0
-    # If entry is a direct value, return it (legacy handling)
-    return entry
+def get_price(category, subcategory, item, variant):
+    try:
+        entry = PRICE_DATA[category]
+        if subcategory:
+            entry = entry[subcategory]
+        entry = entry.get(item, entry)
+        if isinstance(entry, dict):
+            return entry.get(variant, entry.get("Default"))
+        return entry
+    except (KeyError, TypeError):
+        return None
+
+class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
         self.bot = bot
@@ -254,7 +253,7 @@ def get_price(category, item, variant="Default"):
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
-        await msg.add_reaction("â")
+        await msg.add_reaction("ð´")
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
@@ -323,3 +322,23 @@ class TraderCommand(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
+
+
+@bot.event
+async def on_reaction_add(reaction, user):
+    if user.bot:
+        return
+    if reaction.emoji == 'â' and reaction.message.channel.id == TRADER_ORDERS_CHANNEL_ID:
+        message = reaction.message
+        # Remove ð´ reaction if it exists
+        for react in message.reactions:
+            if react.emoji == 'ð´':
+                await message.clear_reaction('ð´')
+        # Add â reaction
+        await message.add_reaction('â')
+        # Edit the message content
+        await message.edit(content=message.content + f"\n\n<@{user.id}> confirmed the order above")
+        # Send the player message in the economy channel (replicating existing logic)
+        economy_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
+        if economy_channel:
+            await economy_channel.send(f"Order confirmed by <@{user.id}>. Proceed with the transaction.")
