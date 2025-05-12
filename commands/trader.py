@@ -265,7 +265,6 @@ class TraderView(discord.ui.View):
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been canceled.", ephemeral=True, delete_after=10)
 
-
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
@@ -305,7 +304,6 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         except ValueError:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
 
-
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -321,7 +319,6 @@ class TraderCommand(commands.Cog):
             view=TraderView(self.bot, interaction.user.id),
             ephemeral=True
         )
-
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
