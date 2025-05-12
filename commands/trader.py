@@ -253,9 +253,9 @@ class TraderView(discord.ui.View):
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
-        await msg.add_reaction("ð´")
-        await msg.edit(content=f"{msg.content}\nPlease confirm this message with a â when order is ready")
-        await msg.add_reaction("â")
+        await msg.add_reaction("Ã°ÂÂÂ´")
+        await msg.edit(content=f"{msg.content}\nPlease confirm this message with a Ã¢ÂÂ when order is ready")
+        await msg.add_reaction("Ã¢ÂÂ")
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
@@ -312,24 +312,24 @@ class TraderCommand(commands.Cog):
         if user.bot:
             return
 
-        # Ensure it's in the correct channel and the reaction is â
+        # Ensure it's in the correct channel and the reaction is Ã¢ÂÂ
         if reaction.message.channel.id != TRADER_ORDERS_CHANNEL_ID:
             return
 
-        if str(reaction.emoji) == "â":
-            # Remove ð´ reaction if present
+        if str(reaction.emoji) == "Ã¢ÂÂ":
+            # Remove Ã°ÂÂÂ´ reaction if present
             try:
                 for react in reaction.message.reactions:
-                    if str(react.emoji) == "ð´":
-                        await reaction.message.clear_reaction("ð´")
+                    if str(react.emoji) == "Ã°ÂÂÂ´":
+                        await reaction.message.clear_reaction("Ã°ÂÂÂ´")
             except Exception as e:
-                print(f"Error removing ð´ reaction: {e}")
+                print(f"Error removing Ã°ÂÂÂ´ reaction: {e}")
 
-            # Add â reaction if not already added
+            # Add Ã¢ÂÂ reaction if not already added
             try:
-                await reaction.message.add_reaction("â")
+                await reaction.message.add_reaction("Ã¢ÂÂ")
             except Exception as e:
-                print(f"Error adding â reaction: {e}")
+                print(f"Error adding Ã¢ÂÂ reaction: {e}")
 
             # Edit the message content to append admin confirmation
             admin_mention = user.mention
