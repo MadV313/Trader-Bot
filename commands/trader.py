@@ -253,6 +253,8 @@ class TraderView(discord.ui.View):
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}")
+        await msg.add_reaction("ð´")
+        await msg.edit(content=f"{msg.content}\nPlease confirm this message with a â when order is ready")
         await msg.add_reaction("â")
 
         session_manager.clear_session(self.user_id)
