@@ -252,7 +252,7 @@ class TraderView(discord.ui.View):
         summary += f"**Total: ${total:,}**"
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = 
+        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a â when order is ready.")
 # Correct message flow injected by Assistant
 
         # Send the final message to trader channel
