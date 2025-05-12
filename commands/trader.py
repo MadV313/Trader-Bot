@@ -332,7 +332,7 @@ class TraderCommand(commands.Cog):
             # Edit the message content to append admin confirmation
             admin_mention = user.mention
             new_content = f"{reaction.message.content}
-{admin_mention} confirmed the order above."
+            new_content = f"{reaction.message.content}\n{admin_mention} confirmed the order above."
             try:
                 await reaction.message.edit(content=new_content)
             except Exception as e:
