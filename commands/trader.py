@@ -253,7 +253,7 @@ class TraderView(discord.ui.View):
 
         
 trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a â when order is ready.")
+msg = await trader_channel.send(f"{summary}
 
 {MENTION_ROLES}")
 await msg.add_reaction("ð´")
