@@ -259,6 +259,10 @@ class TraderView(discord.ui.View):
             return
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Order canceled.", ephemeral=True)
+        try:
+            await interaction.message.delete()
+        except:
+            pass
 
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
