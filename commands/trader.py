@@ -64,7 +64,7 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn’t your cart session.", ephemeral=True)
+            return await interaction.response.send_message("This isnât your cart session.", ephemeral=True)
 
         class DynamicDropdown(discord.ui.Select):
             def __init__(self, bot, user_id, stage, selected=None, dropdown_owner_view=None):
@@ -106,81 +106,80 @@ class TraderView(discord.ui.View):
 
             async def callback(self, select_interaction: discord.Interaction):
                 if select_interaction.user.id != self.user_id:
-            return await select_interaction.response.send_message("Not your session.", ephemeral=True)
+                    return await select_interaction.response.send_message("Not your session.", ephemeral=True)
 
-    value = self.values[0]
-    dropdown = None
+                value = self.values[0]
+                dropdown = None
 
-    try:
-        if self.stage == "category":
-            if value in ["Clothes", "Weapons"]:
-                dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value}, self.dropdown_owner_view)
-            else:
-                dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value}, self.dropdown_owner_view)
-
-        elif self.stage == "subcategory":
-            new_selection = self.selected.copy()
-            new_selection["subcategory"] = value
-            dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.dropdown_owner_view)
-
-        elif self.stage == "item":
-            new_selection = self.selected.copy()
-            item_data = json.loads(value)
-            new_selection["item"] = item_data["item"]
-            if item_data["variant"] == "Default":
-                await select_interaction.response.send_modal(
-                    QuantityModal(
-                        self.bot, self.user_id,
-                        new_selection["category"],
-                        new_selection.get("subcategory"),
-                        new_selection["item"],
-                        "Default",
-                        dropdown_info={
-                            "channel_id": self.dropdown_owner_view.dropdown_channel_id,
-                            "message_id": self.dropdown_owner_view.dropdown_message_id
-                        }
-                    )
-                )
-                return
-            else:
-                dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.dropdown_owner_view)
-
-        elif self.stage == "variant":
-            new_selection = self.selected.copy()
-            new_selection["variant"] = value
-            await select_interaction.response.send_modal(
-                QuantityModal(
-                    self.bot, self.user_id,
-                    new_selection["category"],
-                    new_selection.get("subcategory"),
-                    new_selection["item"],
-                    new_selection["variant"],
-                    dropdown_info={
-                        "channel_id": self.dropdown_owner_view.dropdown_channel_id,
-                        "message_id": self.dropdown_owner_view.dropdown_message_id
-                    }
-                )
-            )
-            return
-
-        if dropdown:
-            new_view = discord.ui.View(timeout=180)
-            dropdown.dropdown_owner_view = self.dropdown_owner_view
-            new_view.add_item(dropdown)
-            try:
-                await select_interaction.edit_original_response(content="Select an option:", view=new_view)
-            except discord.NotFound:
                 try:
-                    await select_interaction.response.defer(ephemeral=True)
-                except:
-                    pass
-                try:
-                    await select_interaction.followup.send("Dropdown expired. Please try again.", ephemeral=True)
-                except:
-                    pass
-    except Exception as e:
-        print(f"[Dropdown Callback Error] {type(e).__name__}: {e}")
+                    if self.stage == "category":
+                        if value in ["Clothes", "Weapons"]:
+                            dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value}, self.dropdown_owner_view)
+                        else:
+                            dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value}, self.dropdown_owner_view)
 
+                    elif self.stage == "subcategory":
+                        new_selection = self.selected.copy()
+                        new_selection["subcategory"] = value
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.dropdown_owner_view)
+
+                    elif self.stage == "item":
+                        new_selection = self.selected.copy()
+                        item_data = json.loads(value)
+                        new_selection["item"] = item_data["item"]
+                        if item_data["variant"] == "Default":
+                            await select_interaction.response.send_modal(
+                                QuantityModal(
+                                    self.bot, self.user_id,
+                                    new_selection["category"],
+                                    new_selection.get("subcategory"),
+                                    new_selection["item"],
+                                    "Default",
+                                    dropdown_info={
+                                        "channel_id": self.dropdown_owner_view.dropdown_channel_id,
+                                        "message_id": self.dropdown_owner_view.dropdown_message_id
+                                    }
+                                )
+                            )
+                            return
+                        else:
+                            dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.dropdown_owner_view)
+
+                    elif self.stage == "variant":
+                        new_selection = self.selected.copy()
+                        new_selection["variant"] = value
+                        await select_interaction.response.send_modal(
+                            QuantityModal(
+                                self.bot, self.user_id,
+                                new_selection["category"],
+                                new_selection.get("subcategory"),
+                                new_selection["item"],
+                                new_selection["variant"],
+                                dropdown_info={
+                                    "channel_id": self.dropdown_owner_view.dropdown_channel_id,
+                                    "message_id": self.dropdown_owner_view.dropdown_message_id
+                                }
+                            )
+                        )
+                        return
+
+                    if dropdown:
+                        new_view = discord.ui.View(timeout=180)
+                        dropdown.dropdown_owner_view = self.dropdown_owner_view
+                        new_view.add_item(dropdown)
+                        try:
+                            await select_interaction.edit_original_response(content="Select an option:", view=new_view)
+                        except discord.NotFound:
+                            try:
+                                await select_interaction.response.defer(ephemeral=True)
+                            except:
+                                pass
+                            try:
+                                await select_interaction.followup.send("Dropdown expired. Please try again.", ephemeral=True)
+                            except:
+                                pass
+                except Exception as e:
+                    print(f"[Dropdown Callback Error] {type(e).__name__}: {e}")
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
