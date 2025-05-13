@@ -105,8 +105,8 @@ class TraderView(discord.ui.View):
                     return [discord.SelectOption(label=f"{v} (${get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0:,})", value=v) for v in variants[:25]]
 
             async def callback(self, select_interaction: discord.Interaction):
-    if select_interaction.user.id != self.user_id:
-        return await select_interaction.response.send_message("Not your session.", ephemeral=True)
+                if select_interaction.user.id != self.user_id:
+            return await select_interaction.response.send_message("Not your session.", ephemeral=True)
 
     value = self.values[0]
     dropdown = None
