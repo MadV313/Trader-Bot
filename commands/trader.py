@@ -81,10 +81,8 @@ class TraderView(discord.ui.View):
 
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
-                if selected_category in ["Weapons", "Clothes"]:
-                    subcategories = get_subcategories(selected_category)
-                    if not subcategories:
-                        return await select_interaction.response.send_message("No subcategories found.", ephemeral=True)
+                subcategories = get_subcategories(selected_category)
+                if subcategories:
                     sub_options = [discord.SelectOption(label=s, value=s) for s in subcategories[:25]]
 
                     class SubcategorySelect(discord.ui.Select):
@@ -99,12 +97,7 @@ class TraderView(discord.ui.View):
                             if not items:
                                 return await sub_select_interaction.response.send_message("No items found.", ephemeral=True)
 
-                            item_options = [
-                                discord.SelectOption(
-                                    label=f"{i} (${get_price(selected_category, selected_subcategory, i, 'Default') or 0:,})",
-                                    value=i
-                                ) for i in items[:25]
-                            ]
+                            item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
 
                             class ItemSelect(discord.ui.Select):
                                 def __init__(self, bot, user_id):
@@ -115,19 +108,13 @@ class TraderView(discord.ui.View):
                                 async def callback(self, item_interaction: discord.Interaction):
                                     selected_item = self.values[0]
                                     variants = get_variants(selected_category, selected_subcategory, selected_item)
-
                                     if len(variants) == 1 and variants[0] == "Default":
                                         await item_interaction.response.send_modal(
                                             QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, "Default")
                                         )
                                         return
 
-                                    variant_options = [
-                                        discord.SelectOption(
-                                            label=f"{v} (${get_price(selected_category, selected_subcategory, selected_item, v) or 0:,})",
-                                            value=v
-                                        ) for v in variants[:25]
-                                    ]
+                                    variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
 
                                     class VariantSelect(discord.ui.Select):
                                         def __init__(self, bot, user_id):
@@ -158,12 +145,7 @@ class TraderView(discord.ui.View):
                     if not items:
                         return await select_interaction.response.send_message("No items found for this category.", ephemeral=True)
 
-                    item_options = [
-                        discord.SelectOption(
-                            label=f"{i} (${get_price(selected_category, None, i, 'Default') or 0:,})",
-                            value=i
-                        ) for i in items[:25]
-                    ]
+                    item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
 
                     class ItemSelect(discord.ui.Select):
                         def __init__(self, bot, user_id):
@@ -174,19 +156,13 @@ class TraderView(discord.ui.View):
                         async def callback(self, item_interaction: discord.Interaction):
                             selected_item = self.values[0]
                             variants = get_variants(selected_category, None, selected_item)
-
                             if len(variants) == 1 and variants[0] == "Default":
                                 await item_interaction.response.send_modal(
                                     QuantityModal(self.bot, self.user_id, selected_category, None, selected_item, "Default")
                                 )
                                 return
 
-                            variant_options = [
-                                discord.SelectOption(
-                                    label=f"{v} (${get_price(selected_category, None, selected_item, v) or 0:,})",
-                                    value=v
-                                ) for v in variants[:25]
-                            ]
+                            variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
 
                             class VariantSelect(discord.ui.Select):
                                 def __init__(self, bot, user_id):
@@ -211,6 +187,7 @@ class TraderView(discord.ui.View):
         category_view = discord.ui.View(timeout=180)
         category_view.add_item(CategorySelect(self.bot, self.user_id))
         await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True)
+
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
@@ -234,7 +211,6 @@ class TraderView(discord.ui.View):
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
         msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a ✅ when the order is ready.")
         await msg.add_reaction("🔴")
-        await msg.add_reaction("✅")
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
@@ -288,13 +264,14 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.confirmed_messages = set()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if user.bot or reaction.message.channel.id != TRADER_ORDERS_CHANNEL_ID:
             return
-
-        if str(reaction.emoji) == "✅":
+        if str(reaction.emoji) == "✅" and reaction.message.id not in self.confirmed_messages:
+            self.confirmed_messages.add(reaction.message.id)
             try:
                 await reaction.message.clear_reaction("🔴")
                 await reaction.message.add_reaction("✅")
@@ -303,7 +280,6 @@ class TraderCommand(commands.Cog):
                 await reaction.message.edit(content=new_content)
             except Exception as e:
                 print(f"Error handling reaction confirmation: {e}")
-
             try:
                 economy_channel = self.bot.get_channel(ECONOMY_CHANNEL_ID)
                 if economy_channel:
@@ -321,7 +297,6 @@ class TraderCommand(commands.Cog):
                 "This command can only be used in the designated economy channel.",
                 ephemeral=True, delete_after=10
             )
-
         session_manager.start_session(interaction.user.id)
         await interaction.response.send_message(
             "Buying session started! Use the buttons below to add items, submit, or cancel your order.",
