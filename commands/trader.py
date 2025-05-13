@@ -117,10 +117,30 @@ class TraderView(discord.ui.View):
         else:
             dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value}, self.dropdown_owner_view)
 
+        if dropdown:
+            new_view = discord.ui.View(timeout=180)
+            dropdown.dropdown_owner_view = self.dropdown_owner_view
+            new_view.add_item(dropdown)
+            try:
+                await select_interaction.edit_original_response(content="Select an option:", view=new_view)
+            except discord.NotFound:
+                await select_interaction.followup.send("Dropdown expired. Please try again.", ephemeral=True)
+        return
+
     elif self.stage == "subcategory":
         new_selection = self.selected.copy()
         new_selection["subcategory"] = value
         dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.dropdown_owner_view)
+
+        if dropdown:
+            new_view = discord.ui.View(timeout=180)
+            dropdown.dropdown_owner_view = self.dropdown_owner_view
+            new_view.add_item(dropdown)
+            try:
+                await select_interaction.edit_original_response(content="Select an option:", view=new_view)
+            except discord.NotFound:
+                await select_interaction.followup.send("Dropdown expired. Please try again.", ephemeral=True)
+        return
 
     elif self.stage == "item":
         new_selection = self.selected.copy()
@@ -141,8 +161,19 @@ class TraderView(discord.ui.View):
                 )
             )
             return
+            
         else:
             dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.dropdown_owner_view)
+
+            if dropdown:
+                new_view = discord.ui.View(timeout=180)
+                dropdown.dropdown_owner_view = self.dropdown_owner_view
+                new_view.add_item(dropdown)
+                try:
+                    await select_interaction.edit_original_response(content="Select an option:", view=new_view)
+                except discord.NotFound:
+                    await select_interaction.followup.send("Dropdown expired. Please try again.", ephemeral=True)
+            return
 
     elif self.stage == "variant":
         new_selection = self.selected.copy()
