@@ -62,10 +62,11 @@ class TraderView(discord.ui.View):
         self.dropdown_channel_id = None
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
-    async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isnât your cart session.", ephemeral=True)
+async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
+    if interaction.user.id != self.user_id:
+        return await interaction.response.send_message("This isn’t your cart session.", ephemeral=True)
 
+    try:
         class DynamicDropdown(discord.ui.Select):
             def __init__(self, bot, user_id, stage, selected=None, dropdown_owner_view=None):
                 self.bot = bot
@@ -79,6 +80,32 @@ class TraderView(discord.ui.View):
                 options = self.get_options()
                 super().__init__(placeholder=placeholder, options=options)
 
+            def get_options(self):
+                # same logic as before
+                ...
+
+            async def callback(self, select_interaction: discord.Interaction):
+                # same callback logic
+                ...
+
+        view = discord.ui.View(timeout=180)
+        dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=self)
+        view.add_item(dropdown)
+        await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
+
+        try:
+            msg = await interaction.original_response()
+            self.dropdown_channel_id = msg.channel.id
+            self.dropdown_message_id = msg.id
+        except Exception as e:
+            print(f"[Dropdown Message Save Error] {type(e).__name__}: {e}")
+
+    except Exception as e:
+        print(f"[Add Item Error] {type(e).__name__}: {e}")
+        try:
+            await interaction.response.send_message("An error occurred while adding item. Please try again.", ephemeral=True)
+        except:
+            pass
             def get_options(self):
                 if self.stage == "category":
                     return [discord.SelectOption(label=c, value=c) for c in get_categories()[:25]]
