@@ -97,7 +97,7 @@ class TraderView(discord.ui.View):
                             if not items:
                                 return await sub_select_interaction.response.send_message("No items found.", ephemeral=True)
 
-                            item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
+                            item_options = [discord.SelectOption(label=f"{i} (${get_price(selected_category, selected_subcategory if 'selected_subcategory' in locals() else None, i, 'Default')})", value=i) for i in items[:25]]
 
                             class ItemSelect(discord.ui.Select):
                                 def __init__(self, bot, user_id):
@@ -114,7 +114,7 @@ class TraderView(discord.ui.View):
                                         )
                                         return
 
-                                    variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
+                                    variant_options = [discord.SelectOption(label=f"{v} (${get_price(selected_category, selected_subcategory if 'selected_subcategory' in locals() else None, selected_item, v)})", value=v) for v in variants[:25]]
 
                                     class VariantSelect(discord.ui.Select):
                                         def __init__(self, bot, user_id):
@@ -145,7 +145,7 @@ class TraderView(discord.ui.View):
                     if not items:
                         return await select_interaction.response.send_message("No items found for this category.", ephemeral=True)
 
-                    item_options = [discord.SelectOption(label=i, value=i) for i in items[:25]]
+                    item_options = [discord.SelectOption(label=f"{i} (${get_price(selected_category, selected_subcategory if 'selected_subcategory' in locals() else None, i, 'Default')})", value=i) for i in items[:25]]
 
                     class ItemSelect(discord.ui.Select):
                         def __init__(self, bot, user_id):
@@ -162,7 +162,7 @@ class TraderView(discord.ui.View):
                                 )
                                 return
 
-                            variant_options = [discord.SelectOption(label=v, value=v) for v in variants[:25]]
+                            variant_options = [discord.SelectOption(label=f"{v} (${get_price(selected_category, selected_subcategory if 'selected_subcategory' in locals() else None, selected_item, v)})", value=v) for v in variants[:25]]
 
                             class VariantSelect(discord.ui.Select):
                                 def __init__(self, bot, user_id):
@@ -305,22 +305,4 @@ class TraderCommand(commands.Cog):
         )
 
 async def setup(bot):
-
-def get_price_display(category, item):
-    item_data = PRICE_DATA.get(category, {}).get(item, {})
-    if isinstance(item_data, dict):
-        variants = list(item_data.keys())
-        if len(variants) == 1 and variants[0].lower() == "default":
-            # Only 'Default' variant exists, skip variant selection
-            price = item_data.get("Default", 0)
-            return price, None
-        elif len(variants) == 0:
-            # No variants, skip to quantity
-            return 0, None
-        else:
-            # Variants available for selection
-            return None, variants
-    else:
-        # Direct price without variants
-        return item_data, None
     await bot.add_cog(TraderCommand(bot))
