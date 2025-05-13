@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -57,9 +56,17 @@ def get_price(category, subcategory, item, variant):
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
-        super().__init__(timeout=180)
+        super().__init__(timeout=20)
         self.bot = bot
         self.user_id = user_id
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        try:
+            await self.message.edit(view=self)
+        except:
+            pass
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -155,7 +162,7 @@ class TraderView(discord.ui.View):
                                             except:
                                                 pass
 
-                                    variant_view = discord.ui.View(timeout=180)
+                                    variant_view = discord.ui.View(timeout=20)
                                     variant_view.add_item(VariantSelect(self.bot, self.user_id))
                                     await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
                                     try:
@@ -163,7 +170,7 @@ class TraderView(discord.ui.View):
                                     except:
                                         pass
 
-                            item_view = discord.ui.View(timeout=180)
+                            item_view = discord.ui.View(timeout=20)
                             item_view.add_item(ItemSelect(self.bot, self.user_id))
                             await sub_select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
                             try:
@@ -171,7 +178,7 @@ class TraderView(discord.ui.View):
                             except:
                                 pass
 
-                    subcategory_view = discord.ui.View(timeout=180)
+                    subcategory_view = discord.ui.View(timeout=20)
                     subcategory_view.add_item(SubcategorySelect(self.bot, self.user_id))
                     await select_interaction.response.send_message("Select a subcategory:", view=subcategory_view, ephemeral=True)
                     try:
@@ -242,7 +249,7 @@ class TraderView(discord.ui.View):
                                     except:
                                         pass
 
-                            variant_view = discord.ui.View(timeout=180)
+                            variant_view = discord.ui.View(timeout=20)
                             variant_view.add_item(VariantSelect(self.bot, self.user_id))
                             await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
                             try:
@@ -250,7 +257,7 @@ class TraderView(discord.ui.View):
                             except:
                                 pass
 
-                    item_view = discord.ui.View(timeout=180)
+                    item_view = discord.ui.View(timeout=20)
                     item_view.add_item(ItemSelect(self.bot, self.user_id))
                     await select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
                     try:
@@ -258,7 +265,7 @@ class TraderView(discord.ui.View):
                     except:
                         pass
 
-        category_view = discord.ui.View(timeout=180)
+        category_view = discord.ui.View(timeout=20)
         category_view.add_item(CategorySelect(self.bot, self.user_id))
         await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True)
         try:
@@ -304,7 +311,7 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
-            
+
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
@@ -478,7 +485,7 @@ class TraderCommand(commands.Cog):
                 await message.add_reaction("✅")
                 await message.edit(content=f"{message.content}\n\npayment confirmed by {user.mention}")
                 data = self.awaiting_final_confirmation[message.id]
-                view = ui.View(timeout=180)
+                view = ui.View(timeout=20)
                 view.add_item(StorageSelect(self.bot, data["player"], data["admin"], data["total"]))
                 await message.channel.send("Select a storage unit or skip:", view=view)
                 del self.awaiting_final_confirmation[message.id]
@@ -488,11 +495,16 @@ class TraderCommand(commands.Cog):
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
     async def trader(self, interaction: discord.Interaction):
         session_manager.start_session(interaction.user.id)
-        await interaction.response.send_message(
+        view = TraderView(self.bot, interaction.user.id)
+        sent = await interaction.response.send_message(
             "Buying session started! Use the buttons below to add items, submit, or cancel your order.",
-            view=TraderView(self.bot, interaction.user.id),
+            view=view,
             ephemeral=True
         )
+        try:
+            view.message = await interaction.original_response()
+        except:
+            pass
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
