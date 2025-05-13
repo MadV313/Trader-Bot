@@ -67,11 +67,12 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("This isn’t your cart session.", ephemeral=True)
 
         class DynamicDropdown(discord.ui.Select):
-            def __init__(self, bot, user_id, stage, selected=None):
+            def __init__(self, bot, user_id, stage, selected=None, dropdown_owner_view=None):
                 self.bot = bot
                 self.user_id = user_id
                 self.stage = stage
                 self.selected = selected or {}
+                self.dropdown_owner_view = dropdown_owner_view
                 placeholder = "Select a category" if stage == "category" else \
                               "Select a subcategory" if stage == "subcategory" else \
                               "Select an item" if stage == "item" else "Select a variant"
@@ -111,14 +112,14 @@ class TraderView(discord.ui.View):
 
                 if self.stage == "category":
                     if value in ["Clothes", "Weapons"]:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value})
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value}, self.dropdown_owner_view)
                     else:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value})
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value}, self.dropdown_owner_view)
 
                 elif self.stage == "subcategory":
                     new_selection = self.selected.copy()
                     new_selection["subcategory"] = value
-                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection)
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.dropdown_owner_view)
 
                 elif self.stage == "item":
                     new_selection = self.selected.copy()
@@ -140,7 +141,7 @@ class TraderView(discord.ui.View):
                         )
                         return
                     else:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection)
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.dropdown_owner_view)
 
                 elif self.stage == "variant":
                     new_selection = self.selected.copy()
@@ -160,17 +161,23 @@ class TraderView(discord.ui.View):
                     )
                     return
 
+                # Edit the dropdown using fetch/delete-safe fallback
+                channel = self.bot.get_channel(self.dropdown_owner_view.dropdown_channel_id)
+                msg = await channel.fetch_message(self.dropdown_owner_view.dropdown_message_id)
                 new_view = discord.ui.View(timeout=180)
                 new_view.add_item(dropdown)
-                await select_interaction.edit_original_response(content="Select an option:", view=new_view)
+                await msg.edit(content="Select an option:", view=new_view)
 
-        view = discord.ui.View(timeout=180)
-        dropdown = DynamicDropdown(self.bot, self.user_id, "category")
-        view.add_item(dropdown)
-        await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
+        view = TraderView(self.bot, self.user_id)
+        dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=view)
+        initial_view = discord.ui.View(timeout=180)
+        initial_view.add_item(dropdown)
+        await interaction.response.send_message("Select a category:", view=initial_view, ephemeral=True)
 
         try:
             msg = await interaction.original_response()
+            view.dropdown_channel_id = msg.channel.id
+            view.dropdown_message_id = msg.id
             self.dropdown_channel_id = msg.channel.id
             self.dropdown_message_id = msg.id
         except:
