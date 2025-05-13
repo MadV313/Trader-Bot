@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -82,12 +81,10 @@ class TraderView(discord.ui.View):
 
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
-
                 if selected_category in ["Weapons", "Clothes"]:
                     subcategories = get_subcategories(selected_category)
                     if not subcategories:
                         return await select_interaction.response.send_message("No subcategories found.", ephemeral=True)
-
                     sub_options = [discord.SelectOption(label=s, value=s) for s in subcategories[:25]]
 
                     class SubcategorySelect(discord.ui.Select):
@@ -100,7 +97,7 @@ class TraderView(discord.ui.View):
                             selected_subcategory = self.values[0]
                             items = get_items_in_subcategory(selected_category, selected_subcategory)
                             if not items:
-                                return await sub_select_interaction.response.send_message("No items found for this subcategory.", ephemeral=True)
+                                return await sub_select_interaction.response.send_message("No items found.", ephemeral=True)
 
                             item_options = [
                                 discord.SelectOption(
@@ -121,11 +118,7 @@ class TraderView(discord.ui.View):
 
                                     if len(variants) == 1 and variants[0] == "Default":
                                         await item_interaction.response.send_modal(
-                                            QuantityModal(
-                                                self.bot, self.user_id,
-                                                selected_category, selected_subcategory,
-                                                selected_item, "Default"
-                                            )
+                                            QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, "Default")
                                         )
                                         return
 
@@ -145,11 +138,7 @@ class TraderView(discord.ui.View):
                                         async def callback(self, variant_interaction: discord.Interaction):
                                             selected_variant = self.values[0]
                                             await variant_interaction.response.send_modal(
-                                                QuantityModal(
-                                                    self.bot, self.user_id,
-                                                    selected_category, selected_subcategory,
-                                                    selected_item, selected_variant
-                                                )
+                                                QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, selected_variant)
                                             )
 
                                     variant_view = discord.ui.View(timeout=180)
@@ -188,11 +177,7 @@ class TraderView(discord.ui.View):
 
                             if len(variants) == 1 and variants[0] == "Default":
                                 await item_interaction.response.send_modal(
-                                    QuantityModal(
-                                        self.bot, self.user_id,
-                                        selected_category, None,
-                                        selected_item, "Default"
-                                    )
+                                    QuantityModal(self.bot, self.user_id, selected_category, None, selected_item, "Default")
                                 )
                                 return
 
@@ -212,11 +197,7 @@ class TraderView(discord.ui.View):
                                 async def callback(self, variant_interaction: discord.Interaction):
                                     selected_variant = self.values[0]
                                     await variant_interaction.response.send_modal(
-                                        QuantityModal(
-                                            self.bot, self.user_id,
-                                            selected_category, None,
-                                            selected_item, selected_variant
-                                        )
+                                        QuantityModal(self.bot, self.user_id, selected_category, None, selected_item, selected_variant)
                                     )
 
                             variant_view = discord.ui.View(timeout=180)
@@ -230,7 +211,6 @@ class TraderView(discord.ui.View):
         category_view = discord.ui.View(timeout=180)
         category_view.add_item(CategorySelect(self.bot, self.user_id))
         await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True)
-
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
@@ -251,17 +231,10 @@ class TraderView(discord.ui.View):
             summary += f"- {item_name} ({variant_name}) x{item['quantity']} = ${item['subtotal']:,}\n"
         summary += f"**Total: ${total:,}**"
 
-        
-trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-msg = await trader_channel.send(f"{summary}
-
-{MENTION_ROLES}")
-await msg.add_reaction("ð´")
-await msg.edit(content=f"{msg.content}
-
-Please confirm this message with a â when order is ready.")
-        await msg.edit(content=f"{msg.content}\nPlease confirm this message with a Ã¢ÂÂ when order is ready")
-        await msg.add_reaction("Ã¢ÂÂ")
+        trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
+        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a ✅ when the order is ready.")
+        await msg.add_reaction("🔴")
+        await msg.add_reaction("✅")
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
@@ -313,44 +286,27 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True, delete_after=10)
 
 class TraderCommand(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
-        if user.bot:
+        if user.bot or reaction.message.channel.id != TRADER_ORDERS_CHANNEL_ID:
             return
 
-        # Ensure it's in the correct channel and the reaction is Ã¢ÂÂ
-        if reaction.message.channel.id != TRADER_ORDERS_CHANNEL_ID:
-            return
-
-        if str(reaction.emoji) == "Ã¢ÂÂ":
-            # Remove Ã°ÂÂÂ´ reaction if present
+        if str(reaction.emoji) == "✅":
             try:
-                for react in reaction.message.reactions:
-                    if str(react.emoji) == "Ã°ÂÂÂ´":
-                        await reaction.message.clear_reaction("Ã°ÂÂÂ´")
-            except Exception as e:
-                print(f"Error removing Ã°ÂÂÂ´ reaction: {e}")
-
-            # Add Ã¢ÂÂ reaction if not already added
-            try:
-                await reaction.message.add_reaction("Ã¢ÂÂ")
-            except Exception as e:
-                print(f"Error adding Ã¢ÂÂ reaction: {e}")
-
-            # Edit the message content to append admin confirmation
-            admin_mention = user.mention
-            new_content = f"{reaction.message.content}\n{admin_mention} confirmed the order above."
-            new_content = f"{reaction.message.content}\n{admin_mention} confirmed the order above."
-            try:
+                await reaction.message.clear_reaction("🔴")
+                await reaction.message.add_reaction("✅")
+                admin_mention = user.mention
+                new_content = f"{reaction.message.content}\n\nOrder confirmed by admin: {admin_mention}"
                 await reaction.message.edit(content=new_content)
             except Exception as e:
-                print(f"Error editing message content: {e}")
+                print(f"Error handling reaction confirmation: {e}")
 
-            # Notify the player in the economy channel
             try:
                 economy_channel = self.bot.get_channel(ECONOMY_CHANNEL_ID)
                 if economy_channel:
-                    # Assuming the player mention is in the original message content, try to extract it
                     mentions = reaction.message.mentions
                     if mentions:
                         player_mention = mentions[0].mention
@@ -358,13 +314,13 @@ class TraderCommand(commands.Cog):
             except Exception as e:
                 print(f"Error sending notification to economy channel: {e}")
 
-    def __init__(self, bot):
-        self.bot = bot
-
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
     async def trader(self, interaction: discord.Interaction):
         if interaction.channel.id != ECONOMY_CHANNEL_ID:
-            return await interaction.response.send_message("This command can only be used in the designated economy channel.", ephemeral=True, delete_after=10)
+            return await interaction.response.send_message(
+                "This command can only be used in the designated economy channel.",
+                ephemeral=True, delete_after=10
+            )
 
         session_manager.start_session(interaction.user.id)
         await interaction.response.send_message(
