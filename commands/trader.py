@@ -56,220 +56,128 @@ def get_price(category, subcategory, item, variant):
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
-        super().__init__(timeout=20)
+        super().__init__(timeout=180)
         self.bot = bot
         self.user_id = user_id
-        self.message = None
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message:
-            try:
-                await self.message.edit(view=self)
-            except:
-                pass
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn’t your cart session.", ephemeral=True)
 
-        categories = get_categories()
-        options = [discord.SelectOption(label=c, value=c) for c in categories[:25]]
-
-        class CategorySelect(discord.ui.Select):
-            def __init__(self, bot, user_id):
-                super().__init__(placeholder="Choose a category...", options=options)
+        class DynamicDropdown(discord.ui.Select):
+            def __init__(self, bot, user_id, stage, selected=None):
                 self.bot = bot
                 self.user_id = user_id
+                self.stage = stage
+                self.selected = selected or {}
+                placeholder = "Select a category" if stage == "category" else \
+                              "Select a subcategory" if stage == "subcategory" else \
+                              "Select an item" if stage == "item" else "Select a variant"
 
-            async def callback(self, select_interaction: discord.Interaction):
-                selected_category = self.values[0]
+                options = self.get_options()
+                super().__init__(placeholder=placeholder, options=options)
 
-                if selected_category in ["Weapons", "Clothes"]:
-                    subcategories = get_subcategories(selected_category)
-                    if not subcategories:
-                        return await select_interaction.response.send_message("No subcategories found.", ephemeral=True)
+            def get_options(self):
+                if self.stage == "category":
+                    return [discord.SelectOption(label=c, value=c) for c in get_categories()[:25]]
 
-                    sub_options = [discord.SelectOption(label=s, value=s) for s in subcategories[:25]]
+                if self.stage == "subcategory":
+                    subcats = get_subcategories(self.selected["category"])
+                    return [discord.SelectOption(label=s, value=s) for s in subcats[:25]]
 
-                    class SubcategorySelect(discord.ui.Select):
-                        def __init__(self, bot, user_id):
-                            super().__init__(placeholder="Choose a subcategory...", options=sub_options)
-                            self.bot = bot
-                            self.user_id = user_id
-
-                        async def callback(self, sub_select_interaction: discord.Interaction):
-                            selected_subcategory = self.values[0]
-                            items = get_items_in_subcategory(selected_category, selected_subcategory)
-                            if not items:
-                                return await sub_select_interaction.response.send_message("No items found for this subcategory.", ephemeral=True)
-
-                            item_options = [
-                                discord.SelectOption(
-                                    label=f"{i} (${get_price(selected_category, selected_subcategory, i, 'Default') or 0:,})",
-                                    value=i
-                                ) for i in items[:25]
-                            ]
-
-                            class ItemSelect(discord.ui.Select):
-                                def __init__(self, bot, user_id):
-                                    super().__init__(placeholder="Choose an item...", options=item_options)
-                                    self.bot = bot
-                                    self.user_id = user_id
-
-                                async def callback(self, item_interaction: discord.Interaction):
-                                    selected_item = self.values[0]
-                                    variants = get_variants(selected_category, selected_subcategory, selected_item)
-
-                                    if len(variants) == 1 and variants[0] == "Default":
-                                        await item_interaction.response.send_modal(
-                                            QuantityModal(
-                                                self.bot, self.user_id,
-                                                selected_category, selected_subcategory,
-                                                selected_item, "Default"
-                                            )
-                                        )
-                                        try:
-                                            await item_interaction.message.delete()
-                                        except:
-                                            pass
-                                        return
-
-                                    variant_options = [
-                                        discord.SelectOption(
-                                            label=f"{v} (${get_price(selected_category, selected_subcategory, selected_item, v) or 0:,})",
-                                            value=v
-                                        ) for v in variants[:25]
-                                    ]
-
-                                    class VariantSelect(discord.ui.Select):
-                                        def __init__(self, bot, user_id):
-                                            super().__init__(placeholder="Choose a variant...", options=variant_options)
-                                            self.bot = bot
-                                            self.user_id = user_id
-
-                                        async def callback(self, variant_interaction: discord.Interaction):
-                                            selected_variant = self.values[0]
-                                            await variant_interaction.response.send_modal(
-                                                QuantityModal(
-                                                    self.bot, self.user_id,
-                                                    selected_category, selected_subcategory,
-                                                    selected_item, selected_variant
-                                                )
-                                            )
-                                            try:
-                                                await variant_interaction.message.delete()
-                                            except:
-                                                pass
-
-                                    variant_view = discord.ui.View(timeout=20)
-                                    variant_view.add_item(VariantSelect(self.bot, self.user_id))
-                                    await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
-                                    try:
-                                        await item_interaction.message.delete()
-                                    except:
-                                        pass
-
-                            item_view = discord.ui.View(timeout=20)
-                            item_view.add_item(ItemSelect(self.bot, self.user_id))
-                            await sub_select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
-                            try:
-                                await sub_select_interaction.message.delete()
-                            except:
-                                pass
-
-                    subcategory_view = discord.ui.View(timeout=20)
-                    subcategory_view.add_item(SubcategorySelect(self.bot, self.user_id))
-                    await select_interaction.response.send_message("Select a subcategory:", view=subcategory_view, ephemeral=True)
-                    try:
-                        await select_interaction.message.delete()
-                    except:
-                        pass
-
-                else:
-                    items = get_items_in_subcategory(selected_category, None)
-                    if not items:
-                        return await select_interaction.response.send_message("No items found for this category.", ephemeral=True)
-
-                    item_options = [
+                if self.stage == "item":
+                    items = get_items_in_subcategory(
+                        self.selected["category"],
+                        self.selected.get("subcategory")
+                    )
+                    return [
                         discord.SelectOption(
-                            label=f"{i} (${get_price(selected_category, None, i, 'Default') or 0:,})",
+                            label=f"{i} (${get_price(self.selected['category'], self.selected.get('subcategory'), i, 'Default') or 0:,})",
                             value=i
                         ) for i in items[:25]
                     ]
 
-                    class ItemSelect(discord.ui.Select):
-                        def __init__(self, bot, user_id):
-                            super().__init__(placeholder="Choose an item...", options=item_options)
-                            self.bot = bot
-                            self.user_id = user_id
+                if self.stage == "variant":
+                    variants = get_variants(
+                        self.selected["category"],
+                        self.selected.get("subcategory"),
+                        self.selected["item"]
+                    )
+                    return [
+                        discord.SelectOption(
+                            label=f"{v} (${get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0:,})",
+                            value=v
+                        ) for v in variants[:25]
+                    ]
 
-                        async def callback(self, item_interaction: discord.Interaction):
-                            selected_item = self.values[0]
-                            variants = get_variants(selected_category, None, selected_item)
+            async def callback(self, select_interaction: discord.Interaction):
+                if select_interaction.user.id != self.user_id:
+                    return await select_interaction.response.send_message("Not your session.", ephemeral=True)
 
-                            if len(variants) == 1 and variants[0] == "Default":
-                                await item_interaction.response.send_modal(
-                                    QuantityModal(
-                                        self.bot, self.user_id,
-                                        selected_category, None,
-                                        selected_item, "Default"
-                                    )
-                                )
-                                try:
-                                    await item_interaction.message.delete()
-                                except:
-                                    pass
-                                return
+                value = self.values[0]
 
-                            variant_options = [
-                                discord.SelectOption(
-                                    label=f"{v} (${get_price(selected_category, None, selected_item, v) or 0:,})",
-                                    value=v
-                                ) for v in variants[:25]
-                            ]
-
-                            class VariantSelect(discord.ui.Select):
-                                def __init__(self, bot, user_id):
-                                    super().__init__(placeholder="Choose a variant...", options=variant_options)
-                                    self.bot = bot
-                                    self.user_id = user_id
-
-                                async def callback(self, variant_interaction: discord.Interaction):
-                                    selected_variant = self.values[0]
-                                    await variant_interaction.response.send_modal(
-                                        QuantityModal(
-                                            self.bot, self.user_id,
-                                            selected_category, None,
-                                            selected_item, selected_variant
-                                        )
-                                    )
-                                    try:
-                                        await variant_interaction.message.delete()
-                                    except:
-                                        pass
-
-                            variant_view = discord.ui.View(timeout=20)
-                            variant_view.add_item(VariantSelect(self.bot, self.user_id))
-                            await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
-                            try:
-                                await item_interaction.message.delete()
-                            except:
-                                pass
-
-                    item_view = discord.ui.View(timeout=20)
-                    item_view.add_item(ItemSelect(self.bot, self.user_id))
-                    await select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
+                if self.stage == "category":
+                    subcats = get_subcategories(value)
+                    if subcats:
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value})
+                    else:
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value})
+                elif self.stage == "subcategory":
+                    new_selection = self.selected.copy()
+                    new_selection["subcategory"] = value
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection)
+                elif self.stage == "item":
+                    new_selection = self.selected.copy()
+                    new_selection["item"] = value
+                    variants = get_variants(
+                        new_selection["category"],
+                        new_selection.get("subcategory"),
+                        value
+                    )
+                    if len(variants) == 1 and variants[0] == "Default":
+                        await select_interaction.response.send_modal(
+                            QuantityModal(
+                                self.bot, self.user_id,
+                                new_selection["category"],
+                                new_selection.get("subcategory"),
+                                new_selection["item"],
+                                "Default"
+                            )
+                        )
+                        try:
+                            await select_interaction.message.delete()
+                        except:
+                            pass
+                        return
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection)
+                elif self.stage == "variant":
+                    new_selection = self.selected.copy()
+                    new_selection["variant"] = value
+                    await select_interaction.response.send_modal(
+                        QuantityModal(
+                            self.bot, self.user_id,
+                            new_selection["category"],
+                            new_selection.get("subcategory"),
+                            new_selection["item"],
+                            new_selection["variant"]
+                        )
+                    )
                     try:
                         await select_interaction.message.delete()
                     except:
                         pass
+                    return
+                else:
+                    return
 
-        category_view = discord.ui.View(timeout=20)
-        category_view.add_item(CategorySelect(self.bot, self.user_id))
-        await interaction.response.send_message("Select a category:", view=category_view, ephemeral=True)
+                new_view = discord.ui.View(timeout=180)
+                new_view.add_item(dropdown)
+                await select_interaction.response.edit_message(content="Select an option:", view=new_view)
+
+        view = discord.ui.View(timeout=180)
+        view.add_item(DynamicDropdown(self.bot, self.user_id, "category"))
+        await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
         try:
             await interaction.message.delete()
         except:
