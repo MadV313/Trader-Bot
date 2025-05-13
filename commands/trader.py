@@ -229,7 +229,7 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
-            
+
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
@@ -264,7 +264,13 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
                 "subtotal": subtotal
             })
 
-            await interaction.response.send_message("Item added to cart.", ephemeral=True)
+            cart_items = session_manager.get_session_items(self.user_id)
+            running_total = sum(item['subtotal'] for item in cart_items)
+
+            await interaction.response.send_message(
+                f"{self.item} ({self.variant}) x{quantity} added to cart — current subtotal: ${running_total:,}",
+                ephemeral=True
+            )
             try:
                 await interaction.message.delete()
             except:
