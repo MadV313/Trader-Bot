@@ -248,6 +248,10 @@ class TraderView(discord.ui.View):
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Order submitted for admin approval!", ephemeral=True)
+        try:
+            await interaction.message.delete()
+        except:
+            pass
 
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -291,6 +295,10 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             })
 
             await interaction.response.send_message("Item added to cart.", ephemeral=True)
+            try:
+                await interaction.message.delete()
+            except:
+                pass
         except Exception:
             await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
@@ -392,7 +400,7 @@ class TraderCommand(commands.Cog):
                 except Exception as e:
                     print(f"Error in admin confirm: {e}")
 
-                       # PHASE 2 — Player confirms payment
+        # PHASE 2 — Player confirms payment
         elif message.id in self.awaiting_payment and str(reaction.emoji) == "✅":
             payment_data = self.awaiting_payment[message.id]
             if user.id != payment_data["player_id"]:
@@ -417,7 +425,7 @@ class TraderCommand(commands.Cog):
                 del self.awaiting_payment[message.id]
             except Exception as e:
                 print(f"Error in player confirm: {e}")
-        
+
         # PHASE 3 — Admin confirms payment and selects storage
         elif message.id in self.awaiting_final_confirmation and str(reaction.emoji) == "✅":
             try:
