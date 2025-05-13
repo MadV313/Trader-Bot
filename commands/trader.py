@@ -121,6 +121,10 @@ class TraderView(discord.ui.View):
                                                 selected_item, "Default"
                                             )
                                         )
+                                        try:
+                                            await item_interaction.message.delete()
+                                        except:
+                                            pass
                                         return
 
                                     variant_options = [
@@ -145,18 +149,34 @@ class TraderView(discord.ui.View):
                                                     selected_item, selected_variant
                                                 )
                                             )
+                                            try:
+                                                await variant_interaction.message.delete()
+                                            except:
+                                                pass
 
                                     variant_view = discord.ui.View(timeout=180)
                                     variant_view.add_item(VariantSelect(self.bot, self.user_id))
                                     await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
+                                    try:
+                                        await item_interaction.message.delete()
+                                    except:
+                                        pass
 
                             item_view = discord.ui.View(timeout=180)
                             item_view.add_item(ItemSelect(self.bot, self.user_id))
                             await sub_select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
+                            try:
+                                await sub_select_interaction.message.delete()
+                            except:
+                                pass
 
                     subcategory_view = discord.ui.View(timeout=180)
                     subcategory_view.add_item(SubcategorySelect(self.bot, self.user_id))
                     await select_interaction.response.send_message("Select a subcategory:", view=subcategory_view, ephemeral=True)
+                    try:
+                        await select_interaction.message.delete()
+                    except:
+                        pass
 
                 else:
                     items = get_items_in_subcategory(selected_category, None)
@@ -188,6 +208,10 @@ class TraderView(discord.ui.View):
                                         selected_item, "Default"
                                     )
                                 )
+                                try:
+                                    await item_interaction.message.delete()
+                                except:
+                                    pass
                                 return
 
                             variant_options = [
@@ -212,14 +236,26 @@ class TraderView(discord.ui.View):
                                             selected_item, selected_variant
                                         )
                                     )
+                                    try:
+                                        await variant_interaction.message.delete()
+                                    except:
+                                        pass
 
                             variant_view = discord.ui.View(timeout=180)
                             variant_view.add_item(VariantSelect(self.bot, self.user_id))
                             await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
+                            try:
+                                await item_interaction.message.delete()
+                            except:
+                                pass
 
                     item_view = discord.ui.View(timeout=180)
                     item_view.add_item(ItemSelect(self.bot, self.user_id))
                     await select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
+                    try:
+                        await select_interaction.message.delete()
+                    except:
+                        pass
 
         category_view = discord.ui.View(timeout=180)
         category_view.add_item(CategorySelect(self.bot, self.user_id))
@@ -263,7 +299,6 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
-
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
