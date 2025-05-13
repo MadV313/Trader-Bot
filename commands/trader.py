@@ -91,12 +91,20 @@ class TraderView(discord.ui.View):
                         self.selected["category"],
                         self.selected.get("subcategory")
                     )
-                    return [
-                        discord.SelectOption(
-                            label=f"{i} (${get_price(self.selected['category'], self.selected.get('subcategory'), i, 'Default') or 0:,})",
-                            value=i
-                        ) for i in items[:25]
-                    ]
+                    options = []
+                    for i in items[:25]:
+                        variants = get_variants(self.selected["category"], self.selected.get("subcategory"), i)
+                        if len(variants) == 1 and variants[0] == "Default":
+                            price = get_price(self.selected["category"], self.selected.get("subcategory"), i, "Default") or 0
+                            label = f"{i} (${price:,})"
+                            options.append(discord.SelectOption(label=label, value=json.dumps({
+                                "item": i, "variant": "Default"
+                            })))
+                        else:
+                            options.append(discord.SelectOption(label=f"{i} (select variant...)", value=json.dumps({
+                                "item": i, "variant": None
+                            })))
+                    return options
 
                 if self.stage == "variant":
                     variants = get_variants(
@@ -118,24 +126,22 @@ class TraderView(discord.ui.View):
                 value = self.values[0]
 
                 if self.stage == "category":
-                    subcats = get_subcategories(value)
-                    if subcats:
+                    if self.values[0] in ["Clothes", "Weapons"]:
                         dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value})
                     else:
                         dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value})
+
                 elif self.stage == "subcategory":
                     new_selection = self.selected.copy()
                     new_selection["subcategory"] = value
                     dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection)
+
                 elif self.stage == "item":
                     new_selection = self.selected.copy()
-                    new_selection["item"] = value
-                    variants = get_variants(
-                        new_selection["category"],
-                        new_selection.get("subcategory"),
-                        value
-                    )
-                    if len(variants) == 1 and variants[0] == "Default":
+                    item_data = json.loads(value)
+                    new_selection["item"] = item_data["item"]
+
+                    if item_data["variant"] == "Default":
                         await select_interaction.response.send_modal(
                             QuantityModal(
                                 self.bot, self.user_id,
@@ -150,7 +156,9 @@ class TraderView(discord.ui.View):
                         except:
                             pass
                         return
-                    dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection)
+                    else:
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection)
+
                 elif self.stage == "variant":
                     new_selection = self.selected.copy()
                     new_selection["variant"] = value
