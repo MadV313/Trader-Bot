@@ -167,12 +167,14 @@ class TraderView(discord.ui.View):
                 else:
                     return
 
+                # Show the new dropdown stage in the same message, but do NOT reassign .message again
                 new_view = discord.ui.View(timeout=180)
-                dropdown.dropdown_owner_view = self.dropdown_owner_view  # retain original ref
+                dropdown.dropdown_owner_view = self.dropdown_owner_view
                 new_view.add_item(dropdown)
 
                 await select_interaction.edit_original_response(content="Select an option:", view=new_view)
 
+        # Initial dropdown setup
         view = discord.ui.View(timeout=180)
         dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=view)
         view.add_item(dropdown)
@@ -252,6 +254,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         if not session_manager.is_session_active(self.user_id):
             session_manager.clear_session(self.user_id)
             return await interaction.response.send_message("Session expired.", ephemeral=True)
+
         try:
             quantity = int(self.quantity.value)
             if quantity <= 0:
