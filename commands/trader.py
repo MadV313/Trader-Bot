@@ -209,8 +209,8 @@ class TraderView(discord.ui.View):
         summary += f"**Total: ${total:,}**"
 
         trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a ✅ when the order is ready.")
-        await msg.add_reaction("🔴")
+        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a â when the order is ready.")
+        await msg.add_reaction("ð´")
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
@@ -270,11 +270,11 @@ class TraderCommand(commands.Cog):
     async def on_reaction_add(self, reaction, user):
         if user.bot or reaction.message.channel.id != TRADER_ORDERS_CHANNEL_ID:
             return
-        if str(reaction.emoji) == "✅" and reaction.message.id not in self.confirmed_messages:
+        if str(reaction.emoji) == "â" and reaction.message.id not in self.confirmed_messages:
             self.confirmed_messages.add(reaction.message.id)
             try:
-                await reaction.message.clear_reaction("🔴")
-                await reaction.message.add_reaction("✅")
+                await reaction.message.clear_reaction("ð´")
+                await reaction.message.add_reaction("â")
                 admin_mention = user.mention
                 new_content = f"{reaction.message.content}\n\nOrder confirmed by admin: {admin_mention}"
                 await reaction.message.edit(content=new_content)
@@ -305,4 +305,22 @@ class TraderCommand(commands.Cog):
         )
 
 async def setup(bot):
+
+def get_price_display(category, item):
+    item_data = PRICE_DATA.get(category, {}).get(item, {})
+    if isinstance(item_data, dict):
+        variants = list(item_data.keys())
+        if len(variants) == 1 and variants[0].lower() == "default":
+            # Only 'Default' variant exists, skip variant selection
+            price = item_data.get("Default", 0)
+            return price, None
+        elif len(variants) == 0:
+            # No variants, skip to quantity
+            return 0, None
+        else:
+            # Variants available for selection
+            return None, variants
+    else:
+        # Direct price without variants
+        return item_data, None
     await bot.add_cog(TraderCommand(bot))
