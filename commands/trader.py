@@ -58,8 +58,8 @@ class TraderView(discord.ui.View):
         super().__init__(timeout=180)
         self.bot = bot
         self.user_id = user_id
-        self.dropdown_message_id = None
-        self.dropdown_channel_id = None
+        self.dropdown_message_id = None   # <<< FIXED
+        self.dropdown_channel_id = None   # <<< FIXED
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -67,12 +67,12 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("This isn’t your cart session.", ephemeral=True)
 
         class DynamicDropdown(discord.ui.Select):
-            def __init__(self, bot, user_id, stage, selected=None, dropdown_owner_view=None):
+            def __init__(self, bot, user_id, stage, selected=None, dropdown_owner_view=None):  # <<< FIXED
                 self.bot = bot
                 self.user_id = user_id
                 self.stage = stage
                 self.selected = selected or {}
-                self.dropdown_owner_view = dropdown_owner_view
+                self.dropdown_owner_view = dropdown_owner_view  # <<< FIXED
                 placeholder = "Select a category" if stage == "category" else \
                               "Select a subcategory" if stage == "subcategory" else \
                               "Select an item" if stage == "item" else "Select a variant"
@@ -113,14 +113,14 @@ class TraderView(discord.ui.View):
 
                 if self.stage == "category":
                     if value in ["Clothes", "Weapons"]:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value}, self.dropdown_owner_view)
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value}, self.dropdown_owner_view)  # <<< FIXED
                     else:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value}, self.dropdown_owner_view)
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value}, self.dropdown_owner_view)  # <<< FIXED
 
                 elif self.stage == "subcategory":
                     new_selection = self.selected.copy()
                     new_selection["subcategory"] = value
-                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.dropdown_owner_view)
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.dropdown_owner_view)  # <<< FIXED
 
                 elif self.stage == "item":
                     new_selection = self.selected.copy()
@@ -134,15 +134,15 @@ class TraderView(discord.ui.View):
                                 new_selection.get("subcategory"),
                                 new_selection["item"],
                                 "Default",
-                                dropdown_info={
-                                    "channel_id": self.dropdown_owner_view.dropdown_channel_id,
-                                    "message_id": self.dropdown_owner_view.dropdown_message_id
+                                dropdown_info={  # <<< FIXED
+                                    "channel_id": self.dropdown_owner_view.dropdown_channel_id,  # <<< FIXED
+                                    "message_id": self.dropdown_owner_view.dropdown_message_id   # <<< FIXED
                                 }
                             )
                         )
                         return
                     else:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.dropdown_owner_view)
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.dropdown_owner_view)  # <<< FIXED
 
                 elif self.stage == "variant":
                     new_selection = self.selected.copy()
@@ -154,9 +154,9 @@ class TraderView(discord.ui.View):
                             new_selection.get("subcategory"),
                             new_selection["item"],
                             new_selection["variant"],
-                            dropdown_info={
-                                "channel_id": self.dropdown_owner_view.dropdown_channel_id,
-                                "message_id": self.dropdown_owner_view.dropdown_message_id
+                            dropdown_info={  # <<< FIXED
+                                "channel_id": self.dropdown_owner_view.dropdown_channel_id,  # <<< FIXED
+                                "message_id": self.dropdown_owner_view.dropdown_message_id   # <<< FIXED
                             }
                         )
                     )
@@ -164,19 +164,19 @@ class TraderView(discord.ui.View):
 
                 if dropdown:
                     new_view = discord.ui.View(timeout=180)
-                    dropdown.dropdown_owner_view = self.dropdown_owner_view
+                    dropdown.dropdown_owner_view = self.dropdown_owner_view  # <<< FIXED
                     new_view.add_item(dropdown)
                     await select_interaction.edit_original_response(content="Select an option:", view=new_view)
 
         view = discord.ui.View(timeout=180)
-        dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=self)
+        dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=self)  # <<< FIXED
         view.add_item(dropdown)
         await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
 
         try:
             msg = await interaction.original_response()
-            self.dropdown_channel_id = msg.channel.id
-            self.dropdown_message_id = msg.id
+            self.dropdown_channel_id = msg.channel.id  # <<< FIXED
+            self.dropdown_message_id = msg.id          # <<< FIXED
         except:
             pass
 
