@@ -248,6 +248,31 @@ class TraderView(discord.ui.View):
         for item in items:
             item_name = item.get('item', 'Unknown')
             variant_name = item.get('variant', 'Default')
+            summary += f"- {item_name} ({variant_name}) x{item['quantity']} = ${{item['subtotal']:,}}\n"
+        summary += f"**Total: ${{total:,}}**"
+
+        trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
+        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a ð´ when the order is ready.")
+        await msg.add_reaction("ð´")
+
+        session_manager.clear_session(self.user_id)
+        await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
+    async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
+        if not session_manager.is_session_active(self.user_id):
+            session_manager.clear_session(self.user_id)
+            return await interaction.response.send_message("Session expired. Start a new order.", ephemeral=True, delete_after=10)
+
+        items = session_manager.get_session_items(self.user_id)
+        if not items:
+            return await interaction.response.send_message("Your cart is empty!", ephemeral=True, delete_after=10)
+
+        total = sum(item['subtotal'] for item in items)
+        summary = f"{interaction.user.mention} wants to purchase:\n"
+        for item in items:
+            item_name = item.get('item', 'Unknown')
+            variant_name = item.get('variant', 'Default')
             summary += f"- {item_name} ({variant_name}) x{item['quantity']} = ${item['subtotal']:,}\n"
         summary += f"**Total: ${total:,}**"
 
@@ -320,88 +345,5 @@ class TraderCommand(commands.Cog):
             ephemeral=True
         )
 
-
-class TraderView(discord.ui.View):
-    def __init__(self, bot, user_id):
-        super().__init__(timeout=180)
-        self.bot = bot
-        self.user_id = user_id
-
-    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
-    async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
-        if not session_manager.is_session_active(self.user_id):
-            session_manager.clear_session(self.user_id)
-            return await interaction.response.send_message("Session expired. Start a new order.", ephemeral=True, delete_after=10)
-
-        items = session_manager.get_session_items(self.user_id)
-        if not items:
-            return await interaction.response.send_message("Your cart is empty!", ephemeral=True, delete_after=10)
-
-        total = sum(item['subtotal'] for item in items)
-        summary = f"{interaction.user.mention} wants to purchase:\n"
-        for item in items:
-            item_name = item.get('item', 'Unknown')
-            variant_name = item.get('variant', 'Default')
-            summary += f"- {item_name} ({variant_name}) x{item['quantity']} = ${{item['subtotal']:,}}\n"
-        summary += f"**Total: ${{total:,}}**"
-
-        trader_channel = self.bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        msg = await trader_channel.send(f"{summary}\n\n{MENTION_ROLES}\n\nPlease confirm this message with a â when the order is ready.")
-        await msg.add_reaction("ð´")
-
-        session_manager.clear_session(self.user_id)
-        await interaction.response.send_message("Your order has been submitted!", ephemeral=True, delete_after=10)
-
-    @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
-    async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn't your session.", ephemeral=True, delete_after=10)
-        session_manager.clear_session(self.user_id)
-        await interaction.response.send_message("Your order has been canceled.", ephemeral=True, delete_after=10)
-
-class TraderCommand(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.confirmed_messages = set()
-
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if user.bot or reaction.message.channel.id != TRADER_ORDERS_CHANNEL_ID:
-            return
-        if str(reaction.emoji) == "â" and reaction.message.id not in self.confirmed_messages:
-            self.confirmed_messages.add(reaction.message.id)
-            try:
-                await reaction.message.clear_reaction("ð´")
-                await reaction.message.add_reaction("â")
-                admin_mention = user.mention
-                new_content = f"{reaction.message.content}\n\nOrder confirmed by admin: {admin_mention}"
-                await reaction.message.edit(content=new_content)
-            except Exception as e:
-                print(f"Error handling reaction confirmation: {e}")
-            try:
-                economy_channel = self.bot.get_channel(ECONOMY_CHANNEL_ID)
-                if economy_channel:
-                    mentions = reaction.message.mentions
-                    if mentions:
-                        player_mention = mentions[0].mention
-                        await economy_channel.send(f"{player_mention}, your order is now ready!")
-            except Exception as e:
-                print(f"Error sending notification to economy channel: {e}")
-
-    @app_commands.command(name="trader", description="Start a buying session with the trader.")
-    async def trader(self, interaction: discord.Interaction):
-        if interaction.channel.id != ECONOMY_CHANNEL_ID:
-            return await interaction.response.send_message(
-                "This command can only be used in the designated economy channel.",
-                ephemeral=True, delete_after=10
-            )
-        session_manager.start_session(interaction.user.id)
-        await interaction.response.send_message(
-            "Buying session started! Use the buttons below to add items, submit, or cancel your order.",
-            view=TraderView(self.bot, interaction.user.id),
-            ephemeral=True
-        )
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
