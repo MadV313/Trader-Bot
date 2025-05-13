@@ -59,6 +59,7 @@ class TraderView(discord.ui.View):
         super().__init__(timeout=180)
         self.bot = bot
         self.user_id = user_id
+        self.dropdown_message = None
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -66,15 +67,15 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("This isn’t your cart session.", ephemeral=True)
 
         class DynamicDropdown(discord.ui.Select):
-            def __init__(self, bot, user_id, stage, selected=None):
+            def __init__(self, bot, user_id, stage, selected=None, view=None):
                 self.bot = bot
                 self.user_id = user_id
                 self.stage = stage
                 self.selected = selected or {}
+                self.view = view
                 placeholder = "Select a category" if stage == "category" else \
                               "Select a subcategory" if stage == "subcategory" else \
                               "Select an item" if stage == "item" else "Select a variant"
-
                 options = self.get_options()
                 super().__init__(placeholder=placeholder, options=options)
 
@@ -127,14 +128,14 @@ class TraderView(discord.ui.View):
 
                 if self.stage == "category":
                     if self.values[0] in ["Clothes", "Weapons"]:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value})
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value}, self.view)
                     else:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value})
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value}, self.view)
 
                 elif self.stage == "subcategory":
                     new_selection = self.selected.copy()
                     new_selection["subcategory"] = value
-                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection)
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.view)
 
                 elif self.stage == "item":
                     new_selection = self.selected.copy()
@@ -148,16 +149,13 @@ class TraderView(discord.ui.View):
                                 new_selection["category"],
                                 new_selection.get("subcategory"),
                                 new_selection["item"],
-                                "Default"
+                                "Default",
+                                dropdown_message=self.view.message
                             )
                         )
-                        try:
-                            await select_interaction.message.delete()
-                        except:
-                            pass
                         return
                     else:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection)
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.view)
 
                 elif self.stage == "variant":
                     new_selection = self.selected.copy()
@@ -168,28 +166,25 @@ class TraderView(discord.ui.View):
                             new_selection["category"],
                             new_selection.get("subcategory"),
                             new_selection["item"],
-                            new_selection["variant"]
+                            new_selection["variant"],
+                            dropdown_message=self.view.message
                         )
                     )
-                    try:
-                        await select_interaction.message.delete()
-                    except:
-                        pass
                     return
                 else:
                     return
 
                 new_view = discord.ui.View(timeout=180)
+                dropdown.view = new_view
                 new_view.add_item(dropdown)
-                await select_interaction.response.edit_message(content="Select an option:", view=new_view)
+                self.view.message = await select_interaction.edit_original_response(content="Select an option:", view=new_view)
 
         view = discord.ui.View(timeout=180)
-        view.add_item(DynamicDropdown(self.bot, self.user_id, "category"))
+        dropdown = DynamicDropdown(self.bot, self.user_id, "category", view=view)
+        view.add_item(dropdown)
         await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
-        try:
-            await interaction.message.delete()
-        except:
-            pass
+        view.message = await interaction.original_response()
+        self.dropdown_message = view.message
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -214,6 +209,14 @@ class TraderView(discord.ui.View):
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Order submitted for admin approval!", ephemeral=True)
+
+        # Clean up dropdown if still visible
+        try:
+            if self.dropdown_message:
+                await self.dropdown_message.delete()
+        except:
+            pass
+
         try:
             await interaction.message.delete()
         except:
@@ -223,17 +226,27 @@ class TraderView(discord.ui.View):
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return
+
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Order canceled.", ephemeral=True)
+
+        # Clean up dropdown if still visible
+        try:
+            if self.dropdown_message:
+                await self.dropdown_message.delete()
+        except:
+            pass
+
         try:
             await interaction.message.delete()
         except:
             pass
 
+
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
-    def __init__(self, bot, user_id, category, subcategory, item, variant):
+    def __init__(self, bot, user_id, category, subcategory, item, variant, dropdown_message=None):
         super().__init__()
         self.bot = bot
         self.user_id = user_id
@@ -241,6 +254,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         self.subcategory = subcategory
         self.item = item
         self.variant = variant
+        self.dropdown_message = dropdown_message
 
     async def on_submit(self, interaction: discord.Interaction):
         if not session_manager.is_session_active(self.user_id):
@@ -271,12 +285,16 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
                 f"{self.item} ({self.variant}) x{quantity} added to cart — current subtotal: ${running_total:,}",
                 ephemeral=True
             )
+
+            # Clean up dropdown message
             try:
-                await interaction.message.delete()
+                if self.dropdown_message:
+                    await self.dropdown_message.delete()
             except:
                 pass
+
         except Exception:
-            await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
+            await interaction.response.send_message("Invalid quantity entered.", ephemeral=True) 
 
 class StorageSelect(ui.Select):
     def __init__(self, bot, player, admin, total):
