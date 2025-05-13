@@ -392,7 +392,7 @@ class TraderCommand(commands.Cog):
                 except Exception as e:
                     print(f"Error in admin confirm: {e}")
 
-                # PHASE 2 — Player confirms payment
+                       # PHASE 2 — Player confirms payment
         elif message.id in self.awaiting_payment and str(reaction.emoji) == "✅":
             payment_data = self.awaiting_payment[message.id]
             if user.id != payment_data["player_id"]:
@@ -401,7 +401,7 @@ class TraderCommand(commands.Cog):
             try:
                 await message.clear_reaction("🔴")
                 await message.edit(content=f"payment sent by {user.mention}")
-                await message.add_reaction("✅")
+                await message.add_reaction("✅")  # Moved after edit to ensure it sticks
 
                 trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
                 final_msg = await trader_channel.send(
