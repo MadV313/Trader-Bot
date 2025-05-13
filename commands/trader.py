@@ -226,7 +226,7 @@ class TraderView(discord.ui.View):
         await interaction.response.edit_message(content="Select a category:", view=category_view)
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
-async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
     if interaction.user.id != self.user_id:
         return
 
@@ -255,7 +255,7 @@ async def submit_order(self, interaction: discord.Interaction, button: discord.u
         pass
         
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
-async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
     if interaction.user.id != self.user_id:
         return
 
