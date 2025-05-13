@@ -494,4 +494,4 @@ class TraderCommand(commands.Cog):
         )
 
 async def setup(bot):
-    await bot.add_cog(TraderCommand(bot)o)
+    await bot.add_cog(TraderCommand(bot))
