@@ -168,9 +168,10 @@ class TraderView(discord.ui.View):
                     return
 
                 new_view = discord.ui.View(timeout=180)
-                dropdown.dropdown_owner_view = new_view
+                dropdown.dropdown_owner_view = self.dropdown_owner_view  # retain original ref
                 new_view.add_item(dropdown)
-                self.dropdown_owner_view.message = await select_interaction.edit_original_response(content="Select an option:", view=new_view)
+
+                await select_interaction.edit_original_response(content="Select an option:", view=new_view)
 
         view = discord.ui.View(timeout=180)
         dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=view)
@@ -284,7 +285,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
                 pass
 
         except Exception:
-            await interaction.response.send_message("Invalid quantity entered.", ephemeral=True) 
+            await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
 class StorageSelect(ui.Select):
     def __init__(self, bot, player, admin, total):
