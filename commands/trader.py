@@ -392,31 +392,31 @@ class TraderCommand(commands.Cog):
                 except Exception as e:
                     print(f"Error in admin confirm: {e}")
 
-        # PHASE 2 — Player confirms payment
-elif message.id in self.awaiting_payment and str(reaction.emoji) == "✅":
-    payment_data = self.awaiting_payment[message.id]
-    if user.id != payment_data["player_id"]:
-        await message.channel.send("mind your own orders!")
-        return
-    try:
-        await message.clear_reaction("🔴")
-        await message.edit(content=f"payment sent by {user.mention}")
-        await message.add_reaction("✅")  # Moved after edit to ensure it sticks
+                # PHASE 2 — Player confirms payment
+        elif message.id in self.awaiting_payment and str(reaction.emoji) == "✅":
+            payment_data = self.awaiting_payment[message.id]
+            if user.id != payment_data["player_id"]:
+                await message.channel.send("mind your own orders!")
+                return
+            try:
+                await message.clear_reaction("🔴")
+                await message.edit(content=f"payment sent by {user.mention}")
+                await message.add_reaction("✅")
 
-        trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
-        final_msg = await trader_channel.send(
-            f"{payment_data['admin_mention']}, {payment_data['player_mention']} sent their payment of ${payment_data['total']} "
-            f"for their order. Please confirm here with a ✅ to complete checkout/storage info!"
-        )
-        await final_msg.add_reaction("🔴")
-        self.awaiting_final_confirmation[final_msg.id] = {
-            "player": self.bot.get_user(payment_data["player_id"]),
-            "admin": payment_data["admin"],
-            "total": payment_data["total"]
-        }
-        del self.awaiting_payment[message.id]
-    except Exception as e:
-        print(f"Error in player confirm: {e}")
+                trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
+                final_msg = await trader_channel.send(
+                    f"{payment_data['admin_mention']}, {payment_data['player_mention']} sent their payment of ${payment_data['total']} "
+                    f"for their order. Please confirm here with a ✅ to complete checkout/storage info!"
+                )
+                await final_msg.add_reaction("🔴")
+                self.awaiting_final_confirmation[final_msg.id] = {
+                    "player": self.bot.get_user(payment_data["player_id"]),
+                    "admin": payment_data["admin"],
+                    "total": payment_data["total"]
+                }
+                del self.awaiting_payment[message.id]
+            except Exception as e:
+                print(f"Error in player confirm: {e}")
         
         # PHASE 3 — Admin confirms payment and selects storage
         elif message.id in self.awaiting_final_confirmation and str(reaction.emoji) == "✅":
