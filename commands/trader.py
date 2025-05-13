@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
-from discord import ui
+from discord import app_commands, ui
 import json
 import os
 from utils import session_manager, variant_utils
@@ -22,35 +21,22 @@ def get_subcategories(category):
     return []
 
 def get_items_in_subcategory(category, subcategory):
-    if subcategory:
-        sub_data = PRICE_DATA.get(category, {}).get(subcategory, {})
-    else:
-        sub_data = PRICE_DATA.get(category, {})
-    if isinstance(sub_data, dict):
-        return list(sub_data.keys())
-    return []
+    sub_data = PRICE_DATA.get(category, {}).get(subcategory, {}) if subcategory else PRICE_DATA.get(category, {})
+    return list(sub_data.keys()) if isinstance(sub_data, dict) else []
 
 def get_variants(category, subcategory, item):
     try:
-        entry = PRICE_DATA[category]
-        if subcategory:
-            entry = entry[subcategory]
+        entry = PRICE_DATA[category][subcategory] if subcategory else PRICE_DATA[category]
         entry = entry[item]
-        if isinstance(entry, dict):
-            return list(entry.keys())
-        return ["Default"]
+        return list(entry.keys()) if isinstance(entry, dict) else ["Default"]
     except (KeyError, TypeError):
         return ["Default"]
 
 def get_price(category, subcategory, item, variant):
     try:
-        entry = PRICE_DATA[category]
-        if subcategory:
-            entry = entry[subcategory]
+        entry = PRICE_DATA[category][subcategory] if subcategory else PRICE_DATA[category]
         entry = entry.get(item, entry)
-        if isinstance(entry, dict):
-            return entry.get(variant, entry.get("Default"))
-        return entry
+        return entry.get(variant, entry.get("Default")) if isinstance(entry, dict) else entry
     except (KeyError, TypeError):
         return None
 
@@ -77,6 +63,16 @@ class TraderView(discord.ui.View):
             async def callback(self, select_interaction: discord.Interaction):
                 selected_category = self.values[0]
 
+                # Instant cleanup block
+                try:
+                    await select_interaction.message.delete()
+                except:
+                    try:
+                        m = await select_interaction.followup.send("clean", ephemeral=True)
+                        await m.delete()
+                    except:
+                        pass
+
                 if selected_category in ["Weapons", "Clothes"]:
                     subcategories = get_subcategories(selected_category)
                     if not subcategories:
@@ -92,9 +88,19 @@ class TraderView(discord.ui.View):
 
                         async def callback(self, sub_select_interaction: discord.Interaction):
                             selected_subcategory = self.values[0]
+
+                            try:
+                                await sub_select_interaction.message.delete()
+                            except:
+                                try:
+                                    m = await sub_select_interaction.followup.send("clean", ephemeral=True)
+                                    await m.delete()
+                                except:
+                                    pass
+
                             items = get_items_in_subcategory(selected_category, selected_subcategory)
                             if not items:
-                                return await sub_select_interaction.response.send_message("No items found for this subcategory.", ephemeral=True)
+                                return await sub_select_interaction.response.send_message("No items found.", ephemeral=True)
 
                             item_options = [
                                 discord.SelectOption(
@@ -111,20 +117,22 @@ class TraderView(discord.ui.View):
 
                                 async def callback(self, item_interaction: discord.Interaction):
                                     selected_item = self.values[0]
+
+                                    try:
+                                        await item_interaction.message.delete()
+                                    except:
+                                        try:
+                                            m = await item_interaction.followup.send("clean", ephemeral=True)
+                                            await m.delete()
+                                        except:
+                                            pass
+
                                     variants = get_variants(selected_category, selected_subcategory, selected_item)
 
                                     if len(variants) == 1 and variants[0] == "Default":
                                         await item_interaction.response.send_modal(
-                                            QuantityModal(
-                                                self.bot, self.user_id,
-                                                selected_category, selected_subcategory,
-                                                selected_item, "Default"
-                                            )
+                                            QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, "Default")
                                         )
-                                        try:
-                                            await item_interaction.message.delete()
-                                        except:
-                                            pass
                                         return
 
                                     variant_options = [
@@ -142,46 +150,36 @@ class TraderView(discord.ui.View):
 
                                         async def callback(self, variant_interaction: discord.Interaction):
                                             selected_variant = self.values[0]
-                                            await variant_interaction.response.send_modal(
-                                                QuantityModal(
-                                                    self.bot, self.user_id,
-                                                    selected_category, selected_subcategory,
-                                                    selected_item, selected_variant
-                                                )
-                                            )
+
                                             try:
                                                 await variant_interaction.message.delete()
                                             except:
-                                                pass
+                                                try:
+                                                    m = await variant_interaction.followup.send("clean", ephemeral=True)
+                                                    await m.delete()
+                                                except:
+                                                    pass
+
+                                            await variant_interaction.response.send_modal(
+                                                QuantityModal(self.bot, self.user_id, selected_category, selected_subcategory, selected_item, selected_variant)
+                                            )
 
                                     variant_view = discord.ui.View(timeout=180)
                                     variant_view.add_item(VariantSelect(self.bot, self.user_id))
                                     await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
-                                    try:
-                                        await item_interaction.message.delete()
-                                    except:
-                                        pass
 
                             item_view = discord.ui.View(timeout=180)
                             item_view.add_item(ItemSelect(self.bot, self.user_id))
                             await sub_select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
-                            try:
-                                await sub_select_interaction.message.delete()
-                            except:
-                                pass
 
                     subcategory_view = discord.ui.View(timeout=180)
                     subcategory_view.add_item(SubcategorySelect(self.bot, self.user_id))
                     await select_interaction.response.send_message("Select a subcategory:", view=subcategory_view, ephemeral=True)
-                    try:
-                        await select_interaction.message.delete()
-                    except:
-                        pass
 
                 else:
                     items = get_items_in_subcategory(selected_category, None)
                     if not items:
-                        return await select_interaction.response.send_message("No items found for this category.", ephemeral=True)
+                        return await select_interaction.response.send_message("No items found.", ephemeral=True)
 
                     item_options = [
                         discord.SelectOption(
@@ -198,20 +196,22 @@ class TraderView(discord.ui.View):
 
                         async def callback(self, item_interaction: discord.Interaction):
                             selected_item = self.values[0]
+
+                            try:
+                                await item_interaction.message.delete()
+                            except:
+                                try:
+                                    m = await item_interaction.followup.send("clean", ephemeral=True)
+                                    await m.delete()
+                                except:
+                                    pass
+
                             variants = get_variants(selected_category, None, selected_item)
 
                             if len(variants) == 1 and variants[0] == "Default":
                                 await item_interaction.response.send_modal(
-                                    QuantityModal(
-                                        self.bot, self.user_id,
-                                        selected_category, None,
-                                        selected_item, "Default"
-                                    )
+                                    QuantityModal(self.bot, self.user_id, selected_category, None, selected_item, "Default")
                                 )
-                                try:
-                                    await item_interaction.message.delete()
-                                except:
-                                    pass
                                 return
 
                             variant_options = [
@@ -229,33 +229,27 @@ class TraderView(discord.ui.View):
 
                                 async def callback(self, variant_interaction: discord.Interaction):
                                     selected_variant = self.values[0]
-                                    await variant_interaction.response.send_modal(
-                                        QuantityModal(
-                                            self.bot, self.user_id,
-                                            selected_category, None,
-                                            selected_item, selected_variant
-                                        )
-                                    )
+
                                     try:
                                         await variant_interaction.message.delete()
                                     except:
-                                        pass
+                                        try:
+                                            m = await variant_interaction.followup.send("clean", ephemeral=True)
+                                            await m.delete()
+                                        except:
+                                            pass
+
+                                    await variant_interaction.response.send_modal(
+                                        QuantityModal(self.bot, self.user_id, selected_category, None, selected_item, selected_variant)
+                                    )
 
                             variant_view = discord.ui.View(timeout=180)
                             variant_view.add_item(VariantSelect(self.bot, self.user_id))
                             await item_interaction.response.send_message("Select a variant:", view=variant_view, ephemeral=True)
-                            try:
-                                await item_interaction.message.delete()
-                            except:
-                                pass
 
                     item_view = discord.ui.View(timeout=180)
                     item_view.add_item(ItemSelect(self.bot, self.user_id))
                     await select_interaction.response.send_message("Select an item:", view=item_view, ephemeral=True)
-                    try:
-                        await select_interaction.message.delete()
-                    except:
-                        pass
 
         category_view = discord.ui.View(timeout=180)
         category_view.add_item(CategorySelect(self.bot, self.user_id))
@@ -263,7 +257,58 @@ class TraderView(discord.ui.View):
         try:
             await interaction.message.delete()
         except:
-            pass
+            try:
+                m = await interaction.followup.send("clean", ephemeral=True)
+                await m.delete()
+            except:
+                pass
+
+class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
+    quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
+
+    def __init__(self, bot, user_id, category, subcategory, item, variant):
+        super().__init__()
+        self.bot = bot
+        self.user_id = user_id
+        self.category = category
+        self.subcategory = subcategory
+        self.item = item
+        self.variant = variant
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if not session_manager.is_session_active(self.user_id):
+            session_manager.clear_session(self.user_id)
+            return await interaction.response.send_message("Session expired.", ephemeral=True)
+        try:
+            quantity = int(self.quantity.value)
+            if quantity <= 0:
+                raise ValueError("Quantity must be greater than 0.")
+
+            price = get_price(self.category, self.subcategory, self.item, self.variant) or 0
+            subtotal = price * quantity
+
+            session_manager.add_item(self.user_id, {
+                "category": self.category,
+                "subcategory": self.subcategory,
+                "item": self.item,
+                "variant": self.variant,
+                "quantity": quantity,
+                "price": price,
+                "subtotal": subtotal
+            })
+
+            await interaction.response.send_message("Item added to cart.", ephemeral=True)
+
+            try:
+                await interaction.message.delete()
+            except:
+                try:
+                    m = await interaction.followup.send("clean", ephemeral=True)
+                    await m.delete()
+                except:
+                    pass
+        except Exception:
+            await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -288,10 +333,15 @@ class TraderView(discord.ui.View):
 
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Order submitted for admin approval!", ephemeral=True)
+
         try:
             await interaction.message.delete()
         except:
-            pass
+            try:
+                m = await interaction.followup.send("clean", ephemeral=True)
+                await m.delete()
+            except:
+                pass
 
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -299,10 +349,15 @@ class TraderView(discord.ui.View):
             return
         session_manager.clear_session(self.user_id)
         await interaction.response.send_message("Order canceled.", ephemeral=True)
+
         try:
             await interaction.message.delete()
         except:
-            pass
+            try:
+                m = await interaction.followup.send("clean", ephemeral=True)
+                await m.delete()
+            except:
+                pass
             
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
