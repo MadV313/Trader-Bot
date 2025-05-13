@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from discord import ui
 import json
 import os
 from utils import session_manager, variant_utils
