@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
-from discord import ui
+from discord import app_commands, ui
 import json
 import os
 from utils import session_manager, variant_utils
@@ -59,7 +58,8 @@ class TraderView(discord.ui.View):
         super().__init__(timeout=180)
         self.bot = bot
         self.user_id = user_id
-        self.dropdown_message = None
+        self.dropdown_message_id = None
+        self.dropdown_channel_id = None
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -67,12 +67,11 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("This isn’t your cart session.", ephemeral=True)
 
         class DynamicDropdown(discord.ui.Select):
-            def __init__(self, bot, user_id, stage, selected=None, dropdown_owner_view=None):
+            def __init__(self, bot, user_id, stage, selected=None):
                 self.bot = bot
                 self.user_id = user_id
                 self.stage = stage
                 self.selected = selected or {}
-                self.dropdown_owner_view = dropdown_owner_view
                 placeholder = "Select a category" if stage == "category" else \
                               "Select a subcategory" if stage == "subcategory" else \
                               "Select an item" if stage == "item" else "Select a variant"
@@ -101,17 +100,8 @@ class TraderView(discord.ui.View):
                             })))
                     return options
                 if self.stage == "variant":
-                    variants = get_variants(
-                        self.selected["category"],
-                        self.selected.get("subcategory"),
-                        self.selected["item"]
-                    )
-                    return [
-                        discord.SelectOption(
-                            label=f"{v} (${get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0:,})",
-                            value=v
-                        ) for v in variants[:25]
-                    ]
+                    variants = get_variants(self.selected["category"], self.selected.get("subcategory"), self.selected["item"])
+                    return [discord.SelectOption(label=f"{v} (${get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0:,})", value=v) for v in variants[:25]]
 
             async def callback(self, select_interaction: discord.Interaction):
                 if select_interaction.user.id != self.user_id:
@@ -120,21 +110,20 @@ class TraderView(discord.ui.View):
                 value = self.values[0]
 
                 if self.stage == "category":
-                    if self.values[0] in ["Clothes", "Weapons"]:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value}, self.dropdown_owner_view)
+                    if value in ["Clothes", "Weapons"]:
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory", {"category": value})
                     else:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value}, self.dropdown_owner_view)
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "item", {"category": value})
 
                 elif self.stage == "subcategory":
                     new_selection = self.selected.copy()
                     new_selection["subcategory"] = value
-                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.dropdown_owner_view)
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection)
 
                 elif self.stage == "item":
                     new_selection = self.selected.copy()
                     item_data = json.loads(value)
                     new_selection["item"] = item_data["item"]
-
                     if item_data["variant"] == "Default":
                         await select_interaction.response.send_modal(
                             QuantityModal(
@@ -143,12 +132,15 @@ class TraderView(discord.ui.View):
                                 new_selection.get("subcategory"),
                                 new_selection["item"],
                                 "Default",
-                                dropdown_message=self.dropdown_owner_view.message
+                                dropdown_info={
+                                    "channel_id": self.dropdown_owner_view.dropdown_channel_id,
+                                    "message_id": self.dropdown_owner_view.dropdown_message_id
+                                }
                             )
                         )
                         return
                     else:
-                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.dropdown_owner_view)
+                        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection)
 
                 elif self.stage == "variant":
                     new_selection = self.selected.copy()
@@ -160,27 +152,29 @@ class TraderView(discord.ui.View):
                             new_selection.get("subcategory"),
                             new_selection["item"],
                             new_selection["variant"],
-                            dropdown_message=self.dropdown_owner_view.message
+                            dropdown_info={
+                                "channel_id": self.dropdown_owner_view.dropdown_channel_id,
+                                "message_id": self.dropdown_owner_view.dropdown_message_id
+                            }
                         )
                     )
                     return
-                else:
-                    return
 
-                # Show the new dropdown stage in the same message, but do NOT reassign .message again
                 new_view = discord.ui.View(timeout=180)
-                dropdown.dropdown_owner_view = self.dropdown_owner_view
                 new_view.add_item(dropdown)
-
                 await select_interaction.edit_original_response(content="Select an option:", view=new_view)
 
-        # Initial dropdown setup
         view = discord.ui.View(timeout=180)
-        dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=view)
+        dropdown = DynamicDropdown(self.bot, self.user_id, "category")
         view.add_item(dropdown)
         await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
-        view.message = await interaction.original_response()
-        self.dropdown_message = view.message
+
+        try:
+            msg = await interaction.original_response()
+            self.dropdown_channel_id = msg.channel.id
+            self.dropdown_message_id = msg.id
+        except:
+            pass
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -207,8 +201,10 @@ class TraderView(discord.ui.View):
         await interaction.response.send_message("Order submitted for admin approval!", ephemeral=True)
 
         try:
-            if self.dropdown_message:
-                await self.dropdown_message.delete()
+            if self.dropdown_channel_id and self.dropdown_message_id:
+                channel = self.bot.get_channel(self.dropdown_channel_id)
+                msg = await channel.fetch_message(self.dropdown_message_id)
+                await msg.delete()
         except:
             pass
 
@@ -226,8 +222,10 @@ class TraderView(discord.ui.View):
         await interaction.response.send_message("Order canceled.", ephemeral=True)
 
         try:
-            if self.dropdown_message:
-                await self.dropdown_message.delete()
+            if self.dropdown_channel_id and self.dropdown_message_id:
+                channel = self.bot.get_channel(self.dropdown_channel_id)
+                msg = await channel.fetch_message(self.dropdown_message_id)
+                await msg.delete()
         except:
             pass
 
@@ -236,11 +234,10 @@ class TraderView(discord.ui.View):
         except:
             pass
 
-
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
-    def __init__(self, bot, user_id, category, subcategory, item, variant, dropdown_message=None):
+    def __init__(self, bot, user_id, category, subcategory, item, variant, dropdown_info=None):
         super().__init__()
         self.bot = bot
         self.user_id = user_id
@@ -248,7 +245,7 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
         self.subcategory = subcategory
         self.item = item
         self.variant = variant
-        self.dropdown_message = dropdown_message
+        self.dropdown_info = dropdown_info
 
     async def on_submit(self, interaction: discord.Interaction):
         if not session_manager.is_session_active(self.user_id):
@@ -282,8 +279,10 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             )
 
             try:
-                if self.dropdown_message:
-                    await self.dropdown_message.delete()
+                if self.dropdown_info:
+                    channel = self.bot.get_channel(self.dropdown_info["channel_id"])
+                    msg = await channel.fetch_message(self.dropdown_info["message_id"])
+                    await msg.delete()
             except:
                 pass
 
@@ -353,7 +352,6 @@ class TraderCommand(commands.Cog):
             return
         message = reaction.message
 
-        # PHASE 1 — Admin confirms order
         if message.channel.id == config["trader_orders_channel_id"] and "please confirm this message with a ✅ when the order is ready" in message.content:
             if str(reaction.emoji) == "✅" and message.id not in self.confirmed_messages:
                 self.confirmed_messages.add(message.id)
@@ -388,7 +386,6 @@ class TraderCommand(commands.Cog):
                 except Exception as e:
                     print(f"Error in admin confirm: {e}")
 
-        # PHASE 2 — Player confirms payment
         elif message.id in self.awaiting_payment and str(reaction.emoji) == "✅":
             payment_data = self.awaiting_payment[message.id]
             if user.id != payment_data["player_id"]:
@@ -397,7 +394,7 @@ class TraderCommand(commands.Cog):
             try:
                 await message.clear_reaction("🔴")
                 await message.edit(content=f"payment sent by {user.mention}")
-                await message.add_reaction("✅")  # Moved after edit to ensure it sticks
+                await message.add_reaction("✅")
 
                 trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
                 final_msg = await trader_channel.send(
@@ -414,7 +411,6 @@ class TraderCommand(commands.Cog):
             except Exception as e:
                 print(f"Error in player confirm: {e}")
 
-        # PHASE 3 — Admin confirms payment and selects storage
         elif message.id in self.awaiting_final_confirmation and str(reaction.emoji) == "✅":
             try:
                 await message.clear_reaction("🔴")
@@ -432,15 +428,12 @@ class TraderCommand(commands.Cog):
     async def trader(self, interaction: discord.Interaction):
         session_manager.start_session(interaction.user.id)
         view = TraderView(self.bot, interaction.user.id)
-        sent = await interaction.response.send_message(
+        await interaction.response.send_message(
             "Buying session started! Use the buttons below to add items, submit, or cancel your order.",
             view=view,
             ephemeral=True
         )
-        try:
-            view.message = await interaction.original_response()
-        except:
-            pass
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
+
