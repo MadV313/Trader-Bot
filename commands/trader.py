@@ -59,14 +59,16 @@ class TraderView(discord.ui.View):
         super().__init__(timeout=20)
         self.bot = bot
         self.user_id = user_id
+        self.message = None
 
     async def on_timeout(self):
         for child in self.children:
             child.disabled = True
-        try:
-            await self.message.edit(view=self)
-        except:
-            pass
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except:
+                pass
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -311,7 +313,7 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
-
+            
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
     quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
