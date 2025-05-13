@@ -161,23 +161,24 @@ class TraderView(discord.ui.View):
                     )
                     return
 
-                # Edit the dropdown using fetch/delete-safe fallback
-                channel = self.bot.get_channel(self.dropdown_owner_view.dropdown_channel_id)
-                msg = await channel.fetch_message(self.dropdown_owner_view.dropdown_message_id)
                 new_view = discord.ui.View(timeout=180)
+                dropdown.dropdown_owner_view = self.dropdown_owner_view
                 new_view.add_item(dropdown)
-                await msg.edit(content="Select an option:", view=new_view)
 
-        view = TraderView(self.bot, self.user_id)
-        dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=view)
-        initial_view = discord.ui.View(timeout=180)
-        initial_view.add_item(dropdown)
-        await interaction.response.send_message("Select a category:", view=initial_view, ephemeral=True)
+                try:
+                    channel = self.bot.get_channel(self.dropdown_owner_view.dropdown_channel_id)
+                    msg = await channel.fetch_message(self.dropdown_owner_view.dropdown_message_id)
+                    await msg.edit(content="Select an option:", view=new_view)
+                except Exception as e:
+                    print(f"Failed to edit dropdown message: {e}")
+
+        view = discord.ui.View(timeout=180)
+        dropdown = DynamicDropdown(self.bot, self.user_id, "category", dropdown_owner_view=self)
+        view.add_item(dropdown)
+        await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
 
         try:
             msg = await interaction.original_response()
-            view.dropdown_channel_id = msg.channel.id
-            view.dropdown_message_id = msg.id
             self.dropdown_channel_id = msg.channel.id
             self.dropdown_message_id = msg.id
         except:
