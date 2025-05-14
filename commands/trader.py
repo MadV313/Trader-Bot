@@ -109,7 +109,8 @@ class TraderView(discord.ui.View):
                     category = self.selected.get("category")
                     subcategory = self.selected.get("subcategory")
                     item = self.selected.get("item")
-                    return [discord.SelectOption(label=v, value=v) for v in get_variants(category, subcategory, item)[:25]]
+                    variants = get_variants(category, subcategory, item)
+                    return [discord.SelectOption(label=v, value=v) for v in variants if v.lower() != "default"]
 
             async def callback(self, interaction: discord.Interaction):
                 self.selected[self.stage] = self.values[0]
@@ -134,9 +135,9 @@ class TraderView(discord.ui.View):
                     if not variants:
                         return await interaction.response.send_message("This item has no valid variants.")
 
-                    if len(variants) == 1:
-                        self.selected["variant"] = variants[0]
-                        price = get_price(category, subcategory, item, variants[0])
+                    if len(variants) == 1 and variants[0].lower() == "default":
+                        self.selected["variant"] = "Default"
+                        price = get_price(category, subcategory, item, "Default")
                         if price is None:
                             return await interaction.response.send_message("No price found for this item.")
 
