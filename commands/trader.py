@@ -262,7 +262,6 @@ class TraderView(discord.ui.View):
         if user:
             await user.send("Select a category:", view=view)
 
-        summary += ""
         summary += "please confirm this message with a ✅ when the order is ready"
 
         trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
