@@ -35,8 +35,9 @@ def get_variants(category, subcategory, item):
         if subcategory:
             entry = entry[subcategory]
         entry = entry[item]
-        if isinstance(entry, dict) and any(isinstance(v, (int, float)) for v in entry.values()):
-            return list(entry.keys())
+        if isinstance(entry, dict):
+            variants = [k for k, v in entry.items() if isinstance(v, (int, float))]
+            return variants if len(variants) > 1 else []
         return []
     except (KeyError, TypeError):
         return []
@@ -111,88 +112,94 @@ class TraderView(discord.ui.View):
                     return [discord.SelectOption(label=v, value=v) for v in get_variants(category, subcategory, item)[:25]]
 
             async def callback(self, interaction: discord.Interaction):
-    self.selected[self.stage] = self.values[0]
+                self.selected[self.stage] = self.values[0]
 
-    category = self.selected.get("category")
-    subcategory = self.selected.get("subcategory")
-    item = self.selected.get("item")
+                category = self.selected.get("category")
+                subcategory = self.selected.get("subcategory")
+                item = self.selected.get("item")
 
-    # Determine next stage
-    next_stage = None
-    if self.stage == "category":
-        if get_subcategories(self.values[0]):
-            next_stage = "subcategory"
-        else:
-            next_stage = "item"
+                next_stage = None
+                if self.stage == "category":
+                    if get_subcategories(self.values[0]):
+                        next_stage = "subcategory"
+                    else:
+                        next_stage = "item"
 
-    elif self.stage == "subcategory":
-        next_stage = "item"
+                elif self.stage == "subcategory":
+                    next_stage = "item"
 
-    elif self.stage == "item":
-        # Stop here if item has no real purchasable variants
-        variants = get_variants(category, subcategory, item)
-        if not variants:
-            return await interaction.response.send_message("This item has no purchasable variants.")
+                elif self.stage == "item":
+                    variants = get_variants(category, subcategory, item)
+                    if not variants:
+                        # Only one variant exists — assume "Default" or equivalent
+                        self.selected["variant"] = "Default"
+                        price = get_price(category, subcategory, item, "Default")
+                        if price is None:
+                            return await interaction.response.send_message("No price available for this item.")
 
-        # Lock in first variant and validate price
-        self.selected["variant"] = variants[0]
-        price = get_price(category, subcategory, item, variants[0])
-        if price is None:
-            return await interaction.response.send_message("No price available for this variant.")
+                        class QuantityModal(ui.Modal, title="Enter Quantity"):
+                            quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
 
-        # Show quantity modal
-        class QuantityModal(ui.Modal, title="Enter Quantity"):
-            quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
+                            def __init__(self, bot, user_id, selected, price):
+                                super().__init__()
+                                self.bot = bot
+                                self.user_id = user_id
+                                self.selected = selected
+                                self.price = price
 
-            def __init__(self, bot, user_id, selected, price):
-                super().__init__()
-                self.bot = bot
-                self.user_id = user_id
-                self.selected = selected
-                self.price = price
+                            async def on_submit(self, interaction: discord.Interaction):
+                                try:
+                                    quantity = int(self.quantity.value)
+                                    if quantity <= 0:
+                                        raise ValueError
+                                except ValueError:
+                                    return await interaction.response.send_message("Invalid quantity.")
 
-            async def on_submit(self, interaction: discord.Interaction):
-                try:
-                    quantity = int(self.quantity.value)
-                    if quantity <= 0:
-                        raise ValueError
-                except ValueError:
-                    return await interaction.response.send_message("Invalid quantity.")
+                                subtotal = self.price * quantity
+                                item_data = {
+                                    "category": self.selected["category"],
+                                    "subcategory": self.selected.get("subcategory"),
+                                    "item": self.selected["item"],
+                                    "variant": self.selected["variant"],
+                                    "quantity": quantity,
+                                    "subtotal": subtotal
+                                }
 
-                subtotal = self.price * quantity
-                item_data = {
-                    "category": self.selected["category"],
-                    "subcategory": self.selected.get("subcategory"),
-                    "item": self.selected["item"],
-                    "variant": self.selected["variant"],
-                    "quantity": quantity,
-                    "subtotal": subtotal
-                }
+                                session_manager.add_to_cart(self.user_id, item_data)
+                                await interaction.response.send_message(
+                                    f"✅ Added {quantity}x {item_data['item']} to your cart.")
+                                await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
 
-                session_manager.add_to_cart(self.user_id, item_data)
-                await interaction.response.send_message(
-                    f"✅ Added {quantity}x {item_data['item']} to your cart.")
-                await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
+                        return await interaction.response.send_modal(QuantityModal(self.bot, self.user_id, self.selected, price))
 
-        return await interaction.response.send_modal(QuantityModal(self.bot, self.user_id, self.selected, price))
+                    # Else: multiple variants exist
+                    next_stage = "variant"
 
-    elif self.stage == "variant":
-        variant = self.values[0]
-        self.selected["variant"] = variant
-        price = get_price(category, subcategory, item, variant)
-        if price is None:
-            return await interaction.response.send_message("No price available for this variant.")
+                elif self.stage == "variant":
+                    variant = self.values[0]
+                    self.selected["variant"] = variant
+                    price = get_price(category, subcategory, item, variant)
+                    if price is None:
+                        return await interaction.response.send_message("No price available for this variant.")
 
-        return await interaction.response.send_modal(QuantityModal(self.bot, self.user_id, self.selected, price))
+                    return await interaction.response.send_modal(QuantityModal(self.bot, self.user_id, self.selected, price))
 
-    # If we’re still progressing stages, draw the next dropdown
-    view = self.view_ref
-    for item in view.children.copy():
-        if isinstance(item, discord.ui.Select):
-            view.remove_item(item)
+                # Advance to next dropdown
+                view = self.view_ref
+                for item in view.children.copy():
+                    if isinstance(item, discord.ui.Select):
+                        view.remove_item(item)
 
-    view.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, selected=self.selected, view_ref=view))
-    await interaction.response.edit_message(view=view)
+                view.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, selected=self.selected, view_ref=view))
+                await interaction.response.edit_message(view=view)
+
+        view = self
+        for item in view.children.copy():
+            if isinstance(item, discord.ui.Select):
+                view.remove_item(item)
+
+        view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=view))
+        await interaction.response.edit_message(view=view)
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
