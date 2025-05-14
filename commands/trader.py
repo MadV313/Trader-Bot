@@ -112,12 +112,25 @@ class TraderView(discord.ui.View):
                         self.selected.get("subcategory"),
                         self.selected["item"]
                     )
-                    return [
-                        discord.SelectOption(
-                            label=f"{v} (${get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0:,})",
-                            value=v
-                        ) for v in variants[:25]
-                    ]
+                    options = []
+                    for v in variants[:25]:
+                        price = get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0
+                        label_text = v.split("<")[0].strip()
+                        emoji = None
+
+                        if "<" in v and ">" in v:
+                            try:
+                                emoji_str = v[v.find("<"):v.find(">")+1]
+                                emoji = discord.PartialEmoji.from_str(emoji_str)
+                            except Exception:
+                                emoji = None
+
+                        options.append(discord.SelectOption(
+                            label=f"{label_text} (${price:,})",
+                            value=v,
+                            emoji=emoji
+                        ))
+                    return options
 
             async def callback(self, select_interaction: discord.Interaction):
                 if select_interaction.user.id != self.user_id:
