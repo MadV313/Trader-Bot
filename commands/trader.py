@@ -279,17 +279,48 @@ class ComboInputModal(ui.Modal, title="Enter Storage Combo"):
         self.unit = unit
 
     async def on_submit(self, interaction: discord.Interaction):
-        msg = (
-            f"{self.player.mention} your order is complete!\n"
-            f"Please proceed to **{self.unit.upper()}** and use the code **{self.combo.value}** to retrieve your order.\n"
-            f"Please leave the lock with the same combo on the door when you're finished!\n"
-            f"Thanks for your purchase and stay frosty out there survivor!"
+    if not session_manager.is_session_active(self.user_id):
+        session_manager.clear_session(self.user_id)
+        return await interaction.response.send_message("Session expired.", ephemeral=True)
+
+    try:
+        quantity = int(self.quantity.value)
+        if quantity <= 0:
+            raise ValueError("Quantity must be greater than 0.")
+
+        price = get_price(self.category, self.subcategory, self.item, self.variant) or 0
+        subtotal = price * quantity
+
+        session_manager.add_item(self.user_id, {
+            "category": self.category,
+            "subcategory": self.subcategory,
+            "item": self.item,
+            "variant": self.variant,
+            "quantity": quantity,
+            "price": price,
+            "subtotal": subtotal
+        })
+
+        cart_items = session_manager.get_session_items(self.user_id)
+        running_total = sum(item['subtotal'] for item in cart_items)
+
+        await interaction.response.send_message(
+            f"{self.item} ({self.variant}) x{quantity} added to cart — current subtotal: ${running_total:,}",
+            ephemeral=True
         )
+
+        # SAFE CLEANUP (optional)
         try:
-            await self.player.send(msg)
-            await interaction.response.send_message("DM sent to player.", ephemeral=True)
+            if self.dropdown_info:
+                channel = self.bot.get_channel(self.dropdown_info["channel_id"])
+                msg = await channel.fetch_message(self.dropdown_info["message_id"])
+                await msg.delete()
         except:
-            await interaction.response.send_message("Failed to DM player.", ephemeral=True)
+            pass
+
+    except Exception as e:
+        print(f"[QuantityModal Error] {type(e).__name__}: {e}")
+        await interaction.response.send_message("Invalid quantity entered or something went wrong.", ephemeral=True)
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
