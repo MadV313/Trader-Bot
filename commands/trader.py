@@ -54,8 +54,56 @@ def get_price(category, subcategory, item, variant):
     except (KeyError, TypeError):
         return None
 
-user_cart_messages = {}
+# Moved here to avoid NameError
+class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
+    quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
 
+    def __init__(self, bot, user_id, category, subcategory, item, variant):
+        super().__init__()
+        self.bot = bot
+        self.user_id = user_id
+        self.category = category
+        self.subcategory = subcategory
+        self.item = item
+        self.variant = variant
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if not session_manager.is_session_active(self.user_id):
+            session_manager.clear_session(self.user_id)
+            return await interaction.response.send_message("Session expired.", ephemeral=True)
+        try:
+            quantity = int(self.quantity.value)
+            if quantity <= 0:
+                raise ValueError("Quantity must be greater than 0.")
+
+            price = get_price(self.category, self.subcategory, self.item, self.variant) or 0
+            subtotal = price * quantity
+
+            session_manager.add_item(self.user_id, {
+                "category": self.category,
+                "subcategory": self.subcategory,
+                "item": self.item,
+                "variant": self.variant,
+                "quantity": quantity,
+                "price": price,
+                "subtotal": subtotal
+            })
+
+            cart_items = session_manager.get_session_items(self.user_id)
+            running_total = sum(item['subtotal'] for item in cart_items)
+
+            await interaction.response.send_message(
+                f"{self.item} ({self.variant}) x{quantity} added to cart — current subtotal: ${running_total:,}",
+                ephemeral=True
+            )
+            try:
+                await interaction.message.delete()
+            except:
+                pass
+        except Exception:
+            await interaction.response.send_message("Invalid quantity entered.", ephemeral=True)
+
+# Main trader view UI
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
