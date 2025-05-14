@@ -259,6 +259,15 @@ class TraderView(discord.ui.View):
         if interaction.user.id != self.user_id:
             return
         session_manager.clear_session(self.user_id)
+
+        # Clean up the cart message
+        if self.user_id in user_cart_messages:
+            try:
+                await user_cart_messages[self.user_id].delete()
+            except:
+                pass
+            del user_cart_messages[self.user_id]
+
         await interaction.response.send_message("Order canceled.", ephemeral=True)
         try:
             await interaction.message.delete()
