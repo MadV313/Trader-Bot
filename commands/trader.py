@@ -312,7 +312,7 @@ class ComboInputModal(ui.Modal, title="Enter Storage Combo"):
         self.admin = admin
         self.unit = unit
 
-    async def on_submit(self, interaction: discord.Interaction):
+async def on_submit(self, interaction: discord.Interaction):
     if not session_manager.is_session_active(self.user_id):
         session_manager.clear_session(self.user_id)
         return await interaction.response.send_message("Session expired.", ephemeral=True)
