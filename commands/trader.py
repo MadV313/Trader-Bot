@@ -404,22 +404,4 @@ class TraderCommand(commands.Cog):
                 del self.awaiting_payment[user.id]
             except Exception as e:
                 print(f"Error finishing payment: {e}")
-
-    @app_commands.command(name="trader", description="Start a buying session with the trader.")
-    async def trader(self, interaction: discord.Interaction):
-        if interaction.channel.id != config["economy_channel_id"]:
-            return await interaction.response.send_message("You must use this command in the #economy channel.", ephemeral=True)
-
-        try:
-            await interaction.user.send(
-                "Buying session started! Use the buttons below to add items, submit, or cancel your order."
-            )
-            view = TraderView(self.bot, interaction.user.id)
-            await interaction.user.send(view=view)
-            session_manager.start_session(interaction.user.id)
-            await interaction.response.send_message("Trader session moved to your DMs.", ephemeral=True)
-        except:
-            await interaction.response.send_message("Could not DM you. Please allow DMs from server members.", ephemeral=True)
-
-async def setup(bot):
-    await bot.add_cog(TraderCommand(bot))
+)
