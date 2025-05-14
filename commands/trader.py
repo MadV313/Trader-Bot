@@ -59,11 +59,26 @@ class TraderView(discord.ui.View):
         super().__init__(timeout=180)
         self.bot = bot
         self.user_id = user_id
+        self.message = None
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(content="Session timed out. Please restart with `/trader`.", view=self)
+            except:
+                pass
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!", ephemeral=True)
+
+        try:
+            await interaction.message.delete()
+        except:
+            pass
 
         class DynamicDropdown(discord.ui.Select):
             def __init__(self, bot, user_id, stage, selected=None):
@@ -198,9 +213,9 @@ class TraderView(discord.ui.View):
 
         view = discord.ui.View(timeout=180)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category"))
-        await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
+        message = await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
         try:
-            await interaction.message.delete()
+            self.message = await interaction.original_response()
         except:
             pass
 
