@@ -35,10 +35,9 @@ def get_variants(category, subcategory, item):
         if subcategory:
             entry = entry[subcategory]
         entry = entry[item]
-        # Only return keys if entry is a dict and not empty
         if isinstance(entry, dict) and entry:
             return list(entry.keys())
-        return []  # No variants
+        return []
     except (KeyError, TypeError):
         return []
 
@@ -92,61 +91,27 @@ class TraderView(discord.ui.View):
                 placeholder = "Select a category" if stage == "category" else \
                               "Select a subcategory" if stage == "subcategory" else \
                               "Select an item" if stage == "item" else "Select a variant"
-
                 options = self.get_options()
                 super().__init__(placeholder=placeholder, options=options)
 
             def get_options(self):
                 if self.stage == "category":
                     return [discord.SelectOption(label=c, value=c) for c in get_categories()[:25]]
-
+                elif self.stage == "subcategory":
+                    category = self.selected.get("category")
+                    return [discord.SelectOption(label=s, value=s) for s in get_subcategories(category)[:25]]
+                elif self.stage == "item":
+                    category = self.selected.get("category")
+                    subcategory = self.selected.get("subcategory")
+                    return [discord.SelectOption(label=i, value=i) for i in get_items_in_subcategory(category, subcategory)[:25]]
                 elif self.stage == "variant":
-    category = self.selected["category"]
-    subcategory = self.selected.get("subcategory")
-    item = self.selected["item"]
-    variant = self.selected["variant"] = self.values[0]
-    price = get_price(category, subcategory, item, variant)
-    if price is None:
-        return await interaction.response.send_message("Failed to retrieve item price.")
-
-    class QuantityModal(ui.Modal, title="Enter Quantity"):
-        quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
-
-        def __init__(self, bot, user_id, selected, price):
-            super().__init__()
-            self.bot = bot
-            self.user_id = user_id
-            self.selected = selected
-            self.price = price
-
-        async def on_submit(self, interaction: discord.Interaction):
-            try:
-                quantity = int(self.quantity.value)
-                if quantity <= 0:
-                    raise ValueError
-            except ValueError:
-                return await interaction.response.send_message("Invalid quantity.")
-
-            subtotal = self.price * quantity
-            item_data = {
-                "category": self.selected["category"],
-                "subcategory": self.selected.get("subcategory"),
-                "item": self.selected["item"],
-                "variant": self.selected["variant"],
-                "quantity": quantity,
-                "subtotal": subtotal
-            }
-
-            session_manager.add_to_cart(self.user_id, item_data)
-            await interaction.response.send_message(f"✅ Added {quantity}x {item_data['item']} to your cart.")
-            await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
-
-    await interaction.response.send_modal(QuantityModal(self.bot, self.user_id, self.selected, price))
-    return
+                    category = self.selected.get("category")
+                    subcategory = self.selected.get("subcategory")
+                    item = self.selected.get("item")
+                    return [discord.SelectOption(label=v, value=v) for v in get_variants(category, subcategory, item)[:25]]
 
             async def callback(self, interaction: discord.Interaction):
                 self.selected[self.stage] = self.values[0]
-
                 next_stage = None
                 if self.stage == "category":
                     next_stage = "subcategory" if get_subcategories(self.values[0]) else "item"
@@ -162,7 +127,7 @@ class TraderView(discord.ui.View):
                     price = get_price(category, subcategory, item, variant)
                     if price is None:
                         return await interaction.response.send_message("Failed to retrieve item price.")
-                    
+
                     class QuantityModal(ui.Modal, title="Enter Quantity"):
                         quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
 
@@ -236,7 +201,6 @@ class TraderView(discord.ui.View):
             f"{interaction.user.mention} has submitted a new order:\n\n{summary}\n\n🔴 Please confirm this message with a ✅ when the order is ready"
         )
         await msg.add_reaction("🔴")
-
         await interaction.response.send_message("✅ Order submitted to trader channel.")
         session_manager.end_session(self.user_id)
 
