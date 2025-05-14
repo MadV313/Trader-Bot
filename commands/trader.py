@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 from discord import app_commands
 from discord import ui
@@ -58,6 +59,16 @@ class TraderView(discord.ui.View):
         super().__init__(timeout=180)
         self.bot = bot
         self.user_id = user_id
+        self.subtotal_message = None
+
+    async def update_subtotal_message(self, user, content):
+        try:
+            if self.subtotal_message:
+                await self.subtotal_message.edit(content=content)
+            else:
+                self.subtotal_message = await user.send(content)
+        except:
+            pass
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -197,9 +208,9 @@ class TraderView(discord.ui.View):
 
         view = discord.ui.View(timeout=180)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category"))
-        await interaction.response.send_message("Select a category:", view=view, ephemeral=True)
+        await interaction.user.send("Select a category:", view=view)
         try:
-            await interaction.message.delete()
+            await interaction.response.send_message("Trader session moved to your DMs.", ephemeral=True)
         except:
             pass
 
@@ -237,7 +248,7 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
-        
+
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
@@ -318,9 +329,11 @@ class StorageSelect(ui.Select):
 
         choice = self.values[0]
         if choice == "skip":
-            economy_channel = self.bot.get_channel(config["economy_channel_id"])
-            await economy_channel.send(f"{self.player.mention} thanks for your purchase at trader! Stay frosty out there survivor!")
-            return await interaction.response.edit_message(content="Skipped. Public message sent.", view=None)
+            try:
+                await self.player.send("Thanks for your purchase at trader! Stay frosty out there survivor!")
+            except:
+                pass
+            return await interaction.response.edit_message(content="Skipped. DM sent to player.", view=None)
 
         await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
 
@@ -354,100 +367,28 @@ class TraderCommand(commands.Cog):
         self.awaiting_payment = {}
         self.awaiting_final_confirmation = {}
 
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if user.bot:
-            return
-        message = reaction.message
-
-        # PHASE 1 — Admin confirms order
-        if message.channel.id == config["trader_orders_channel_id"] and "please confirm this message with a ✅ when the order is ready" in message.content:
-            if str(reaction.emoji) == "✅" and message.id not in self.confirmed_messages:
-                self.confirmed_messages.add(message.id)
-                try:
-                    await message.clear_reaction("🔴")
-                    await message.add_reaction("✅")
-                    admin_mention = user.mention
-                    new_content = f"{message.content}\n\nOrder confirmed by admin: {admin_mention}"
-                    await message.edit(content=new_content)
-
-                    mentions = message.mentions
-                    total = None
-                    for line in message.content.splitlines():
-                        if "Total:" in line:
-                            total = line.split("$")[-1].replace(",", "")
-                            break
-                    if mentions:
-                        player = mentions[0]
-                        economy_channel = self.bot.get_channel(config["economy_channel_id"])
-                        payment_msg = await economy_channel.send(
-                            f"{player.mention} your order is ready for pick up.\n"
-                            f"Please make a payment of ${total} to {admin_mention} and confirm this message with a ✅ once you’ve sent your payment!"
-                        )
-                        await payment_msg.add_reaction("🔴")
-                        self.awaiting_payment[payment_msg.id] = {
-                            "player_id": player.id,
-                            "player_mention": player.mention,
-                            "admin_mention": admin_mention,
-                            "admin": user,
-                            "total": total
-                        }
-                except Exception as e:
-                    print(f"Error in admin confirm: {e}")
-
-        # PHASE 2 — Player confirms payment
-        elif message.id in self.awaiting_payment and str(reaction.emoji) == "✅":
-            payment_data = self.awaiting_payment[message.id]
-            if user.id != payment_data["player_id"]:
-                await message.channel.send("mind your own orders!")
-                return
-            try:
-                await message.clear_reaction("🔴")
-                await message.edit(content=f"payment sent by {user.mention}")
-                await message.add_reaction("✅")  # Moved after edit to ensure it sticks
-
-                trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
-                final_msg = await trader_channel.send(
-                    f"{payment_data['admin_mention']}, {payment_data['player_mention']} sent their payment of ${payment_data['total']} "
-                    f"for their order. Please confirm here with a ✅ to complete checkout/storage info!"
-                )
-                await final_msg.add_reaction("🔴")
-                self.awaiting_final_confirmation[final_msg.id] = {
-                    "player": self.bot.get_user(payment_data["player_id"]),
-                    "admin": payment_data["admin"],
-                    "total": payment_data["total"]
-                }
-                del self.awaiting_payment[message.id]
-            except Exception as e:
-                print(f"Error in player confirm: {e}")
-
-        # PHASE 3 — Admin confirms payment and selects storage
-        elif message.id in self.awaiting_final_confirmation and str(reaction.emoji) == "✅":
-            try:
-                await message.clear_reaction("🔴")
-                await message.add_reaction("✅")
-                await message.edit(content=f"{message.content}\n\npayment confirmed by {user.mention}")
-                data = self.awaiting_final_confirmation[message.id]
-                view = ui.View(timeout=20)
-                view.add_item(StorageSelect(self.bot, data["player"], data["admin"], data["total"]))
-                await message.channel.send("Select a storage unit or skip:", view=view)
-                del self.awaiting_final_confirmation[message.id]
-            except Exception as e:
-                print(f"Error in storage confirmation: {e}")
-
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
     async def trader(self, interaction: discord.Interaction):
+        if interaction.channel.id != config["economy_channel_id"]:
+            return await interaction.response.send_message(
+                "You must use this command in the designated economy channel.",
+                ephemeral=True
+            )
+
         session_manager.start_session(interaction.user.id)
-        view = TraderView(self.bot, interaction.user.id)
-        sent = await interaction.response.send_message(
-            "Buying session started! Use the buttons below to add items, submit, or cancel your order.",
-            view=view,
-            ephemeral=True
-        )
+
         try:
-            view.message = await interaction.original_response()
+            user_dm = await interaction.user.create_dm()
+            view = TraderView(self.bot, interaction.user.id)
+            sent = await user_dm.send(
+                "Buying session started! Use the buttons below to add items, submit, or cancel your order.",
+                view=view
+            )
+            view.message = sent
+            await interaction.response.send_message("Session started! Check your DMs.", ephemeral=True)
         except:
-            pass
+            await interaction.response.send_message("Failed to open DM. Please check your privacy settings.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
+    
