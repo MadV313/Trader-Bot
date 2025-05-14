@@ -111,8 +111,8 @@ class TraderView(discord.ui.View):
                     item = self.selected.get("item")
                     return [discord.SelectOption(label=v, value=v) for v in get_variants(category, subcategory, item)[:25]]
 
-        async def callback(self, interaction: discord.Interaction):
-        self.selected[self.stage] = self.values[0]
+    async def callback(self, interaction: discord.Interaction):
+    self.selected[self.stage] = self.values[0]
 
     category = self.selected.get("category")
     subcategory = self.selected.get("subcategory")
