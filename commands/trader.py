@@ -92,10 +92,16 @@ class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
             cart_items = session_manager.get_session_items(self.user_id)
             running_total = sum(item['subtotal'] for item in cart_items)
 
-            await interaction.response.send_message(
-                f"{self.item} ({self.variant}) x{quantity} added to cart — current subtotal: ${running_total:,}",
-                ephemeral=True
-            )
+            if hasattr(self.bot, "user_cart_messages") and self.user_id in self.bot.user_cart_messages:
+                msg = self.bot.user_cart_messages[self.user_id]
+                await msg.edit(content=f"{self.item} ({self.variant}) x{quantity} added to cart — current subtotal: ${running_total:,}")
+            else:
+                msg = await interaction.channel.send(f"{self.item} ({self.variant}) x{quantity} added to cart — current subtotal: ${running_total:,}")
+                if not hasattr(self.bot, "user_cart_messages"):
+                    self.bot.user_cart_messages = {}
+                self.bot.user_cart_messages[self.user_id] = msg
+
+            await interaction.response.send_message("Item added.", ephemeral=True)
             try:
                 await interaction.message.delete()
             except:
