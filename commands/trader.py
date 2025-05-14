@@ -63,7 +63,7 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn’t your cart session.", ephemeral=True)
+            return await interaction.response.send_message("Mind your own order!", ephemeral=True)
 
         class DynamicDropdown(discord.ui.Select):
             def __init__(self, bot, user_id, stage, selected=None):
@@ -216,7 +216,7 @@ class TraderView(discord.ui.View):
         total = sum(item['subtotal'] for item in items)
 
         summary = (
-            f"<@&{config['trader_role_id']}> a new order is ready to be processed\n"
+            f"<@&{config['trader_role_id']}> a new order is ready to be processed!\n"
             f"{interaction.user.mention} wants to purchase:\n"
         )
         for item in items:
