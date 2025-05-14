@@ -191,28 +191,62 @@ class TraderView(discord.ui.View):
         except:
             pass
 
-    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
-    async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # ...unchanged logic
+@discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
+async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
+    if interaction.user.id != self.user_id:
+        return
+
+    items = session_manager.get_session_items(self.user_id)
+    if not items:
+        return await interaction.response.send_message("Your cart is empty.", ephemeral=True)
+
+    total = sum(item['subtotal'] for item in items)
+    summary = f"{interaction.user.mention} wants to purchase:\n"
+    for item in items:
+        item_name = item.get('item', 'Unknown')
+        variant_name = item.get('variant', 'Default')
+        summary += f"- {item_name} ({variant_name}) x{item['quantity']} = ${item['subtotal']:,}\n"
+    summary += f"**Total: ${total:,}**\n\nplease confirm this message with a ✅ when the order is ready"
+
+    trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
+    order_msg = await trader_channel.send(summary)
+    await order_msg.add_reaction("🔴")
+
+    session_manager.clear_session(self.user_id)
+    await interaction.response.send_message("Order submitted for admin approval!", ephemeral=True)
+
+    try:
+        if self.dropdown_channel_id and self.dropdown_message_id:
+            channel = self.bot.get_channel(self.dropdown_channel_id)
+            msg = await channel.fetch_message(self.dropdown_message_id)
+            await msg.delete()
+    except:
         pass
 
-    @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
-    async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # ...unchanged logic
+    try:
+        await interaction.message.delete()
+    except:
         pass
 
-class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
-    quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
+@discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
+async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
+    if interaction.user.id != self.user_id:
+        return
+    session_manager.clear_session(self.user_id)
+    await interaction.response.send_message("Order canceled.", ephemeral=True)
 
-    def __init__(self, bot, user_id, category, subcategory, item, variant, dropdown_info=None):  # <<<<<< FIXED
-        super().__init__()
-        self.bot = bot
-        self.user_id = user_id
-        self.category = category
-        self.subcategory = subcategory
-        self.item = item
-        self.variant = variant
-        self.dropdown_info = dropdown_info  # <<<<<< FIXED
+    try:
+        if self.dropdown_channel_id and self.dropdown_message_id:
+            channel = self.bot.get_channel(self.dropdown_channel_id)
+            msg = await channel.fetch_message(self.dropdown_message_id)
+            await msg.delete()
+    except:
+        pass
+
+    try:
+        await interaction.message.delete()
+    except:
+        pass
 
 class StorageSelect(ui.Select):
     def __init__(self, bot, player, admin, total):
