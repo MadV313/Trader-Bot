@@ -204,41 +204,41 @@ class TraderView(discord.ui.View):
         except:
             pass
 
- @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
-async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
-    if interaction.user.id != self.user_id:
-        return
+    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
+    async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
 
-    items = session_manager.get_session_items(self.user_id)
-    if not items:
-        return await interaction.response.send_message("Your cart is empty.", ephemeral=True)
+        items = session_manager.get_session_items(self.user_id)
+        if not items:
+            return await interaction.response.send_message("Your cart is empty.", ephemeral=True)
 
-    total = sum(item['subtotal'] for item in items)
+        total = sum(item['subtotal'] for item in items)
 
-    summary = (
-        f"<@&{config['trader_role_id']}>\n"
-        f"Please check for any incomplete trader orders!\n\n"
-        f"{interaction.user.mention} wants to purchase:\n"
-    )
-    for item in items:
-        name = item.get('item', 'Unknown')
-        variant = item.get('variant', 'Default')
-        quantity = item.get('quantity', 1)
-        subtotal = item.get('subtotal', 0)
-        summary += f"• {name} ({variant}) x{quantity} = ${subtotal:,}\n"
-    summary += f"Total: ${total:,}\n\n"
-    summary += "please confirm this message with a ✅ when the order is ready"
+        summary = (
+            f"<@&{config['trader_role_id']}>\n"
+            f"Please check for any incomplete trader orders!\n\n"
+            f"{interaction.user.mention} wants to purchase:\n"
+        )
+        for item in items:
+            name = item.get('item', 'Unknown')
+            variant = item.get('variant', 'Default')
+            quantity = item.get('quantity', 1)
+            subtotal = item.get('subtotal', 0)
+            summary += f"• {name} ({variant}) x{quantity} = ${subtotal:,}\n"
+        summary += f"Total: ${total:,}\n\n"
+        summary += "please confirm this message with a ✅ when the order is ready"
 
-    trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
-    order_msg = await trader_channel.send(summary)
-    await order_msg.add_reaction("🔴")
+        trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
+        order_msg = await trader_channel.send(summary)
+        await order_msg.add_reaction("🔴")
 
-    session_manager.clear_session(self.user_id)
-    await interaction.response.send_message("Order submitted for admin approval!", ephemeral=True)
-    try:
-        await interaction.message.delete()
-    except:
-        pass
+        session_manager.clear_session(self.user_id)
+        await interaction.response.send_message("Order submitted for admin approval!", ephemeral=True)
+        try:
+            await interaction.message.delete()
+        except:
+            pass
         
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
