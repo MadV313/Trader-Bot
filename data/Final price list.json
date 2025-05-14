@@ -862,8 +862,8 @@
         "Default": 3000
       },
       "Revolver": {
-        "Standard": {
-          "Default": 5000
+        "Sawed Off": 5000,
+          "Standard": 5000
         }
       }
     },
