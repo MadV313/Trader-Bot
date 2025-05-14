@@ -353,7 +353,7 @@ class TraderCommand(commands.Cog):
             session_manager.start_session(interaction.user.id)
             await interaction.response.send_message("Trader session moved to your DMs.")
         except:
-            await interaction.response.send_message("Could not DM you. Please allow DMs from server members.")
+            await interaction.response.send_message("Could not DM you. Please allow DMs from server members.") 
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
