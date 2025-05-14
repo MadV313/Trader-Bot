@@ -404,4 +404,3 @@ class TraderCommand(commands.Cog):
                 del self.awaiting_payment[user.id]
             except Exception as e:
                 print(f"Error finishing payment: {e}")
-)
