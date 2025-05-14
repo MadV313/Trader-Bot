@@ -202,8 +202,17 @@ class TraderView(discord.ui.View):
         pass
 
 class QuantityModal(discord.ui.Modal, title="Enter Quantity"):
-    # ...unchanged logic (use your last confirmed version)
-    pass
+    quantity = discord.ui.TextInput(label="Quantity", placeholder="Enter a number", min_length=1, max_length=4)
+
+    def __init__(self, bot, user_id, category, subcategory, item, variant, dropdown_info=None):  # <<<<<< FIXED
+        super().__init__()
+        self.bot = bot
+        self.user_id = user_id
+        self.category = category
+        self.subcategory = subcategory
+        self.item = item
+        self.variant = variant
+        self.dropdown_info = dropdown_info  # <<<<<< FIXED
 
 class StorageSelect(ui.Select):
     def __init__(self, bot, player, admin, total):
