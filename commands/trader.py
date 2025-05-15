@@ -121,8 +121,6 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         except Exception:
             self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
 
-        await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
-
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
@@ -383,14 +381,19 @@ class TraderCommand(commands.Cog):
                 print(f"Error finishing payment: {e}")
 
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
-    async def trader(self, interaction: discord.Interaction):
-        if interaction.channel.id != config["economy_channel_id"]:
-            return await interaction.response.send_message("You must use this command in the #economy channel.")
+async def trader(self, interaction: discord.Interaction):
+    if interaction.channel.id != config["economy_channel_id"]:
+        return await interaction.response.send_message("You must use this command in the #economy channel.")
 
-        try:
-            await interaction.user.send(
-                "Buying session started! Use the buttons below to add items, submit, or cancel your order."
-            )
+    try:
+        await interaction.user.send("Buying session started! Use the buttons below to add items, submit, or cancel your order.")
+        view = TraderView(self.bot, interaction.user.id)
+        ui_msg = await interaction.user.send(view=view)
+        view.ui_message = ui_msg  # Track the message holding the buttons
+        session_manager.start_session(interaction.user.id)
+        await interaction.response.send_message("Trader session moved to your DMs.")
+    except:
+        await interaction.response.send_message("Could not DM you. Please allow DMs from server members.")
             view = TraderView(self.bot, interaction.user.id)
             await interaction.user.send(view=view)
             session_manager.start_session(interaction.user.id)
