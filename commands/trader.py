@@ -95,18 +95,18 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
 
         latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
 
-items = session_manager.get_session_items(self.user_id)
-cart_total = sum(item["subtotal"] for item in items)
-latest_summary += f"🛒 Cart Total: ${cart_total:,}"
+        items = session_manager.get_session_items(self.user_id)
+        cart_total = sum(item["subtotal"] for item in items)
+        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
 
-# Edit the prior cart message if it exists
-try:
-    if self.view_ref and self.view_ref.cart_message:
-        await self.view_ref.cart_message.edit(content=latest_summary)
-    else:
-        self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
-except Exception:
-    self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+        # Edit the prior cart message if it exists
+        try:
+            if self.view_ref and self.view_ref.cart_message:
+                await self.view_ref.cart_message.edit(content=latest_summary)
+            else:
+                self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+        except Exception:
+            self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
         await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
 
 class TraderView(discord.ui.View):
