@@ -478,3 +478,4 @@ class ComboInputModal(ui.Modal, title="Enter Storage Combo"):
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
+    await bot.tree.sync()
