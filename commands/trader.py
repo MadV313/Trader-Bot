@@ -85,7 +85,7 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
             "subtotal": subtotal
         }
 
-        session_manager.add_to_cart(self.user_id, item_data)
+        session_manager.add_item(self.user_id, item_data)
         await interaction.response.send_message(
             f"✅ Added {quantity}x {self.item} to your cart."
         )
