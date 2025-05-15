@@ -104,7 +104,16 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
             if self.view_ref and self.view_ref.cart_message:
                 await self.view_ref.cart_message.edit(content=latest_summary)
             else:
-                self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+                await interaction.response.defer()  # Acknowledge the modal submission
+
+# Then safely edit or send follow-up
+try:
+    if self.view_ref and self.view_ref.cart_message:
+        await self.view_ref.cart_message.edit(content=latest_summary)
+    else:
+        self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+except Exception:
+    self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
         except Exception:
             self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
         await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
