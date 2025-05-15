@@ -256,6 +256,12 @@ class TraderView(discord.ui.View):
         await interaction.response.send_message("✅ Order submitted to trader channel.")
         session_manager.end_session(self.user_id)
 
+        # Clean up UI
+        try:
+            await interaction.message.edit(view=None)
+        except:
+            pass
+
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
@@ -263,6 +269,12 @@ class TraderView(discord.ui.View):
 
         session_manager.end_session(self.user_id)
         await interaction.response.send_message("❌ Order canceled.")
+
+        # Clean up UI
+        try:
+            await interaction.message.edit(view=None)
+        except:
+            pass
 
 class StorageSelect(ui.Select):
     def __init__(self, bot, player, admin, total):
