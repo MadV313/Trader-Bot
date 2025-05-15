@@ -68,6 +68,46 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         self.view_ref = view_ref
         self.price = get_price(category, subcategory, item, variant)
 
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            quantity = int(self.quantity.value)
+            if quantity <= 0:
+                raise ValueError
+        except ValueError:
+            return await interaction.response.send_message("Invalid quantity.")
+
+        subtotal = self.price * quantity
+        item_data = {
+            "category": self.category,
+            "subcategory": self.subcategory,
+            "item": self.item,
+            "variant": self.variant,
+            "quantity": quantity,
+            "subtotal": subtotal
+        }
+
+        session_manager.add_item(self.user_id, item_data)
+
+        try:
+            await interaction.message.delete()
+        except Exception:
+            pass
+
+        await interaction.response.defer()
+
+        latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
+        items = session_manager.get_session_items(self.user_id)
+        cart_total = sum(item["subtotal"] for item in items)
+        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
+
+        try:
+            if self.view_ref and self.view_ref.cart_message:
+                await self.view_ref.cart_message.edit(content=latest_summary)
+            else:
+                self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+        except Exception:
+            self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
@@ -251,6 +291,7 @@ class TraderView(discord.ui.View):
         except Exception as e:
             print(f"[UI Cleanup - Cancel] {e}")
 
+
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -353,7 +394,7 @@ class TraderCommand(commands.Cog):
                         await msg.delete()
                         return await interaction.response.send_message("Skip acknowledged.")
 
-                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
+                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
 
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
                 combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
