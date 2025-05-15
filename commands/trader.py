@@ -68,55 +68,50 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         self.price = get_price(category, subcategory, item, variant)
 
     async def on_submit(self, interaction: discord.Interaction):
-        try:
-            quantity = int(self.quantity.value)
-            if quantity <= 0:
-                raise ValueError
-        except ValueError:
-            return await interaction.response.send_message("Invalid quantity.")
+    try:
+        quantity = int(self.quantity.value)
+        if quantity <= 0:
+            raise ValueError
+    except ValueError:
+        return await interaction.response.send_message("Invalid quantity.")
 
-        subtotal = self.price * quantity
-        item_data = {
-            "category": self.category,
-            "subcategory": self.subcategory,
-            "item": self.item,
-            "variant": self.variant,
-            "quantity": quantity,
-            "subtotal": subtotal
-        }
+    subtotal = self.price * quantity
+    item_data = {
+        "category": self.category,
+        "subcategory": self.subcategory,
+        "item": self.item,
+        "variant": self.variant,
+        "quantity": quantity,
+        "subtotal": subtotal
+    }
 
-        session_manager.add_item(self.user_id, item_data)
+    session_manager.add_item(self.user_id, item_data)
 
-        # Delete previous dropdown message if exists
-        try:
-            await interaction.message.delete()
-        except Exception:
-            pass  # message may not exist in some fallback cases
+    # Delete dropdown message (if any)
+    try:
+        await interaction.message.delete()
+    except Exception:
+        pass
 
-        latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
+    # Defer response to allow followup.send()
+    await interaction.response.defer()
 
-        items = session_manager.get_session_items(self.user_id)
-        cart_total = sum(item["subtotal"] for item in items)
-        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
+    # Build summary
+    latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
+    items = session_manager.get_session_items(self.user_id)
+    cart_total = sum(item["subtotal"] for item in items)
+    latest_summary += f"🛒 Cart Total: ${cart_total:,}"
 
-        # Edit the prior cart message if it exists
-        try:
-            if self.view_ref and self.view_ref.cart_message:
-                await self.view_ref.cart_message.edit(content=latest_summary)
-            else:
-                await interaction.response.defer()  # Acknowledge the modal submission
-
-# Then safely edit or send follow-up
-try:
-    if self.view_ref and self.view_ref.cart_message:
-        await self.view_ref.cart_message.edit(content=latest_summary)
-    else:
-        self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
-except Exception:
-    self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
-        except Exception:
+    # Send or edit cart summary message
+    try:
+        if self.view_ref and self.view_ref.cart_message:
+            await self.view_ref.cart_message.edit(content=latest_summary)
+        else:
             self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
-        await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
+    except Exception:
+        self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+
+    await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
