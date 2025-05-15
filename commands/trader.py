@@ -145,7 +145,7 @@ class TraderView(discord.ui.View):
         else:
             self.cart_message = await interaction.followup.send(content=text)
 
-    @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
+       @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!")
@@ -256,10 +256,9 @@ class TraderView(discord.ui.View):
 
         # Clean up the UI
         try:
-            if self.ui_message:
-                await self.ui_message.edit(view=None)
-        except:
-            pass
+            await interaction.message.edit(view=None)
+        except Exception as e:
+            print(f"[UI Cleanup - Submit] {e}")
 
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -271,10 +270,9 @@ class TraderView(discord.ui.View):
 
         # Clean up the UI
         try:
-            if self.ui_message:
-                await self.ui_message.edit(view=None)
-        except:
-            pass
+            await interaction.message.edit(view=None)
+        except Exception as e:
+            print(f"[UI Cleanup - Cancel] {e}")
 
 class StorageSelect(ui.Select):
     def __init__(self, bot, player, admin, total):
@@ -313,18 +311,45 @@ class ComboInputModal(ui.Modal, title="Enter Storage Combo"):
         self.admin = admin
         self.unit = unit
 
-    async def on_submit(self, interaction: discord.Interaction):
-        msg = (
-            f"{self.player.mention} your order is complete!\n"
-            f"Please proceed to **{self.unit.upper()}** and use the code **{self.combo.value}** to retrieve your order.\n"
-            f"Please leave the lock with the same combo on the door when you're finished!\n"
-            f"Thanks for your purchase and stay frosty out there survivor!"
-        )
+        async def on_submit(self, interaction: discord.Interaction):
         try:
-            await self.player.send(msg)
-            await interaction.response.send_message("DM sent to player.")
+            quantity = int(self.quantity.value)
+            if quantity <= 0:
+                raise ValueError
+        except ValueError:
+            return await interaction.response.send_message("Invalid quantity.")
+
+        subtotal = self.price * quantity
+        item_data = {
+            "category": self.category,
+            "subcategory": self.subcategory,
+            "item": self.item,
+            "variant": self.variant,
+            "quantity": quantity,
+            "subtotal": subtotal
+        }
+
+        session_manager.add_item(self.user_id, item_data)
+
+        try:
+            await interaction.message.delete()
         except:
-            await interaction.response.send_message("Failed to DM player.")
+            pass
+
+        await interaction.response.defer()
+
+        latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
+        items = session_manager.get_session_items(self.user_id)
+        cart_total = sum(item["subtotal"] for item in items)
+        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
+
+        try:
+            if self.view_ref and self.view_ref.cart_message:
+                await self.view_ref.cart_message.edit(content=latest_summary)
+            else:
+                self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+        except:
+            self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
