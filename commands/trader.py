@@ -233,8 +233,13 @@ class TraderView(discord.ui.View):
         if not trader_channel:
             return await interaction.response.send_message("Trader channel not found.")
 
-        await trader_channel.send(
-            f"{interaction.user.mention} has submitted a new order:\n\n{summary}\n\n🔴 Please confirm this message with a ✅ when the order is ready"
+        order_message = await trader_channel.send(
+    f"<@&{config['trader_role_id']}> a new order is ready to be processed!\n\n"
+    f"{interaction.user.mention} has submitted a new order:\n\n"
+    f"{summary}\n\n"
+    f"Please confirm this message with a ✅ when the order is ready"
+)
+await order_message.add_reaction("🔴")
         )
         await interaction.response.send_message("✅ Order submitted to trader channel.")
 
