@@ -127,7 +127,7 @@ class TraderView(discord.ui.View):
         self.bot = bot
         self.user_id = user_id
         self.cart_message = None
-        self.ui_message = None  # Track the message that holds the view/buttons
+        self.ui_message = None  # will hold the DM message with this View
 
     async def update_cart_message(self, interaction):
         items = session_manager.get_session_items(self.user_id)
@@ -145,7 +145,7 @@ class TraderView(discord.ui.View):
         else:
             self.cart_message = await interaction.followup.send(content=text)
 
-       @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!")
@@ -192,7 +192,7 @@ class TraderView(discord.ui.View):
                             try:
                                 emoji_str = v[v.find("<"):v.find(">")+1]
                                 emoji = discord.PartialEmoji.from_str(emoji_str)
-                            except Exception:
+                            except:
                                 emoji = None
                         options.append(discord.SelectOption(label=f"{label_text} (${price:,})", value=v, emoji=emoji))
                     return options
@@ -247,16 +247,16 @@ class TraderView(discord.ui.View):
         if not trader_channel:
             return await interaction.response.send_message("Trader channel not found.")
 
-        msg = await trader_channel.send(
+        await trader_channel.send(
             f"{interaction.user.mention} has submitted a new order:\n\n{summary}\n\n🔴 Please confirm this message with a ✅ when the order is ready"
         )
-        await msg.add_reaction("🔴")
         await interaction.response.send_message("✅ Order submitted to trader channel.")
         session_manager.end_session(self.user_id)
 
-        # Clean up the UI
+        # Cleanup the UI
         try:
-            await interaction.message.edit(view=None)
+            if self.ui_message:
+                await self.ui_message.edit(view=None)
         except Exception as e:
             print(f"[UI Cleanup - Submit] {e}")
 
@@ -268,9 +268,10 @@ class TraderView(discord.ui.View):
         session_manager.end_session(self.user_id)
         await interaction.response.send_message("❌ Order canceled.")
 
-        # Clean up the UI
+        # Cleanup the UI
         try:
-            await interaction.message.edit(view=None)
+            if self.ui_message:
+                await self.ui_message.edit(view=None)
         except Exception as e:
             print(f"[UI Cleanup - Cancel] {e}")
 
