@@ -242,14 +242,6 @@ class TraderView(discord.ui.View):
         )
         await order_message.add_reaction("🔴")
 
-        session_manager.store_order_tracking(order_message.id, {
-            "player_id": interaction.user.id,
-            "player_mention": interaction.user.mention,
-            "summary": summary,
-            "total": total,
-            "status": "awaiting_admin_confirm"
-        })
-
         await interaction.response.send_message("✅ Order submitted to trader channel.")
 
         try:
@@ -299,161 +291,151 @@ class TraderView(discord.ui.View):
         except Exception as e:
             print(f"[UI Cleanup - Cancel] {e}")
 
+
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.awaiting_payment = {}
+        self.awaiting_storage = {}
+        self.awaiting_pickup = {}
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
-        if user.bot or not reaction.message.guild:
+        if user.bot or not reaction.message:
             return
 
         message = reaction.message
-        order_data = session_manager.get_order_by_message_id(message.id)
+        emoji = str(reaction.emoji)
 
-        if not order_data:
-            return
+        # Admin confirms order
+        if message.channel.id == config["trader_orders_channel_id"] and emoji == "✅":
+            if "Please confirm this message with a ✅ when the order is ready" in message.content and message.id not in self.awaiting_payment:
+                await message.clear_reaction("🔴")
+                await message.add_reaction("✅")
+                new_content = f"{message.content}\n\nOrder confirmed by {user.mention}"
+                await message.edit(content=new_content)
 
-        # Admin confirms initial order
-        if order_data["status"] == "awaiting_admin_confirm" and str(reaction.emoji) == "✅":
-            await message.clear_reaction("🔴")
-            await message.add_reaction("✅")
+                mentioned_users = message.mentions
+                total = None
+                for line in message.content.splitlines():
+                    if "Total:" in line:
+                        total = line.split("$")[-1].replace(",", "")
+                        break
 
-            order_data["status"] = "awaiting_payment"
-            order_data["admin_id"] = user.id
-            order_data["admin_mention"] = user.mention
-            session_manager.update_order(message.id, order_data)
+                if mentioned_users:
+                    player = mentioned_users[0]
+                    dm = await player.send(
+                        f"{player.mention} your order is ready for pick up!\n"
+                        f"Please make a payment to {user.mention} in the amount of **${total}**.\n"
+                        f"React here with a ✅ once payment has been made!"
+                    )
+                    await dm.add_reaction("🔴")
+                    self.awaiting_payment[dm.id] = {
+                        "player": player,
+                        "admin": user,
+                        "total": total,
+                        "original_message": message
+                    }
 
-            updated = message.content + f"\n\nOrder confirmed by {user.mention}"
-            await message.edit(content=updated)
-
-            player = await self.bot.fetch_user(order_data["player_id"])
-            dm_msg = await player.send(
-                f"{order_data['player_mention']} your order is ready for pick up!\n"
-                f"Please make a payment to {user.mention} in the amount of ${order_data['total']:,} and react with ✅ to confirm your payment."
-            )
-            await dm_msg.add_reaction("🔴")
-
-            session_manager.track_payment_message(dm_msg.id, {
-                "player_id": player.id,
-                "admin_id": user.id,
-                "admin_mention": user.mention,
-                "order_id": message.id,
-                "total": order_data["total"],
-                "status": "awaiting_payment_confirmation"
-            })
+                    await user.send(
+                        f"give user:{user.id} amount:{total} account:cash"
+                    )
 
         # Player confirms payment
-        elif message.id in session_manager.payment_confirm_map and str(reaction.emoji) == "✅":
-            payment_data = session_manager.payment_confirm_map[message.id]
-            if user.id != payment_data["player_id"]:
-                return
-
-            await message.clear_reaction("🔴")
-            await message.add_reaction("✅")
-
-            updated = message.content + "\n\nPayment confirmed! Please stand by!"
-            await message.edit(content=updated)
+        elif emoji == "✅" and reaction.message.id in self.awaiting_payment:
+            data = self.awaiting_payment.pop(reaction.message.id)
+            await reaction.message.clear_reaction("🔴")
+            await reaction.message.add_reaction("✅")
+            await reaction.message.edit(content=reaction.message.content + "\n\nPayment confirmed! Please stand by.")
 
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
-            pay_alert = await trader_channel.send(
-                f"<@&{config['trader_role_id']}> {user.mention} sent their payment for their order. Please confirm here with a ✅ to proceed!"
+            payment_notice = await trader_channel.send(
+                f"<@&{config['trader_role_id']}> {data['player'].mention} sent their payment.\nPlease confirm with a ✅ to proceed."
             )
-            await pay_alert.add_reaction("🔴")
+            await payment_notice.add_reaction("🔴")
 
-            session_manager.track_final_confirm(pay_alert.id, {
-                "player_id": payment_data["player_id"],
-                "admin_id": payment_data["admin_id"],
-                "order_id": payment_data["order_id"],
-                "status": "awaiting_final_confirmation"
-            })
+            self.awaiting_storage[payment_notice.id] = {
+                "player": data["player"],
+                "admin": data["admin"],
+                "total": data["total"]
+            }
 
-            # Admin final confirmation
-        elif message.id in session_manager.final_confirm_map and str(reaction.emoji) == "✅":
-            final_data = session_manager.final_confirm_map[message.id]
-            if user.id != final_data["admin_id"]:
-                return
+        # Admin confirms payment receipt
+        elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
+            data = self.awaiting_storage.pop(reaction.message.id)
+            await reaction.message.clear_reaction("🔴")
+            await reaction.message.add_reaction("✅")
+            await reaction.message.edit(content=reaction.message.content + f"\n\nPayment confirmed by {user.mention}")
 
-            await message.clear_reaction("🔴")
-            await message.add_reaction("✅")
+            # Begin storage dropdown
+            class StorageSelect(ui.Select):
+                def __init__(self, bot, player, admin, total):
+                    options = [
+                        discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)
+                    ] + [
+                        discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)
+                    ] + [
+                        discord.SelectOption(label="Skip", value="skip")
+                    ]
+                    super().__init__(placeholder="Select a storage unit or skip", options=options)
+                    self.bot = bot
+                    self.player = player
+                    self.admin = admin
+                    self.total = total
 
-            updated = message.content + f"\n\nPayment confirmed by {user.mention}"
-            await message.edit(content=updated)
+                async def callback(self, interaction: discord.Interaction):
+                    if interaction.user.id != self.admin.id:
+                        return await interaction.response.send_message("You are not authorized to select for this order.")
 
-            player = await self.bot.fetch_user(final_data["player_id"])
-            view = StorageSelect(self.bot, player, user)
-            await user.send("Select a storage unit or skip:", view=view)
+                    choice = self.values[0]
+                    if choice == "skip":
+                        msg = await self.player.send("Thanks for shopping with us, see ya next time! Stay frosty survivor!")
+                        await msg.add_reaction("🔴")
+                        await asyncio.sleep(20)
+                        await msg.delete()
+                        return
 
-class StorageSelect(ui.Select):
-    def __init__(self, bot, player, admin):
-        options = [
-            discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)
-        ] + [
-            discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)
-        ] + [
-            discord.SelectOption(label="Skip", value="skip")
-        ]
-        super().__init__(placeholder="Select a storage unit or skip", options=options)
-        self.bot = bot
-        self.player = player
-        self.admin = admin
+                    # Prompt for code
+                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
 
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.admin.id:
-            return await interaction.response.send_message("You are not authorized to select for this order.", ephemeral=True)
+            class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
+                combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
 
-        choice = self.values[0]
-        if choice == "skip":
-            msg = await self.player.send("Thanks for shopping with us, see ya next time! Stay frosty survivor!")
-            await msg.add_reaction("🔴")
-            await asyncio.sleep(20)
-            await msg.delete()
-            return await interaction.response.send_message("Skip acknowledged.")
+                def __init__(self, bot, player, admin, unit):
+                    super().__init__()
+                    self.bot = bot
+                    self.player = player
+                    self.admin = admin
+                    self.unit = unit
 
-        await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
+                async def on_submit(self, interaction: discord.Interaction):
+                    dm = await self.player.send(
+                        f"{self.player.mention}, your order is ready for pick up!\n"
+                        f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
+                        f"Please leave the lock with the same code when done!\nReact here with a ✅ when finished."
+                    )
+                    await dm.add_reaction("🔴")
+                    self.bot.get_cog("TraderCommand").awaiting_pickup[dm.id] = {
+                        "player": self.player,
+                        "unit": self.unit
+                    }
 
-class ComboInputModal(ui.Modal, title="Enter Storage Combo"):
-    combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 4582", max_length=4, min_length=4)
-
-    def __init__(self, bot, player, admin, unit):
-        super().__init__()
-        self.bot = bot
-        self.player = player
-        self.admin = admin
-        self.unit = unit
-
-    async def on_submit(self, interaction: discord.Interaction):
-        msg = await self.player.send(
-            f"{self.player.mention} your order is ready for pick up!\n"
-            f"Please proceed to **{self.unit.upper()}** and use the code **{self.combo.value}** to retrieve your order.\n"
-            f"Please leave the lock with the same combo on the door when you're finished!\n"
-            f"Thanks for your purchase and stay frosty out there survivor!"
-        )
-        await msg.add_reaction("🔴")
-
-        session_manager.track_unit_clearance(msg.id, {
-            "player_id": self.player.id
-        })
-
-        await interaction.response.send_message("Combo sent to player.")
-
-        elif message.id in session_manager.unit_clearance_map and str(reaction.emoji) == "✅":
-            if user.id != session_manager.unit_clearance_map[message.id]["player_id"]:
-                return
-
-            await message.clear_reaction("🔴")
-            await message.add_reaction("✅")
-            await message.edit(content="All set! See ya next time!")
+        # Player confirms pickup complete
+        elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
+            data = self.awaiting_pickup.pop(reaction.message.id)
+            await reaction.message.clear_reaction("🔴")
+            await reaction.message.add_reaction("✅")
+            await reaction.message.edit(content="All set, see ya next time!")
 
             await asyncio.sleep(20)
             try:
-                await message.delete()
+                await reaction.message.delete()
             except:
                 pass
 
-            trader_notify = self.bot.get_channel(config["trader_payout_channel_id"])
-            if trader_notify:
-                await trader_notify.send(f"<@&{config['trader_role_id']}> {user.mention} cleared their unit!")    
+            payout_channel = self.bot.get_channel(config["trader_payout_channel_id"])
+            await payout_channel.send(f"<@&{config['trader_role_id']}> {data['player'].mention} cleared their unit!")
+
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
     async def trader(self, interaction: discord.Interaction):
         if interaction.channel.id != config["economy_channel_id"]:
@@ -471,6 +453,6 @@ class ComboInputModal(ui.Modal, title="Enter Storage Combo"):
         except:
             await interaction.response.send_message("Trader session moved to your DMs.")
 
+
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
-    await bot.tree.sync()
