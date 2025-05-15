@@ -113,7 +113,7 @@ class TraderView(discord.ui.View):
         self.bot = bot
         self.user_id = user_id
         self.cart_message = None
-        self.ui_message = None  # will hold the DM message with this View
+        self.ui_message = None
 
     async def update_cart_message(self, interaction):
         items = session_manager.get_session_items(self.user_id)
@@ -193,7 +193,6 @@ class TraderView(discord.ui.View):
                     new_selection = self.selected.copy()
                     new_selection["subcategory"] = value
                     dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.view_ref)
-
                 elif self.stage == "item":
                     new_selection = self.selected.copy()
                     item_data = json.loads(value)
