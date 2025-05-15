@@ -243,7 +243,7 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
-        session = session_manager.get_session(interaction.user.id)
+        session = session_manager.sessions.get(interaction.user.id, {})
         for msg_id in session.get("cart_messages", []):
             try:
                 msg = await interaction.channel.fetch_message(msg_id)
@@ -272,7 +272,7 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
-        session = session_manager.get_session(interaction.user.id)
+        session = session_manager.sessions.get(interaction.user.id, {})
         for msg_id in session.get("cart_messages", []):
             try:
                 msg = await interaction.channel.fetch_message(msg_id)
