@@ -68,28 +68,35 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         self.price = get_price(category, subcategory, item, variant)
 
     async def on_submit(self, interaction: discord.Interaction):
-        try:
-            quantity = int(self.quantity.value)
-            if quantity <= 0:
-                raise ValueError
-        except ValueError:
-            return await interaction.response.send_message("Invalid quantity.")
+    try:
+        quantity = int(self.quantity.value)
+        if quantity <= 0:
+            raise ValueError
+    except ValueError:
+        return await interaction.response.send_message("Invalid quantity.")
 
-        subtotal = self.price * quantity
-        item_data = {
-            "category": self.category,
-            "subcategory": self.subcategory,
-            "item": self.item,
-            "variant": self.variant,
-            "quantity": quantity,
-            "subtotal": subtotal
-        }
+    subtotal = self.price * quantity
+    item_data = {
+        "category": self.category,
+        "subcategory": self.subcategory,
+        "item": self.item,
+        "variant": self.variant,
+        "quantity": quantity,
+        "subtotal": subtotal
+    }
 
-        session_manager.add_item(self.user_id, item_data)
-        await interaction.response.send_message(
-            f"✅ Added {quantity}x {self.item} to your cart."
-        )
-        await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
+    session_manager.add_item(self.user_id, item_data)
+
+    # Delete previous dropdown message if exists
+    try:
+        await interaction.message.delete()
+    except Exception:
+        pass  # message may not exist in some fallback cases
+
+    await interaction.response.send_message(
+        f"✅ Added {quantity}x {self.item} to your cart."
+    )
+    await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
