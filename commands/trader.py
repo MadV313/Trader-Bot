@@ -296,17 +296,17 @@ class TraderCommand(commands.Cog):
         if interaction.channel.id != config["economy_channel_id"]:
             return await interaction.response.send_message("You must use this command in the #economy channel.")
             
-try:
-    await interaction.user.send("🛒 Buying session started! Use the buttons below to add items, submit, or cancel your order.")
-    view = TraderView(self.bot, interaction.user.id)
-    ui_msg = await interaction.user.send(view=view)
-    view.ui_message = ui_msg
-    session_manager.start_session(interaction.user.id)
-    session = session_manager.get_session(interaction.user.id)
-    session["cart_messages"] = [ui_msg.id]
-    await interaction.response.send_message("Trader session moved to your DMs.")
-except:
-    await interaction.response.send_message("Trader session moved to your DMs.")
+    try:
+        await interaction.user.send("🛒 Buying session started! Use the buttons below to add items, submit, or cancel your order.")
+        view = TraderView(self.bot, interaction.user.id)
+        ui_msg = await interaction.user.send(view=view)
+        view.ui_message = ui_msg
+        session_manager.start_session(interaction.user.id)
+        session = session_manager.get_session(interaction.user.id)
+        session["cart_messages"] = [ui_msg.id]
+        await interaction.response.send_message("Trader session moved to your DMs.")
+    except:
+        await interaction.response.send_message("Trader session moved to your DMs.")
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
