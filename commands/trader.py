@@ -53,6 +53,44 @@ def get_price(category, subcategory, item, variant):
     except (KeyError, TypeError):
         return None
 
+class QuantityModal(ui.Modal, title="Enter Quantity"):
+    quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
+
+    def __init__(self, bot, user_id, category, subcategory, item, variant, view_ref):
+        super().__init__()
+        self.bot = bot
+        self.user_id = user_id
+        self.category = category
+        self.subcategory = subcategory
+        self.item = item
+        self.variant = variant
+        self.view_ref = view_ref
+        self.price = get_price(category, subcategory, item, variant)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            quantity = int(self.quantity.value)
+            if quantity <= 0:
+                raise ValueError
+        except ValueError:
+            return await interaction.response.send_message("Invalid quantity.")
+
+        subtotal = self.price * quantity
+        item_data = {
+            "category": self.category,
+            "subcategory": self.subcategory,
+            "item": self.item,
+            "variant": self.variant,
+            "quantity": quantity,
+            "subtotal": subtotal
+        }
+
+        session_manager.add_to_cart(self.user_id, item_data)
+        await interaction.response.send_message(
+            f"✅ Added {quantity}x {self.item} to your cart."
+        )
+        await self.bot.get_cog("TraderCommand").views[self.user_id].update_cart_message(interaction)
+
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
