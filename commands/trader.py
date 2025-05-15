@@ -240,7 +240,7 @@ class TraderView(discord.ui.View):
     f"Please confirm this message with a ✅ when the order is ready"
 )
 await order_message.add_reaction("🔴")
-        )
+
         await interaction.response.send_message("✅ Order submitted to trader channel.")
 
         # Cleanup: delete UI and cart messages
