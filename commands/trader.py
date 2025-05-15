@@ -295,8 +295,8 @@ class TraderCommand(commands.Cog):
     async def trader(self, interaction: discord.Interaction):
         if interaction.channel.id != config["economy_channel_id"]:
             return await interaction.response.send_message("You must use this command in the #economy channel.")
-
-            try:
+            
+try:
     await interaction.user.send("🛒 Buying session started! Use the buttons below to add items, submit, or cancel your order.")
     view = TraderView(self.bot, interaction.user.id)
     ui_msg = await interaction.user.send(view=view)
