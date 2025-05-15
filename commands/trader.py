@@ -145,7 +145,7 @@ class TraderView(discord.ui.View):
         else:
             self.cart_message = await interaction.followup.send(content=text)
 
-    @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
+        @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!")
@@ -253,7 +253,6 @@ class TraderView(discord.ui.View):
         await interaction.response.send_message("✅ Order submitted to trader channel.")
         session_manager.end_session(self.user_id)
 
-        # Cleanup the UI
         try:
             if self.ui_message:
                 await self.ui_message.edit(view=None)
@@ -268,7 +267,6 @@ class TraderView(discord.ui.View):
         session_manager.end_session(self.user_id)
         await interaction.response.send_message("❌ Order canceled.")
 
-        # Cleanup the UI
         try:
             if self.ui_message:
                 await self.ui_message.edit(view=None)
@@ -312,59 +310,31 @@ class ComboInputModal(ui.Modal, title="Enter Storage Combo"):
         self.admin = admin
         self.unit = unit
 
-        async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction):
+        msg = (
+            f"{self.player.mention} your order is complete!\n"
+            f"Please proceed to **{self.unit.upper()}** and use the code **{self.combo.value}** to retrieve your order.\n"
+            f"Please leave the lock with the same combo on the door when you're finished!\n"
+            f"Thanks for your purchase and stay frosty out there survivor!"
+        )
         try:
-            quantity = int(self.quantity.value)
-            if quantity <= 0:
-                raise ValueError
-        except ValueError:
-            return await interaction.response.send_message("Invalid quantity.")
-
-        subtotal = self.price * quantity
-        item_data = {
-            "category": self.category,
-            "subcategory": self.subcategory,
-            "item": self.item,
-            "variant": self.variant,
-            "quantity": quantity,
-            "subtotal": subtotal
-        }
-
-        session_manager.add_item(self.user_id, item_data)
-
-        try:
-            await interaction.message.delete()
+            await self.player.send(msg)
+            await interaction.response.send_message("DM sent to player.")
         except:
-            pass
-
-        await interaction.response.defer()
-
-        latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
-        items = session_manager.get_session_items(self.user_id)
-        cart_total = sum(item["subtotal"] for item in items)
-        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
-
-        try:
-            if self.view_ref and self.view_ref.cart_message:
-                await self.view_ref.cart_message.edit(content=latest_summary)
-            else:
-                self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
-        except:
-            self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+            await interaction.response.send_message("Failed to DM player.")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.confirmed_messages = set()
         self.awaiting_payment = {}
-        self.awaiting_final_confirmation = {}
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if user.bot:
             return
-        message = reaction.message
 
+        message = reaction.message
         if message.channel.id == config["trader_orders_channel_id"] and "please confirm this message with a ✅ when the order is ready" in message.content:
             if str(reaction.emoji) == "✅" and message.id not in self.confirmed_messages:
                 self.confirmed_messages.add(message.id)
@@ -407,25 +377,19 @@ class TraderCommand(commands.Cog):
                 print(f"Error finishing payment: {e}")
 
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
-async def trader(self, interaction: discord.Interaction):
-    if interaction.channel.id != config["economy_channel_id"]:
-        return await interaction.response.send_message("You must use this command in the #economy channel.")
+    async def trader(self, interaction: discord.Interaction):
+        if interaction.channel.id != config["economy_channel_id"]:
+            return await interaction.response.send_message("You must use this command in the #economy channel.")
 
-    try:
-        await interaction.user.send("Buying session started! Use the buttons below to add items, submit, or cancel your order.")
-        view = TraderView(self.bot, interaction.user.id)
-        ui_msg = await interaction.user.send(view=view)
-        view.ui_message = ui_msg  # Track the message holding the buttons
-        session_manager.start_session(interaction.user.id)
-        await interaction.response.send_message("Trader session moved to your DMs.")
-    except:
-        await interaction.response.send_message("Could not DM you. Please allow DMs from server members.")
+        try:
+            await interaction.user.send("Buying session started! Use the buttons below to add items, submit, or cancel your order.")
             view = TraderView(self.bot, interaction.user.id)
-            await interaction.user.send(view=view)
+            ui_msg = await interaction.user.send(view=view)
+            view.ui_message = ui_msg
             session_manager.start_session(interaction.user.id)
             await interaction.response.send_message("Trader session moved to your DMs.")
         except:
-            await interaction.response.send_message("Could not DM you. Please allow DMs from server members.") 
+            await interaction.response.send_message("Could not DM you. Please allow DMs from server members.")
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
