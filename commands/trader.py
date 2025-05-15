@@ -437,6 +437,23 @@ class ComboInputModal(ui.Modal, title="Enter Storage Combo"):
 
         await interaction.response.send_message("Combo sent to player.")
 
+        elif message.id in session_manager.unit_clearance_map and str(reaction.emoji) == "✅":
+            if user.id != session_manager.unit_clearance_map[message.id]["player_id"]:
+                return
+
+            await message.clear_reaction("🔴")
+            await message.add_reaction("✅")
+            await message.edit(content="All set! See ya next time!")
+
+            await asyncio.sleep(20)
+            try:
+                await message.delete()
+            except:
+                pass
+
+            trader_notify = self.bot.get_channel(config["trader_payout_channel_id"])
+            if trader_notify:
+                await trader_notify.send(f"<@&{config['trader_role_id']}> {user.mention} cleared their unit!")    
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
     async def trader(self, interaction: discord.Interaction):
         if interaction.channel.id != config["economy_channel_id"]:
