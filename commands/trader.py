@@ -68,46 +68,6 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         self.view_ref = view_ref
         self.price = get_price(category, subcategory, item, variant)
 
-    async def on_submit(self, interaction: discord.Interaction):
-        try:
-            quantity = int(self.quantity.value)
-            if quantity <= 0:
-                raise ValueError
-        except ValueError:
-            return await interaction.response.send_message("Invalid quantity.")
-
-        subtotal = self.price * quantity
-        item_data = {
-            "category": self.category,
-            "subcategory": self.subcategory,
-            "item": self.item,
-            "variant": self.variant,
-            "quantity": quantity,
-            "subtotal": subtotal
-        }
-
-        session_manager.add_item(self.user_id, item_data)
-
-        try:
-            await interaction.message.delete()
-        except Exception:
-            pass
-
-        await interaction.response.defer()
-
-        latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
-        items = session_manager.get_session_items(self.user_id)
-        cart_total = sum(item["subtotal"] for item in items)
-        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
-
-        try:
-            if self.view_ref and self.view_ref.cart_message:
-                await self.view_ref.cart_message.edit(content=latest_summary)
-            else:
-                self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
-        except Exception:
-            self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
-
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=180)
@@ -291,7 +251,6 @@ class TraderView(discord.ui.View):
         except Exception as e:
             print(f"[UI Cleanup - Cancel] {e}")
 
-
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -307,7 +266,7 @@ class TraderCommand(commands.Cog):
         message = reaction.message
         emoji = str(reaction.emoji)
 
-        # Admin confirms order
+        # Phase 1: Admin confirms order
         if message.channel.id == config["trader_orders_channel_id"] and emoji == "✅":
             if "Please confirm this message with a ✅ when the order is ready" in message.content and message.id not in self.awaiting_payment:
                 await message.clear_reaction("🔴")
@@ -341,7 +300,7 @@ class TraderCommand(commands.Cog):
                         f"give user:{user.id} amount:{total} account:cash"
                     )
 
-        # Player confirms payment
+        # Phase 2: Player confirms payment
         elif emoji == "✅" and reaction.message.id in self.awaiting_payment:
             data = self.awaiting_payment.pop(reaction.message.id)
             await reaction.message.clear_reaction("🔴")
@@ -360,14 +319,13 @@ class TraderCommand(commands.Cog):
                 "total": data["total"]
             }
 
-        # Admin confirms payment receipt
+        # Phase 3: Admin confirms payment received
         elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
             data = self.awaiting_storage.pop(reaction.message.id)
             await reaction.message.clear_reaction("🔴")
             await reaction.message.add_reaction("✅")
             await reaction.message.edit(content=reaction.message.content + f"\n\nPayment confirmed by {user.mention}")
 
-            # Begin storage dropdown
             class StorageSelect(ui.Select):
                 def __init__(self, bot, player, admin, total):
                     options = [
@@ -393,9 +351,8 @@ class TraderCommand(commands.Cog):
                         await msg.add_reaction("🔴")
                         await asyncio.sleep(20)
                         await msg.delete()
-                        return
+                        return await interaction.response.send_message("Skip acknowledged.")
 
-                    # Prompt for code
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
 
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
@@ -420,7 +377,7 @@ class TraderCommand(commands.Cog):
                         "unit": self.unit
                     }
 
-        # Player confirms pickup complete
+        # Phase 4: Player confirms pickup complete
         elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
             data = self.awaiting_pickup.pop(reaction.message.id)
             await reaction.message.clear_reaction("🔴")
@@ -453,6 +410,6 @@ class TraderCommand(commands.Cog):
         except:
             await interaction.response.send_message("Trader session moved to your DMs.")
 
-
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
+
