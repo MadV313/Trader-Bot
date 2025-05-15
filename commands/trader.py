@@ -394,7 +394,7 @@ class TraderCommand(commands.Cog):
                         await msg.delete()
                         return await interaction.response.send_message("Skip acknowledged.")
 
-                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
+                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
 
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
                 combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
