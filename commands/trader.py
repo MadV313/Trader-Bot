@@ -129,6 +129,7 @@ class TraderView(discord.ui.View):
         self.bot = bot
         self.user_id = user_id
         self.cart_message = None
+        self.ui_message = None  # Track the message that holds the view/buttons
 
     async def update_cart_message(self, interaction):
         items = session_manager.get_session_items(self.user_id)
@@ -242,8 +243,7 @@ class TraderView(discord.ui.View):
 
         total = sum(item["subtotal"] for item in items)
         lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
-        summary = "\n".join(lines)
-        summary += f"\n\nTotal: ${total:,}"
+        summary = "\n".join(lines) + f"\n\nTotal: ${total:,}"
 
         trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
         if not trader_channel:
@@ -256,9 +256,10 @@ class TraderView(discord.ui.View):
         await interaction.response.send_message("✅ Order submitted to trader channel.")
         session_manager.end_session(self.user_id)
 
-        # Clean up UI
+        # Clean up the UI
         try:
-            await interaction.message.edit(view=None)
+            if self.ui_message:
+                await self.ui_message.edit(view=None)
         except:
             pass
 
@@ -270,9 +271,10 @@ class TraderView(discord.ui.View):
         session_manager.end_session(self.user_id)
         await interaction.response.send_message("❌ Order canceled.")
 
-        # Clean up UI
+        # Clean up the UI
         try:
-            await interaction.message.edit(view=None)
+            if self.ui_message:
+                await self.ui_message.edit(view=None)
         except:
             pass
 
