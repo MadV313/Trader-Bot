@@ -112,9 +112,6 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         # Don't delete the UI — just continue with cart update
         pass
 
-        except Exception:
-            pass
-
         await interaction.response.defer()
 
         latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
