@@ -162,11 +162,14 @@ class TraderView(discord.ui.View):
 
             def get_options(self):
                 if self.stage == "category":
-                    options = []
-                    for c in get_categories()[:25]:
-                        label, emoji = extract_label_and_emoji(c)
-                        options.append(discord.SelectOption(label=label, value=c, emoji=emoji))
-                    return options
+                    next_stage = "subcategory" if get_subcategories(value) else "item"
+                    dropdown = DynamicDropdown(
+                        self.bot,
+                        self.user_id,
+                        next_stage,
+                        {"category": value},
+                        self.view_ref
+                    )
 
                 if self.stage == "subcategory":
                     subcats = get_subcategories(self.selected["category"])
