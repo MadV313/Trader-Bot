@@ -289,7 +289,7 @@ class DynamicDropdown(discord.ui.Select):
                     options.append(discord.SelectOption(label=f"{i} (select variant...)", value=json.dumps({"item": i, "variant": None})))
             return options
         if self.stage == "variant":
-            variants = get_variants(self.selected["category"], self.selected.get("subcategory"), self.selected["item"])
+            variants = get_variants(self.selected['category'], self.selected.get('subcategory'), self.selected["item"])
             options = []
             for v in variants[:25]:
                 price = get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0
@@ -331,9 +331,14 @@ class DynamicDropdown(discord.ui.Select):
                 QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
             )
 
-        new_view = discord.ui.View(timeout=180)
-        new_view.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref))
+        # 🔁 Replace dropdown in existing view instead of recreating view
+        for child in self.view_ref.children[:]:
+            if isinstance(child, DynamicDropdown):
+                self.view_ref.remove_item(child)
 
+        self.view_ref.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref))
+
+        # ⬅️ Add back button if not at root
         if self.stage != "category":
             class BackButton(discord.ui.Button):
                 def __init__(inner_self):
@@ -344,7 +349,6 @@ class DynamicDropdown(discord.ui.Select):
                         return await back_interaction.response.send_message("Not your session.", ephemeral=True)
 
                     back_selection = self.selected.copy()
-
                     if self.stage == "subcategory":
                         back_stage = "category"
                         back_selection = {}
@@ -361,16 +365,19 @@ class DynamicDropdown(discord.ui.Select):
                     else:
                         return await back_interaction.response.send_message("Cannot go back further.", ephemeral=True)
 
-                    back_view = discord.ui.View(timeout=180)
-                    back_view.add_item(DynamicDropdown(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
+                    for child in self.view_ref.children[:]:
+                        if isinstance(child, DynamicDropdown):
+                            self.view_ref.remove_item(child)
+
+                    self.view_ref.add_item(DynamicDropdown(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
                     if back_stage != "category":
-                        back_view.add_item(BackButton())
+                        self.view_ref.add_item(BackButton())
 
-                    await back_interaction.response.edit_message(content="Back to previous step:", view=back_view)
+                    await back_interaction.response.edit_message(content="Back to previous step:", view=self.view_ref)
 
-            new_view.add_item(BackButton())
+            self.view_ref.add_item(BackButton())
 
-        await select_interaction.response.edit_message(content="Select an option:", view=new_view)
+        await select_interaction.response.edit_message(content="Select an option:", view=self.view_ref)
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
