@@ -298,10 +298,6 @@ class DynamicDropdown(discord.ui.Select):
         view = discord.ui.View(timeout=180)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
         await interaction.response.send_message("Select a category:", view=view)
-    
-        view = discord.ui.View(timeout=180)
-        view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
-        await interaction.response.send_message("Select a category:", view=view)
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
