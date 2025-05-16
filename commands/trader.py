@@ -163,7 +163,7 @@ class TraderView(discord.ui.View):
         else:
             self.cart_message = await interaction.followup.send(content=text)
 
-    @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
+@discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
 async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
     if interaction.user.id != self.user_id:
         return await interaction.response.send_message("Mind your own order!")
