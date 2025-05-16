@@ -6,16 +6,6 @@ import os
 import asyncio
 from utils import session_manager, variant_utils
 
-import re
-
-def extract_label_and_emoji(text):
-    match = re.search(r'(<:.*?:\d+>)', text)
-    if match:
-        emoji = match.group(1)
-        label = text.split(' <')[0].strip()
-        return label, emoji
-    return text, None
-
 config = json.loads(os.environ.get("CONFIG_JSON"))
 
 PRICE_FILE = os.path.join("data", "Final price list.json")
@@ -162,19 +152,10 @@ class TraderView(discord.ui.View):
 
             def get_options(self):
                 if self.stage == "category":
-                    next_stage = "subcategory" if get_subcategories(value) else "item"
-                    dropdown = DynamicDropdown(
-                        self.bot,
-                        self.user_id,
-                        next_stage,
-                        {"category": value},
-                        self.view_ref
-                    )
-
+                    return [discord.SelectOption(label=c, value=c) for c in get_categories()[:25]]
                 if self.stage == "subcategory":
                     subcats = get_subcategories(self.selected["category"])
                     return [discord.SelectOption(label=s, value=s) for s in subcats[:25]]
-
                 if self.stage == "item":
                     items = get_items_in_subcategory(self.selected["category"], self.selected.get("subcategory"))
                     options = []
@@ -187,7 +168,6 @@ class TraderView(discord.ui.View):
                         else:
                             options.append(discord.SelectOption(label=f"{i} (select variant...)", value=json.dumps({"item": i, "variant": None})))
                     return options
-
                 if self.stage == "variant":
                     variants = get_variants(self.selected["category"], self.selected.get("subcategory"), self.selected["item"])
                     options = []
@@ -204,6 +184,39 @@ class TraderView(discord.ui.View):
                         options.append(discord.SelectOption(label=f"{label_text} (${price:,})", value=v, emoji=emoji))
                     return options
 
+            async def callback(self, select_interaction: discord.Interaction):
+                if select_interaction.user.id != self.user_id:
+                    return await select_interaction.response.send_message("Not your session.", ephemeral=True)
+                value = self.values[0]
+                if self.stage == "category":
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "subcategory" if value in ["Clothes", "Weapons"] else "item", {"category": value}, self.view_ref)
+                elif self.stage == "subcategory":
+                    new_selection = self.selected.copy()
+                    new_selection["subcategory"] = value
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.view_ref)
+                elif self.stage == "item":
+                    new_selection = self.selected.copy()
+                    item_data = json.loads(value)
+                    new_selection["item"] = item_data["item"]
+                    if item_data["variant"] == "Default":
+                        return await select_interaction.response.send_modal(
+                            QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], "Default", self.view_ref)
+                        )
+                    dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.view_ref)
+                elif self.stage == "variant":
+                    new_selection = self.selected.copy()
+                    new_selection["variant"] = value
+                    return await select_interaction.response.send_modal(
+                        QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
+                    )
+                new_view = discord.ui.View(timeout=180)
+                new_view.add_item(dropdown)
+                await select_interaction.response.edit_message(content="Select an option:", view=new_view)
+
+        view = discord.ui.View(timeout=180)
+        view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
+        await interaction.response.send_message("Select a category:", view=view)
+
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
@@ -214,7 +227,7 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Your cart is empty.")
 
         total = sum(item["subtotal"] for item in items)
-        lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
+        lines = [f"â¢ {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
         summary = "\n".join(lines) + f"\n\nTotal: ${total:,}"
 
         trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
@@ -225,11 +238,11 @@ class TraderView(discord.ui.View):
             f"<@&{config['trader_role_id']}> a new order is ready to be processed!\n\n"
             f"{interaction.user.mention} has submitted a new order:\n\n"
             f"{summary}\n\n"
-            f"Please confirm this message with a ✅ when the order is ready"
+            f"Please confirm this message with a â when the order is ready"
         )
-        await order_message.add_reaction("🔴")
+        await order_message.add_reaction("ð´")
 
-        await interaction.response.send_message("✅ Order submitted to trader channel.")
+        await interaction.response.send_message("â Order submitted to trader channel.")
 
         try:
             await interaction.message.delete()
@@ -257,7 +270,7 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Mind your own order!")
 
         session_manager.end_session(self.user_id)
-        await interaction.response.send_message("❌ Order canceled.")
+        await interaction.response.send_message("â Order canceled.")
 
         try:
             await interaction.message.delete()
@@ -294,11 +307,11 @@ class TraderCommand(commands.Cog):
         message = reaction.message
         emoji = str(reaction.emoji)
 
-        # Phase 1: Admin confirms order
-        if message.channel.id == config["trader_orders_channel_id"] and emoji == "✅":
-            if "Please confirm this message with a ✅ when the order is ready" in message.content and message.id not in self.awaiting_payment:
-                await message.clear_reaction("🔴")
-                await message.add_reaction("✅")
+        # Admin confirms order
+        if message.channel.id == config["trader_orders_channel_id"] and emoji == "â":
+            if "Please confirm this message with a â when the order is ready" in message.content and message.id not in self.awaiting_payment:
+                await message.clear_reaction("ð´")
+                await message.add_reaction("â")
                 new_content = f"{message.content}\n\nOrder confirmed by {user.mention}"
                 await message.edit(content=new_content)
 
@@ -314,9 +327,9 @@ class TraderCommand(commands.Cog):
                     dm = await player.send(
                         f"{player.mention} your order is ready for pick up!\n"
                         f"Please make a payment to {user.mention} in the amount of **${total}**.\n"
-                        f"React here with a ✅ once payment has been made!"
+                        f"React here with a â once payment has been made!"
                     )
-                    await dm.add_reaction("🔴")
+                    await dm.add_reaction("ð´")
                     self.awaiting_payment[dm.id] = {
                         "player": player,
                         "admin": user,
@@ -328,18 +341,18 @@ class TraderCommand(commands.Cog):
                         f"give user:{user.id} amount:{total} account:cash"
                     )
 
-        # Phase 2: Player confirms payment
-        elif emoji == "✅" and reaction.message.id in self.awaiting_payment:
+        # Player confirms payment
+        elif emoji == "â" and reaction.message.id in self.awaiting_payment:
             data = self.awaiting_payment.pop(reaction.message.id)
-            await reaction.message.clear_reaction("🔴")
-            await reaction.message.add_reaction("✅")
+            await reaction.message.clear_reaction("ð´")
+            await reaction.message.add_reaction("â")
             await reaction.message.edit(content=reaction.message.content + "\n\nPayment confirmed! Please stand by.")
 
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
             payment_notice = await trader_channel.send(
-                f"<@&{config['trader_role_id']}> {data['player'].mention} sent their payment.\nPlease confirm with a ✅ to proceed."
+                f"<@&{config['trader_role_id']}> {data['player'].mention} sent their payment.\nPlease confirm with a â to proceed."
             )
-            await payment_notice.add_reaction("🔴")
+            await payment_notice.add_reaction("ð´")
 
             self.awaiting_storage[payment_notice.id] = {
                 "player": data["player"],
@@ -347,13 +360,14 @@ class TraderCommand(commands.Cog):
                 "total": data["total"]
             }
 
-        # Phase 3: Admin confirms payment received
-        elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
+        # Admin confirms payment receipt
+        elif emoji == "â" and reaction.message.id in self.awaiting_storage:
             data = self.awaiting_storage.pop(reaction.message.id)
-            await reaction.message.clear_reaction("🔴")
-            await reaction.message.add_reaction("✅")
+            await reaction.message.clear_reaction("ð´")
+            await reaction.message.add_reaction("â")
             await reaction.message.edit(content=reaction.message.content + f"\n\nPayment confirmed by {user.mention}")
 
+            # Begin storage dropdown
             class StorageSelect(ui.Select):
                 def __init__(self, bot, player, admin, total):
                     options = [
@@ -376,11 +390,12 @@ class TraderCommand(commands.Cog):
                     choice = self.values[0]
                     if choice == "skip":
                         msg = await self.player.send("Thanks for shopping with us, see ya next time! Stay frosty survivor!")
-                        await msg.add_reaction("🔴")
+                        await msg.add_reaction("ð´")
                         await asyncio.sleep(20)
                         await msg.delete()
-                        return await interaction.response.send_message("Skip acknowledged.")
+                        return
 
+                    # Prompt for code
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
 
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
@@ -397,19 +412,19 @@ class TraderCommand(commands.Cog):
                     dm = await self.player.send(
                         f"{self.player.mention}, your order is ready for pick up!\n"
                         f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
-                        f"Please leave the lock with the same code when done!\nReact here with a ✅ when finished."
+                        f"Please leave the lock with the same code when done!\nReact here with a â when finished."
                     )
-                    await dm.add_reaction("🔴")
+                    await dm.add_reaction("ð´")
                     self.bot.get_cog("TraderCommand").awaiting_pickup[dm.id] = {
                         "player": self.player,
                         "unit": self.unit
                     }
 
-        # Phase 4: Player confirms pickup complete
-        elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
+        # Player confirms pickup complete
+        elif emoji == "â" and reaction.message.id in self.awaiting_pickup:
             data = self.awaiting_pickup.pop(reaction.message.id)
-            await reaction.message.clear_reaction("🔴")
-            await reaction.message.add_reaction("✅")
+            await reaction.message.clear_reaction("ð´")
+            await reaction.message.add_reaction("â")
             await reaction.message.edit(content="All set, see ya next time!")
 
             await asyncio.sleep(20)
@@ -427,7 +442,7 @@ class TraderCommand(commands.Cog):
             return await interaction.response.send_message("You must use this command in the #economy channel.")
 
         try:
-            await interaction.user.send("🛒 Buying session started! Use the buttons below to add items, submit, or cancel your order.")
+            await interaction.user.send("ð Buying session started! Use the buttons below to add items, submit, or cancel your order.")
             view = TraderView(self.bot, interaction.user.id)
             ui_msg = await interaction.user.send(view=view)
             view.ui_message = ui_msg
@@ -438,6 +453,6 @@ class TraderCommand(commands.Cog):
         except:
             await interaction.response.send_message("Trader session moved to your DMs.")
 
+
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
-
