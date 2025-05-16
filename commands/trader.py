@@ -106,14 +106,12 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
             "subtotal": subtotal
         }
 
+        # Add item to session
         session_manager.add_item(self.user_id, item_data)
-
-        try:
-        # Don't delete the UI — just continue with cart update
-        pass
 
         await interaction.response.defer()
 
+        # Update cart message or send new one
         latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
         items = session_manager.get_session_items(self.user_id)
         cart_total = sum(item["subtotal"] for item in items)
