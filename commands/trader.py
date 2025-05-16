@@ -219,73 +219,81 @@ class TraderView(discord.ui.View):
                         options.append(discord.SelectOption(label=f"{label_text} (${price:,})", value=v, emoji=emoji))
                     return options
 
-            async def callback(self, select_interaction: discord.Interaction):
-                if select_interaction.user.id != self.user_id:
-                    return await select_interaction.response.send_message("Not your session.", ephemeral=True)
+                async def callback(self, select_interaction: discord.Interaction):
+                    if select_interaction.user.id != self.user_id:
+                        return await select_interaction.response.send_message("Not your session.", ephemeral=True)
 
-                value = self.values[0]
+                    value = self.values[0]
 
-                # Determine next stage and build new selection
-                if self.stage == "category":
-                    category_name = value.lower()
-                    next_stage = "subcategory" if "clothes" in category_name else "item"
-                    new_selection = {"category": value}
-                elif self.stage == "subcategory":
-                    next_stage = "item"
-                    new_selection = {**self.selected, "subcategory": value}
-                elif self.stage == "item":
-                    item_data = json.loads(value)
-                    new_selection = {**self.selected, "item": item_data["item"]}
-                    if item_data["variant"] == "Default":
-                        return await select_interaction.response.send_modal(
-                            QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], "Default", self.view_ref)
-                        )
-                    next_stage = "variant"
-                elif self.stage == "variant":
-                    new_selection = {**self.selected, "variant": value}
-                    return await select_interaction.response.send_modal(
-                        QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
-                    )
+    # Determine next stage and updated selection
+    if self.stage == "category":
+        category_name = value.lower()
+        next_stage = "subcategory" if "clothes" in category_name else "item"
+        new_selection = {"category": value}
+    elif self.stage == "subcategory":
+        next_stage = "item"
+        new_selection = {**self.selected, "subcategory": value}
+    elif self.stage == "item":
+        item_data = json.loads(value)
+        new_selection = {**self.selected, "item": item_data["item"]}
+        if item_data["variant"] == "Default":
+            return await select_interaction.response.send_modal(
+                QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], "Default", self.view_ref)
+            )
+        next_stage = "variant"
+    elif self.stage == "variant":
+        new_selection = {**self.selected, "variant": value}
+        return await select_interaction.response.send_modal(
+            QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
+        )
 
-                new_view = discord.ui.View(timeout=180)
-                new_view.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref))
+    # Create updated dropdown and view
+    new_view = discord.ui.View(timeout=180)
+    new_view.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref))
 
-                # BACK BUTTON LOGIC
-                if self.stage != "category":
-                    class BackButton(discord.ui.Button):
-                        def __init__(self, bot, user_id, stage, selected, view_ref):
-                            super().__init__(label="Back", style=discord.ButtonStyle.secondary)
-                            self.bot = bot
-                            self.user_id = user_id
-                            self.stage = stage
-                            self.selected = selected
-                            self.view_ref = view_ref
+    # BackButton now declared outside callback so it can receive correct context
+    class BackButton(discord.ui.Button):
+        def __init__(self, bot, user_id, stage, selected, view_ref):
+            super().__init__(label="Back", style=discord.ButtonStyle.secondary)
+            self.bot = bot
+            self.user_id = user_id
+            self.stage = stage
+            self.selected = selected
+            self.view_ref = view_ref
 
-                        async def callback(self, back_interaction: discord.Interaction):
-                            if back_interaction.user.id != self.user_id:
-                                return await back_interaction.response.send_message("Not your session.", ephemeral=True)
+        async def callback(self, back_interaction: discord.Interaction):
+            if back_interaction.user.id != self.user_id:
+                return await back_interaction.response.send_message("Not your session.", ephemeral=True)
 
-                            # Determine back stage and back selection
-                            back_selection = self.selected.copy()
-                            if self.stage == "subcategory":
-                                back_stage = "category"
-                                back_selection = {}
-                            elif self.stage == "item":
-                                back_stage = "subcategory" if "subcategory" in back_selection else "category"
-                                back_selection.pop("subcategory", None)
-                            elif self.stage == "variant":
-                                back_stage = "item"
-                                back_selection.pop("item", None)
+            # Determine where to go back based on current stage
+            back_selection = self.selected.copy()
+            if self.stage == "item":
+                if "subcategory" in back_selection:
+                    back_stage = "subcategory"
+                else:
+                    back_stage = "category"
+                back_selection.pop("item", None)
+            elif self.stage == "subcategory":
+                back_stage = "category"
+                back_selection = {}
+            elif self.stage == "variant":
+                back_stage = "item"
+                back_selection.pop("item", None)
+            else:
+                return await back_interaction.response.send_message("Cannot go back any further.", ephemeral=True)
 
-                            back_view = discord.ui.View(timeout=180)
-                            back_view.add_item(DynamicDropdown(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
-                            if back_stage != "category":
-                                back_view.add_item(BackButton(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
-                            await back_interaction.response.edit_message(content="Back to previous step:", view=back_view)
+            back_view = discord.ui.View(timeout=180)
+            back_view.add_item(DynamicDropdown(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
+            if back_stage != "category":
+                back_view.add_item(BackButton(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
 
-                    new_view.add_item(BackButton(self.bot, self.user_id, self.stage, self.selected, self.view_ref))
+            await back_interaction.response.edit_message(content="Back to previous step:", view=back_view)
 
-                await select_interaction.response.edit_message(content="Select an option:", view=new_view)
+    # Only hide back button on root (category)
+    if self.stage != "category":
+        new_view.add_item(BackButton(self.bot, self.user_id, self.stage, self.selected, self.view_ref))
+
+    await select_interaction.response.edit_message(content="Select an option:", view=new_view)
 
         view = discord.ui.View(timeout=180)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
