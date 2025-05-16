@@ -89,41 +89,81 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         self.price = get_price(category, subcategory, item, variant)
 
     async def on_submit(self, interaction: discord.Interaction):
-        try:
-            quantity = int(self.quantity.value)
-            if quantity <= 0:
-                raise ValueError
-        except ValueError:
-            return await interaction.response.send_message("Invalid quantity.")
+    try:
+        quantity = int(self.quantity.value)
+        if quantity <= 0:
+            raise ValueError
+    except ValueError:
+        return await interaction.response.send_message("Invalid quantity.")
 
-        subtotal = self.price * quantity
-        item_data = {
+    subtotal = self.price * quantity
+    item_data = {
+        "category": self.category,
+        "subcategory": self.subcategory,
+        "item": self.item,
+        "variant": self.variant,
+        "quantity": quantity,
+        "subtotal": subtotal
+    }
+
+    # Add item to session
+    session_manager.add_item(self.user_id, item_data)
+
+    await interaction.response.defer()
+
+    # Update cart message
+    latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
+    items = session_manager.get_session_items(self.user_id)
+    cart_total = sum(item["subtotal"] for item in items)
+    latest_summary += f"🛒 Cart Total: ${cart_total:,}"
+
+    try:
+        if self.view_ref and self.view_ref.cart_message:
+            await self.view_ref.cart_message.edit(content=latest_summary)
+        else:
+            self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+    except Exception:
+        self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+
+    # Rebuild dropdown flow from previous step
+    for child in self.view_ref.children[:]:
+        if isinstance(child, DynamicDropdown) or isinstance(child, BackButton):
+            self.view_ref.remove_item(child)
+
+    # Determine previous dropdown stage
+    if self.subcategory:  # Clothes path
+        back_stage = "item"
+        selected = {
             "category": self.category,
             "subcategory": self.subcategory,
-            "item": self.item,
-            "variant": self.variant,
-            "quantity": quantity,
-            "subtotal": subtotal
+            "item": self.item
+        }
+    else:  # Non-clothes path
+        back_stage = "item"
+        selected = {
+            "category": self.category,
+            "item": self.item
         }
 
-        # Add item to session
-        session_manager.add_item(self.user_id, item_data)
+    self.view_ref.add_item(DynamicDropdown(
+        self.bot,
+        self.user_id,
+        back_stage,
+        selected,
+        self.view_ref
+    ))
 
-        await interaction.response.defer()
+    # Add back button if not starting at category
+    if back_stage != "category":
+        self.view_ref.add_item(BackButton(
+            self.bot,
+            self.user_id,
+            back_stage,
+            selected,
+            self.view_ref
+        ))
 
-        # Update cart message or send new one
-        latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
-        items = session_manager.get_session_items(self.user_id)
-        cart_total = sum(item["subtotal"] for item in items)
-        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
-
-        try:
-            if self.view_ref and self.view_ref.cart_message:
-                await self.view_ref.cart_message.edit(content=latest_summary)
-            else:
-                self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
-        except Exception:
-            self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+    await self.view_ref.ui_message.edit(content="Select an option:", view=self.view_ref)
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
