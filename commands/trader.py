@@ -539,3 +539,11 @@ class TraderCommand(commands.Cog):
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
 
+    try:
+        # Optional: If you're using a test guild, replace GUILD_ID below
+        # bot.tree.copy_global_to(guild=discord.Object(id=YOUR_GUILD_ID))
+        await bot.tree.sync()
+        print("✅ Slash commands synced successfully.")
+    except Exception as e:
+        print(f"❌ Error syncing commands: {e}")
+
