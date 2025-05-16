@@ -23,29 +23,31 @@ def get_subcategories(category):
 
 def get_items_in_subcategory(category, subcategory):
     """
-    Handles both flat and deeply nested subcategory structures.
-    Returns a list of actual item names (i.e., keys that contain price variants).
+    Returns immediate keys under the category/subcategory — no deep dive.
+    Used for dropdown item selection logic.
     """
     if subcategory:
         sub_data = PRICE_DATA.get(category, {}).get(subcategory, {})
     else:
         sub_data = PRICE_DATA.get(category, {})
 
-    if not isinstance(sub_data, dict):
-        return []
+    if isinstance(sub_data, dict):
+        return list(sub_data.keys())
+    return []
 
-    item_list = []
-    for key, val in sub_data.items():
-        if isinstance(val, dict):
-            # Case 1: This key directly has price variants
-            if all(isinstance(v, (int, float)) for v in val.values()):
-                item_list.append(key)
-            # Case 2: Still nested (like clothes → backpacks → assault)
-            else:
-                for nested_key, nested_val in val.items():
-                    if isinstance(nested_val, dict) and all(isinstance(v, (int, float)) for v in nested_val.values()):
-                        item_list.append(nested_key)
-    return item_list
+def is_real_item(category, subcategory, item):
+    """
+    Determines if a selected item is an actual purchasable item
+    (i.e., has variant prices directly under it).
+    """
+    try:
+        entry = PRICE_DATA[category]
+        if subcategory:
+            entry = entry[subcategory]
+        entry = entry[item]
+        return isinstance(entry, dict) and all(isinstance(v, (int, float)) for v in entry.values())
+    except Exception:
+        return False
 
 def get_variants(category, subcategory, item):
     try:
@@ -69,9 +71,7 @@ def get_price(category, subcategory, item, variant):
             return entry.get(variant)
         return None
     except (KeyError, TypeError):
-        return None
-
-import re  # Make sure this is at the top of your file
+        return Nonefile
 
 def extract_label_and_emoji(category_key):
     match = re.search(r'(<:.*?:\d+>)', category_key)
