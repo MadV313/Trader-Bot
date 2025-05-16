@@ -219,11 +219,11 @@ class TraderView(discord.ui.View):
                         options.append(discord.SelectOption(label=f"{label_text} (${price:,})", value=v, emoji=emoji))
                     return options
 
-                async def callback(self, select_interaction: discord.Interaction):
-                    if select_interaction.user.id != self.user_id:
-                        return await select_interaction.response.send_message("Not your session.", ephemeral=True)
+async def callback(self, select_interaction: discord.Interaction):
+    if select_interaction.user.id != self.user_id:
+        return await select_interaction.response.send_message("Not your session.", ephemeral=True)
 
-                    value = self.values[0]
+    value = self.values[0]
 
     # Determine next stage and updated selection
     if self.stage == "category":
@@ -294,7 +294,7 @@ class TraderView(discord.ui.View):
         new_view.add_item(BackButton(self.bot, self.user_id, self.stage, self.selected, self.view_ref))
 
     await select_interaction.response.edit_message(content="Select an option:", view=new_view)
-
+    
         view = discord.ui.View(timeout=180)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
         await interaction.response.send_message("Select a category:", view=view)
