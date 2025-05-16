@@ -146,7 +146,7 @@ class TraderView(discord.ui.View):
                 return label, emoji
             return category_key, None
 
-        class DynamicDropdown(discord.ui.Select):
+class DynamicDropdown(discord.ui.Select):
     def __init__(self, bot, user_id, stage, selected=None, view_ref=None):
         self.bot = bot
         self.user_id = user_id
