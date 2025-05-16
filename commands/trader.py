@@ -132,10 +132,19 @@ class TraderView(discord.ui.View):
         else:
             self.cart_message = await interaction.followup.send(content=text)
 
-    @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
+        @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
     async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!")
+
+        import re
+        def extract_label_and_emoji(category_key):
+            match = re.search(r'(<:.*?:\d+>)', category_key)
+            if match:
+                emoji = match.group(1)
+                label = category_key.split(' <')[0].strip()
+                return label, emoji
+            return category_key, None
 
         class DynamicDropdown(discord.ui.Select):
             def __init__(self, bot, user_id, stage, selected=None, view_ref=None):
@@ -152,10 +161,23 @@ class TraderView(discord.ui.View):
 
             def get_options(self):
                 if self.stage == "category":
-                    return [discord.SelectOption(label=c, value=c) for c in get_categories()[:25]]
+                    categories = get_categories()[:25]
+                    options = []
+                    for c in categories:
+                        label, emoji_str = extract_label_and_emoji(c)
+                        emoji = None
+                        if emoji_str:
+                            try:
+                                emoji = discord.PartialEmoji.from_str(emoji_str)
+                            except:
+                                pass
+                        options.append(discord.SelectOption(label=label, value=c, emoji=emoji))
+                    return options
+
                 if self.stage == "subcategory":
                     subcats = get_subcategories(self.selected["category"])
                     return [discord.SelectOption(label=s, value=s) for s in subcats[:25]]
+
                 if self.stage == "item":
                     items = get_items_in_subcategory(self.selected["category"], self.selected.get("subcategory"))
                     options = []
@@ -168,6 +190,7 @@ class TraderView(discord.ui.View):
                         else:
                             options.append(discord.SelectOption(label=f"{i} (select variant...)", value=json.dumps({"item": i, "variant": None})))
                     return options
+
                 if self.stage == "variant":
                     variants = get_variants(self.selected["category"], self.selected.get("subcategory"), self.selected["item"])
                     options = []
