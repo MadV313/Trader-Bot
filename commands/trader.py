@@ -207,7 +207,7 @@ class TraderView(discord.ui.View):
                         options.append(discord.SelectOption(label=f"{label_text} (${price:,})", value=v, emoji=emoji))
                     return options
 
-            async def callback(self, select_interaction: discord.Interaction):
+async def callback(self, select_interaction: discord.Interaction):
     if select_interaction.user.id != self.user_id:
         return await select_interaction.response.send_message("Not your session.", ephemeral=True)
 
