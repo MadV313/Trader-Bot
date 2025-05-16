@@ -164,9 +164,13 @@ class TraderView(discord.ui.View):
             self.cart_message = await interaction.followup.send(content=text)
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
-    async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Mind your own order!")
+async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
+    if interaction.user.id != self.user_id:
+        return await interaction.response.send_message("Mind your own order!")
+
+    view = discord.ui.View(timeout=180)
+    view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
+    await interaction.response.send_message("Select a category:", view=view)
 
 class DynamicDropdown(discord.ui.Select):
     def __init__(self, bot, user_id, stage, selected=None, view_ref=None):
@@ -295,10 +299,6 @@ class DynamicDropdown(discord.ui.Select):
 
     await select_interaction.response.edit_message(content="Select an option:", view=new_view)
     
-        view = discord.ui.View(timeout=180)
-        view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
-        await interaction.response.send_message("Select a category:", view=view)
-
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
