@@ -557,13 +557,13 @@ class TraderCommand(commands.Cog):
 
 @app_commands.guilds(discord.Object(id=1166441420643639348))
 @app_commands.command(name="trader", description="Start a buying session with the trader.")
-async def trader(self, interaction: Interaction):
+async def trader(interaction: Interaction):
     if interaction.channel.id != config["economy_channel_id"]:
         return await interaction.response.send_message("You must use this command in the #economy channel.")
     
     try:
         await interaction.user.send("🛒 Buying session started! Use the buttons below to add items, submit, or cancel your order.")
-        view = TraderView(self.bot, interaction.user.id)
+        view = TraderView(bot, interaction.user.id)
         ui_msg = await interaction.user.send(view=view)
         view.ui_message = ui_msg
         session_manager.start_session(interaction.user.id)
