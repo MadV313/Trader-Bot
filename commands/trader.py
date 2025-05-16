@@ -164,18 +164,20 @@ class TraderView(discord.ui.View):
             self.cart_message = await interaction.followup.send(content=text)
 
     @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
-    async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Mind your own order!")
+async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
+    if interaction.user.id != self.user_id:
+        return await interaction.response.send_message("Mind your own order!")
 
-        # ✅ Use self (TraderView) instead of creating a new View
-        self.clear_items()
-        self.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
-        self.add_item(self.handle_add_item)
-        self.add_item(self.submit_order)
-        self.add_item(self.cancel_order)
+    # Clear existing dropdowns but keep buttons
+    for child in self.children[:]:
+        if isinstance(child, DynamicDropdown):
+            self.remove_item(child)
 
-        await interaction.response.edit_message(content="Select a category:", view=self)
+    # Add new dropdown for category selection
+    self.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
+
+    # Edit the existing message with the updated view
+    await interaction.response.edit_message(content="Select a category:", view=self)
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
