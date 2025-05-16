@@ -1,7 +1,7 @@
 {
   "categories": {
     "Ammo1": {
-      "emoji": "<:emoji:1372684246933569676>",
+      "emoji": {"name": "emoji", "id": "1372684246933569676"},
       "12g Bean Bag": {
         "Default": 500
       },
@@ -37,7 +37,7 @@
       }
     },
     "Ammo2": {
-      "emoji": "<:emoji:1372700445302063186>",
+      "emoji": {"name": "emoji", "id": "1372700445302063186"},
       "5.45x39 Tracer": {
         "Default": 500
       },
@@ -73,7 +73,7 @@
       }
     },
     "BaseSupplies": {
-      "emoji": "<:emoji:1372700705684721825>",
+      "emoji": {"name": "emoji", "id": "1372700705684721825"},
       "Barbed Wire": {
         "Default": 1800
       },
@@ -127,7 +127,7 @@
       }
     },
     "CarParts": {
-      "emoji": "<:emoji:1372701703043809311>",
+      "emoji": {"name": "emoji", "id": "1372701703043809311"},
       "Battery": {
         "Default": 15000
       },
@@ -148,7 +148,7 @@
       }
     },
     "Clothes": {
-      "emoji": "<:emoji:1372701378144632832>",
+      "emoji": {"name": "emoji", "id": "1372701378144632832"},
       "Backpacks": {
         "Army Pouch": {
           "Default": 2000
@@ -482,7 +482,7 @@
       }
     },
     "Explosives": {
-      "emoji": "<:emoji:1372701951162323095>",
+      "emoji": {"name": "emoji", "id": "1372701951162323095"},
       "1-M4 Smoke Grenade": {
         "Default": 10000
       },
@@ -521,7 +521,7 @@
       }
     },
     "Mags1": {
-      "emoji": "<:emoji:1372702727444103208>",
+      "emoji": {"name": "emoji", "id": "1372702727444103208"},
       "10rnd Cmag": {
         "Default": 500
       },
@@ -584,7 +584,7 @@
       }
     },
     "Mags2": {
-      "emoji": "<:emoji:1372703072744374395>",
+      "emoji": {"name": "emoji", "id": "1372703072744374395"},
       "30rnd KA101": {
         "Default": 500
       },
@@ -647,6 +647,7 @@
       }
     },
     "Scopes & Suppressors": {
+      "emoji": {"name": "emoji", "id": "1372703342261698661"},
       "ATOG 6x48 Scope": {
         "Default": 800
       },
@@ -688,7 +689,7 @@
       }
     },
     "Special": {
-      "emoji": "<:emoji:1372702377076981862>",
+      "emoji": {"name": "emoji", "id": "1372702377076981862"},
       "Builders Truck": {
         "Default": 100000
       },
@@ -749,7 +750,7 @@
       }
     },
     "Weapons_AssaultRifles": {
-      "emoji": "<:emoji:1372682392510398464>",
+      "emoji": {"name": "emoji", "id": "1372682392510398464"},
       "AUR A1": {
         "Default": 18000
       },
@@ -789,13 +790,13 @@
       }
     },
     "Weapons_BattleRifles": {
-      "emoji": "<:emoji:1372682966647705640>",
+      "emoji": {"name": "emoji", "id": "1372682966647705640"},
       "LAR": {
         "Default": 35000
       }
     },
     "Weapons_BoltActionRifles": {
-      "emoji": "<:emoji:1372706827514544268>",
+      "emoji": {"name": "emoji", "id": "1372706827514544268"},
       "CR 527": {
         "Default": 5000
       },
@@ -823,7 +824,7 @@
       }
     },
     "Weapons_BreakActionRifles": {
-      "emoji": "<:emoji:1372665493021921412>",
+      "emoji": {"name": "emoji", "id": "1372665493021921412"},
       "BK 18": {
         "Sawed Off": 5000,
         "Standard <:emoji:1372395385397579899>": 5000
@@ -834,13 +835,13 @@
       }
     },
     "Weapons_LeverActionRifles": {
-      "emoji": "<:emoji:1372666820884041829>",
+      "emoji": {"name": "emoji", "id": "1372666820884041829"},
       "Repeater": {
         "Default": 5000
       }
     },
     "Weapons_MarksmanRifles": {
-      "emoji": "<:emoji:1372666091150774432>",
+      "emoji": {"name": "emoji", "id": "1372666091150774432"},
       "VSD": {
         "Default": 20000
       },
@@ -849,7 +850,7 @@
       }
     },
     "Weapons_Pistols": {
-      "emoji": "<:emoji:1372676037309370509>",
+      "emoji": {"name": "emoji", "id": "1372676037309370509"},
       "CR 75": {
         "Default": 5000
       },
@@ -888,7 +889,7 @@
       }
     },
     "Weapons_SMGs": {
-      "emoji": "<:emoji:1372667841240633354>",
+      "emoji": {"name": "emoji", "id": "1372667841240633354"},
       "Bizon": {
         "Default": 5000
       },
@@ -909,7 +910,7 @@
       }
     },
     "Weapons_SemiAutoRifles": {
-      "emoji": "<:emoji:1372669405686661331>",
+      "emoji": {"name": "emoji", "id": "1372669405686661331"},
       "DMR": {
         "Default": 40000
       },
@@ -922,7 +923,7 @@
       }
     },
     "Weapons_Shotguns": {
-      "emoji": "<:emoji:1372671393480704134>",
+      "emoji": {"name": "emoji", "id": "1372671393480704134"},
       "BK 12": {
         "Sawed Off": 5000,
         "Standard <:emoji:1372395385397579899>": 5000
@@ -938,6 +939,13 @@
         "Default": 5000
       }
     }
+  },
+  "notes": "Sell prices are one-third of buy prices."
+}
+  },
+  "notes": "Sell prices are one-third of buy prices."
+}
+
   },
   "notes": "Sell prices are one-third of buy prices."
 }
