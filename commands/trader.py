@@ -170,36 +170,7 @@ class BackButton(discord.ui.Button):
 
         await interaction.response.edit_message(content="Back to previous selection:", view=view)
 
-class TraderView(discord.ui.View):
-    def __init__(self, bot, user_id):
-        super().__init__(timeout=180)
-        self.bot = bot
-        self.user_id = user_id
-        self.cart_message = None
-        self.ui_message = None
-
-    async def update_cart_message(self, interaction):
-        items = session_manager.get_session_items(self.user_id)
-        if not items:
-            text = "Your cart is currently empty."
-        else:
-            total = sum(item['subtotal'] for item in items)
-            lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
-            summary = "\n".join(lines)
-            summary += f"\n\nTotal: ${total:,}"
-            text = summary
-
-        if self.cart_message:
-            await self.cart_message.edit(content=text)
-        else:
-            self.cart_message = await interaction.followup.send(content=text)
-
-    @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
-    async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Mind your own order!")
-
-        class DynamicDropdown(discord.ui.Select):
+class DynamicDropdown(discord.ui.Select):
             def __init__(self, bot, user_id, stage, selected=None, view_ref=None):
                 self.bot = bot
                 self.user_id = user_id
@@ -371,6 +342,34 @@ class TraderView(discord.ui.View):
         except Exception as e:
             print(f"[UI Cleanup - Cancel] {e}")
 
+class TraderView(discord.ui.View):
+    def __init__(self, bot, user_id):
+        super().__init__(timeout=180)
+        self.bot = bot
+        self.user_id = user_id
+        self.cart_message = None
+        self.ui_message = None
+
+    async def update_cart_message(self, interaction):
+        items = session_manager.get_session_items(self.user_id)
+        if not items:
+            text = "Your cart is currently empty."
+        else:
+            total = sum(item['subtotal'] for item in items)
+            lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
+            summary = "\n".join(lines)
+            summary += f"\n\nTotal: ${total:,}"
+            text = summary
+
+        if self.cart_message:
+            await self.cart_message.edit(content=text)
+        else:
+            self.cart_message = await interaction.followup.send(content=text)
+
+    @discord.ui.button(label="Add Item", style=discord.ButtonStyle.primary)
+    async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("Mind your own order!")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
