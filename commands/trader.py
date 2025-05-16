@@ -210,15 +210,15 @@ class TraderView(discord.ui.View):
                     return await select_interaction.response.send_message("Not your session.", ephemeral=True)
                 value = self.values[0]
                 if self.stage == "category":
-                subcats = get_subcategories(value)
-                next_stage = "subcategory" if subcats else "item"
-                dropdown = DynamicDropdown(
-                    self.bot,
-                    self.user_id,
-                    next_stage,
-                    {"category": value},
-                    self.view_ref
-                )
+                    subcats = get_subcategories(value)
+                    next_stage = "subcategory" if subcats else "item"
+                    dropdown = DynamicDropdown(
+                        self.bot,
+                        self.user_id,
+                        next_stage,
+                        {"category": value},
+                        self.view_ref
+                    )
                 elif self.stage == "subcategory":
                     new_selection = self.selected.copy()
                     new_selection["subcategory"] = value
