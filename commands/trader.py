@@ -54,6 +54,16 @@ def get_price(category, subcategory, item, variant):
     except (KeyError, TypeError):
         return None
 
+import re  # Make sure this is at the top of your file
+
+def extract_label_and_emoji(category_key):
+    match = re.search(r'(<:.*?:\d+>)', category_key)
+    if match:
+        emoji = match.group(1)
+        label = category_key.split(' <')[0].strip()
+        return label, emoji
+    return category_key, None
+    
 class QuantityModal(ui.Modal, title="Enter Quantity"):
     quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
 
