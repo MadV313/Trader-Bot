@@ -167,7 +167,6 @@ class TraderView(discord.ui.View):
     async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!")
-
         view = discord.ui.View(timeout=180)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
         await interaction.response.send_message("Select a category:", view=view)
@@ -250,14 +249,12 @@ class DynamicDropdown(discord.ui.Select):
                 QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
             )
 
-        # Generate new view and dropdown
         new_view = discord.ui.View(timeout=180)
         new_view.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref))
 
-        # Back button logic
         if self.stage != "category":
             class BackButton(discord.ui.Button):
-                def __init__(self):
+                def __init__(inner_self):
                     super().__init__(label="Back", style=discord.ButtonStyle.secondary)
 
                 async def callback(inner_self, back_interaction: discord.Interaction):
@@ -293,12 +290,6 @@ class DynamicDropdown(discord.ui.Select):
 
         await select_interaction.response.edit_message(content="Select an option:", view=new_view)
 
-    # Only hide back button on root (category)
-    if self.stage != "category":
-        new_view.add_item(BackButton(self.bot, self.user_id, self.stage, self.selected, self.view_ref))
-
-    await select_interaction.response.edit_message(content="Select an option:", view=new_view)
-    
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
@@ -372,7 +363,6 @@ class DynamicDropdown(discord.ui.Select):
                 await self.ui_message.edit(view=None)
         except Exception as e:
             print(f"[UI Cleanup - Cancel] {e}")
-
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
