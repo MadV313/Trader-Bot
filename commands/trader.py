@@ -16,10 +16,12 @@ def get_categories():
     return list(PRICE_DATA.keys())
 
 def get_subcategories(category):
+    """
+    Returns first-level subcategories under a category.
+    Handles nested structures like Clothes > Backpacks > Assault Bag.
+    """
     sub_data = PRICE_DATA.get(category, {})
-    if any(isinstance(v, dict) for v in sub_data.values()):
-        return list(sub_data.keys())
-    return []
+    return [key for key, val in sub_data.items() if isinstance(val, dict)]
 
 def get_items_in_subcategory(category, subcategory):
     """
