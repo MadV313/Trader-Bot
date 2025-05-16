@@ -261,7 +261,7 @@ class DynamicDropdown(discord.ui.Select):
                 new_view = discord.ui.View(timeout=180)
                 new_view.add_item(dropdown)
                 if dropdown.stage != "category":
-                    new_view.add_item(BackButton(self.bot, self.user_id, self.stage, new_selection, self.view_ref))
+                    new_view.add_item(BackButton(self.bot, self.user_id, dropdown.stage, new_selection, self.view_ref))
                 await select_interaction.response.edit_message(content="Select an option:", view=new_view)
 
 class TraderView(discord.ui.View):
