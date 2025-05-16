@@ -210,8 +210,12 @@ class TraderView(discord.ui.View):
                     return await select_interaction.response.send_message("Not your session.", ephemeral=True)
                 value = self.values[0]
                 if self.stage == "category":
-                    subcats = get_subcategories(value)
-                    next_stage = "subcategory" if subcats else "item"
+                    category_name = value.lower()
+                    if "clothes" in category_name:
+                        next_stage = "subcategory"
+                    else:
+                        next_stage = "item"
+
                     dropdown = DynamicDropdown(
                         self.bot,
                         self.user_id,
