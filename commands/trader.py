@@ -6,6 +6,16 @@ import os
 import asyncio
 from utils import session_manager, variant_utils
 
+import re
+
+def extract_label_and_emoji(text):
+    match = re.search(r'(<:.*?:\d+>)', text)
+    if match:
+        emoji = match.group(1)
+        label = text.split(' <')[0].strip()
+        return label, emoji
+    return text, None
+
 config = json.loads(os.environ.get("CONFIG_JSON"))
 
 PRICE_FILE = os.path.join("data", "Final price list.json")
@@ -22,32 +32,13 @@ def get_subcategories(category):
     return []
 
 def get_items_in_subcategory(category, subcategory):
-    """
-    Returns immediate keys under the category/subcategory — no deep dive.
-    Used for dropdown item selection logic.
-    """
     if subcategory:
         sub_data = PRICE_DATA.get(category, {}).get(subcategory, {})
     else:
         sub_data = PRICE_DATA.get(category, {})
-
     if isinstance(sub_data, dict):
         return list(sub_data.keys())
     return []
-
-def is_real_item(category, subcategory, item):
-    """
-    Determines if a selected item is an actual purchasable item
-    (i.e., has variant prices directly under it).
-    """
-    try:
-        entry = PRICE_DATA[category]
-        if subcategory:
-            entry = entry[subcategory]
-        entry = entry[item]
-        return isinstance(entry, dict) and all(isinstance(v, (int, float)) for v in entry.values())
-    except Exception:
-        return False
 
 def get_variants(category, subcategory, item):
     try:
@@ -71,16 +62,8 @@ def get_price(category, subcategory, item, variant):
             return entry.get(variant)
         return None
     except (KeyError, TypeError):
-        return Nonefile
+        return None
 
-def extract_label_and_emoji(category_key):
-    match = re.search(r'(<:.*?:\d+>)', category_key)
-    if match:
-        emoji = match.group(1)
-        label = category_key.split(' <')[0].strip()
-        return label, emoji
-    return category_key, None
-    
 class QuantityModal(ui.Modal, title="Enter Quantity"):
     quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
 
@@ -122,10 +105,10 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
 
         await interaction.response.defer()
 
-        latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
+        latest_summary = f"â Added {quantity}x {self.item} to your cart.\n"
         items = session_manager.get_session_items(self.user_id)
         cart_total = sum(item["subtotal"] for item in items)
-        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
+        latest_summary += f"ð Cart Total: ${cart_total:,}"
 
         try:
             if self.view_ref and self.view_ref.cart_message:
@@ -149,7 +132,7 @@ class TraderView(discord.ui.View):
             text = "Your cart is currently empty."
         else:
             total = sum(item['subtotal'] for item in items)
-            lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
+            lines = [f"â¢ {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
             summary = "\n".join(lines)
             summary += f"\n\nTotal: ${total:,}"
             text = summary
@@ -178,49 +161,45 @@ class TraderView(discord.ui.View):
                 super().__init__(placeholder=placeholder, options=options)
 
             def get_options(self):
-                if self.stage == "category":
-                    categories = get_categories()[:25]
-                    options = []
-                    for c in categories:
-                        label, emoji_str = extract_label_and_emoji(c)
-                        emoji = None
-                        if emoji_str:
-                            try:
-                                emoji = discord.PartialEmoji.from_str(emoji_str)
-                            except:
-                                pass
-                        options.append(discord.SelectOption(label=label, value=c, emoji=emoji))
-                    return options
-                if self.stage == "subcategory":
-                    subcats = get_subcategories(self.selected["category"])
-                    return [discord.SelectOption(label=s, value=s) for s in subcats[:25]]
-                if self.stage == "item":
-                    items = get_items_in_subcategory(self.selected["category"], self.selected.get("subcategory"))
-                    options = []
-                    for i in items[:25]:
-                        variants = get_variants(self.selected["category"], self.selected.get("subcategory"), i)
-                        if len(variants) == 1 and variants[0] == "Default":
-                            price = get_price(self.selected["category"], self.selected.get("subcategory"), i, "Default") or 0
-                            label = f"{i} (${price:,})"
-                            options.append(discord.SelectOption(label=label, value=json.dumps({"item": i, "variant": "Default"})))
-                        else:
-                            options.append(discord.SelectOption(label=f"{i} (select variant...)", value=json.dumps({"item": i, "variant": None})))
-                    return options
-                if self.stage == "variant":
-                    variants = get_variants(self.selected["category"], self.selected.get("subcategory"), self.selected["item"])
-                    options = []
-                    for v in variants[:25]:
-                        price = get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0
-                        label_text = v.split("<")[0].strip()
-                        emoji = None
-                        if "<" in v and ">" in v:
-                            try:
-                                emoji_str = v[v.find("<"):v.find(">")+1]
-                                emoji = discord.PartialEmoji.from_str(emoji_str)
-                            except:
-                                emoji = None
-                        options.append(discord.SelectOption(label=f"{label_text} (${price:,})", value=v, emoji=emoji))
-                    return options
+    if self.stage == "category":
+        options = []
+        for c in get_categories()[:25]:
+            label, emoji = extract_label_and_emoji(c)
+            options.append(discord.SelectOption(label=label, value=c, emoji=emoji))
+        return options
+
+    if self.stage == "subcategory":
+        subcats = get_subcategories(self.selected["category"])
+        return [discord.SelectOption(label=s, value=s) for s in subcats[:25]]
+
+    if self.stage == "item":
+        items = get_items_in_subcategory(self.selected["category"], self.selected.get("subcategory"))
+        options = []
+        for i in items[:25]:
+            variants = get_variants(self.selected["category"], self.selected.get("subcategory"), i)
+            if len(variants) == 1 and variants[0] == "Default":
+                price = get_price(self.selected["category"], self.selected.get("subcategory"), i, "Default") or 0
+                label = f"{i} (${price:,})"
+                options.append(discord.SelectOption(label=label, value=json.dumps({"item": i, "variant": "Default"})))
+            else:
+                options.append(discord.SelectOption(label=f"{i} (select variant...)", value=json.dumps({"item": i, "variant": None})))
+        return options
+
+    if self.stage == "variant":
+        variants = get_variants(self.selected["category"], self.selected.get("subcategory"), self.selected["item"])
+        options = []
+        for v in variants[:25]:
+            price = get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0
+            label_text = v.split("<")[0].strip()
+            emoji = None
+            if "<" in v and ">" in v:
+                try:
+                    emoji_str = v[v.find("<"):v.find(">")+1]
+                    emoji = discord.PartialEmoji.from_str(emoji_str)
+                except:
+                    emoji = None
+            options.append(discord.SelectOption(label=f"{label_text} (${price:,})", value=v, emoji=emoji))
+        return options
 
             async def callback(self, select_interaction: discord.Interaction):
                 if select_interaction.user.id != self.user_id:
