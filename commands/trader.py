@@ -225,6 +225,7 @@ class TraderView(discord.ui.View):
 
                 value = self.values[0]
 
+                # Determine next stage and build new selection
                 if self.stage == "category":
                     category_name = value.lower()
                     next_stage = "subcategory" if "clothes" in category_name else "item"
@@ -249,15 +250,22 @@ class TraderView(discord.ui.View):
                 new_view = discord.ui.View(timeout=180)
                 new_view.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref))
 
-                # Add Back button only if we're not at root
+                # BACK BUTTON LOGIC
                 if self.stage != "category":
                     class BackButton(discord.ui.Button):
-                        def __init__(self):
+                        def __init__(self, bot, user_id, stage, selected, view_ref):
                             super().__init__(label="Back", style=discord.ButtonStyle.secondary)
+                            self.bot = bot
+                            self.user_id = user_id
+                            self.stage = stage
+                            self.selected = selected
+                            self.view_ref = view_ref
 
                         async def callback(self, back_interaction: discord.Interaction):
                             if back_interaction.user.id != self.user_id:
                                 return await back_interaction.response.send_message("Not your session.", ephemeral=True)
+
+                            # Determine back stage and back selection
                             back_selection = self.selected.copy()
                             if self.stage == "subcategory":
                                 back_stage = "category"
@@ -272,10 +280,10 @@ class TraderView(discord.ui.View):
                             back_view = discord.ui.View(timeout=180)
                             back_view.add_item(DynamicDropdown(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
                             if back_stage != "category":
-                                back_view.add_item(BackButton())
+                                back_view.add_item(BackButton(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
                             await back_interaction.response.edit_message(content="Back to previous step:", view=back_view)
 
-                    new_view.add_item(BackButton())
+                    new_view.add_item(BackButton(self.bot, self.user_id, self.stage, self.selected, self.view_ref))
 
                 await select_interaction.response.edit_message(content="Select an option:", view=new_view)
 
