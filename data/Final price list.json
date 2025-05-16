@@ -647,7 +647,6 @@
       }
     },
     "Scopes & Suppressors": {
-      "emoji": "<:emoji:1372703342261698661>",
       "ATOG 6x48 Scope": {
         "Default": 800
       },
@@ -939,9 +938,6 @@
         "Default": 5000
       }
     }
-  },
-  "notes": "Sell prices are one-third of buy prices."
-}
   },
   "notes": "Sell prices are one-third of buy prices."
 }
