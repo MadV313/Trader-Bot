@@ -167,9 +167,89 @@ class TraderView(discord.ui.View):
     async def handle_add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!")
-        view = discord.ui.View(timeout=180)
-        view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
-        await interaction.response.send_message("Select a category:", view=view)
+
+        # ✅ Use self (TraderView) instead of creating a new View
+        self.clear_items()
+        self.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
+        self.add_item(self.handle_add_item)
+        self.add_item(self.submit_order)
+        self.add_item(self.cancel_order)
+
+        await interaction.response.edit_message(content="Select a category:", view=self)
+
+    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
+    async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("Mind your own order!")
+
+        items = session_manager.get_session_items(self.user_id)
+        if not items:
+            return await interaction.response.send_message("Your cart is empty.")
+
+        total = sum(item["subtotal"] for item in items)
+        lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
+        summary = "\n".join(lines) + f"\n\nTotal: ${total:,}"
+
+        trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
+        if not trader_channel:
+            return await interaction.response.send_message("Trader channel not found.")
+
+        order_message = await trader_channel.send(
+            f"<@&{config['trader_role_id']}> a new order is ready to be processed!\n\n"
+            f"{interaction.user.mention} has submitted a new order:\n\n"
+            f"{summary}\n\n"
+            f"Please confirm this message with a ✅ when the order is ready"
+        )
+        await order_message.add_reaction("🔴")
+
+        await interaction.response.send_message("✅ Order submitted to trader channel.")
+
+        try:
+            await interaction.message.delete()
+        except:
+            pass
+        session = session_manager.sessions.get(interaction.user.id, {})
+        for msg_id in session.get("cart_messages", []):
+            try:
+                msg = await interaction.channel.fetch_message(msg_id)
+                await msg.delete()
+            except:
+                continue
+        session_manager.clear_session(interaction.user.id)
+        session_manager.end_session(self.user_id)
+
+        try:
+            if self.ui_message:
+                await self.ui_message.edit(view=None)
+        except Exception as e:
+            print(f"[UI Cleanup - Submit] {e}")
+
+    @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
+    async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("Mind your own order!")
+
+        session_manager.end_session(self.user_id)
+        await interaction.response.send_message("❌ Order canceled.")
+
+        try:
+            await interaction.message.delete()
+        except:
+            pass
+        session = session_manager.sessions.get(interaction.user.id, {})
+        for msg_id in session.get("cart_messages", []):
+            try:
+                msg = await interaction.channel.fetch_message(msg_id)
+                await msg.delete()
+            except:
+                continue
+        session_manager.clear_session(interaction.user.id)
+
+        try:
+            if self.ui_message:
+                await self.ui_message.edit(view=None)
+        except Exception as e:
+            print(f"[UI Cleanup - Cancel] {e}")
 
 class DynamicDropdown(discord.ui.Select):
     def __init__(self, bot, user_id, stage, selected=None, view_ref=None):
@@ -289,80 +369,6 @@ class DynamicDropdown(discord.ui.Select):
             new_view.add_item(BackButton())
 
         await select_interaction.response.edit_message(content="Select an option:", view=new_view)
-
-    @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
-    async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Mind your own order!")
-
-        items = session_manager.get_session_items(self.user_id)
-        if not items:
-            return await interaction.response.send_message("Your cart is empty.")
-
-        total = sum(item["subtotal"] for item in items)
-        lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
-        summary = "\n".join(lines) + f"\n\nTotal: ${total:,}"
-
-        trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
-        if not trader_channel:
-            return await interaction.response.send_message("Trader channel not found.")
-
-        order_message = await trader_channel.send(
-            f"<@&{config['trader_role_id']}> a new order is ready to be processed!\n\n"
-            f"{interaction.user.mention} has submitted a new order:\n\n"
-            f"{summary}\n\n"
-            f"Please confirm this message with a ✅ when the order is ready"
-        )
-        await order_message.add_reaction("🔴")
-
-        await interaction.response.send_message("✅ Order submitted to trader channel.")
-
-        try:
-            await interaction.message.delete()
-        except:
-            pass
-        session = session_manager.sessions.get(interaction.user.id, {})
-        for msg_id in session.get("cart_messages", []):
-            try:
-                msg = await interaction.channel.fetch_message(msg_id)
-                await msg.delete()
-            except:
-                continue
-        session_manager.clear_session(interaction.user.id)
-        session_manager.end_session(self.user_id)
-
-        try:
-            if self.ui_message:
-                await self.ui_message.edit(view=None)
-        except Exception as e:
-            print(f"[UI Cleanup - Submit] {e}")
-
-    @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
-    async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Mind your own order!")
-
-        session_manager.end_session(self.user_id)
-        await interaction.response.send_message("❌ Order canceled.")
-
-        try:
-            await interaction.message.delete()
-        except:
-            pass
-        session = session_manager.sessions.get(interaction.user.id, {})
-        for msg_id in session.get("cart_messages", []):
-            try:
-                msg = await interaction.channel.fetch_message(msg_id)
-                await msg.delete()
-            except:
-                continue
-        session_manager.clear_session(interaction.user.id)
-
-        try:
-            if self.ui_message:
-                await self.ui_message.edit(view=None)
-        except Exception as e:
-            print(f"[UI Cleanup - Cancel] {e}")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
