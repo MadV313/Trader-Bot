@@ -1,3 +1,4 @@
+from discord import Interaction
 import discord
 from discord.ext import commands
 from discord import app_commands, ui
@@ -556,7 +557,7 @@ class TraderCommand(commands.Cog):
 
 @app_commands.guilds(discord.Object(id=1166441420643639348))
 @app_commands.command(name="trader", description="Start a buying session with the trader.")
-async def trader(self, interaction: discord.Interaction):
+async def trader(self, interaction: Interaction):
     if interaction.channel.id != config["economy_channel_id"]:
         return await interaction.response.send_message("You must use this command in the #economy channel.")
     
