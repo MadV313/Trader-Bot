@@ -67,6 +67,20 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         self.view_ref = view_ref
         self.price = get_price(category, subcategory, item, variant)
 
+class QuantityModal(ui.Modal, title="Enter Quantity"):
+    quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
+
+    def __init__(self, bot, user_id, category, subcategory, item, variant, view_ref):
+        super().__init__()
+        self.bot = bot
+        self.user_id = user_id
+        self.category = category
+        self.subcategory = subcategory
+        self.item = item
+        self.variant = variant
+        self.view_ref = view_ref
+        self.price = get_price(category, subcategory, item, variant)
+
     async def on_submit(self, interaction: discord.Interaction):
         try:
             quantity = int(self.quantity.value)
@@ -113,7 +127,7 @@ class TraderView(discord.ui.View):
         self.bot = bot
         self.user_id = user_id
         self.cart_message = None
-        self.ui_message = None
+        self.ui_message = None  # will hold the DM message with this View
 
     async def update_cart_message(self, interaction):
         items = session_manager.get_session_items(self.user_id)
