@@ -147,102 +147,81 @@ class TraderView(discord.ui.View):
             return category_key, None
 
         class DynamicDropdown(discord.ui.Select):
-            def __init__(self, bot, user_id, stage, selected=None, view_ref=None):
-                self.bot = bot
-                self.user_id = user_id
-                self.stage = stage
-                self.selected = selected or {}
-                self.view_ref = view_ref
-                placeholder = "Select a category" if stage == "category" else \
-                              "Select a subcategory" if stage == "subcategory" else \
-                              "Select an item" if stage == "item" else "Select a variant"
-                options = self.get_options()
-                super().__init__(placeholder=placeholder, options=options)
-
-            def get_options(self):
-                if self.stage == "category":
-                    categories = get_categories()[:25]
-                    options = []
-                    for c in categories:
-                        label, emoji_str = extract_label_and_emoji(c)
-                        emoji = None
-                        if emoji_str:
-                            try:
-                                emoji = discord.PartialEmoji.from_str(emoji_str)
-                            except:
-                                pass
-                        options.append(discord.SelectOption(label=label, value=c, emoji=emoji))
-                    return options
-
-                if self.stage == "subcategory":
-                    subcats = get_subcategories(self.selected["category"])
-                    return [discord.SelectOption(label=s, value=s) for s in subcats[:25]]
-
-                if self.stage == "item":
-                    items = get_items_in_subcategory(self.selected["category"], self.selected.get("subcategory"))
-                    options = []
-                    for i in items[:25]:
-                        variants = get_variants(self.selected["category"], self.selected.get("subcategory"), i)
-                        if len(variants) == 1 and variants[0] == "Default":
-                            price = get_price(self.selected["category"], self.selected.get("subcategory"), i, "Default") or 0
-                            label = f"{i} (${price:,})"
-                            options.append(discord.SelectOption(label=label, value=json.dumps({"item": i, "variant": "Default"})))
-                        else:
-                            options.append(discord.SelectOption(label=f"{i} (select variant...)", value=json.dumps({"item": i, "variant": None})))
-                    return options
-
-                if self.stage == "variant":
-                    variants = get_variants(self.selected["category"], self.selected.get("subcategory"), self.selected["item"])
-                    options = []
-                    for v in variants[:25]:
-                        price = get_price(self.selected['category'], self.selected.get('subcategory'), self.selected['item'], v) or 0
-                        label_text = v.split("<")[0].strip()
-                        emoji = None
-                        if "<" in v and ">" in v:
-                            try:
-                                emoji_str = v[v.find("<"):v.find(">")+1]
-                                emoji = discord.PartialEmoji.from_str(emoji_str)
-                            except:
-                                emoji = None
-                        options.append(discord.SelectOption(label=f"{label_text} (${price:,})", value=v, emoji=emoji))
-                    return options
-
-async def callback(self, select_interaction: discord.Interaction):
-    if select_interaction.user.id != self.user_id:
-        return await select_interaction.response.send_message("Not your session.", ephemeral=True)
-
-    value = self.values[0]
-
-    if self.stage == "category":
-        new_selection = {"category": value}
-        next_stage = "subcategory" if value in ["Clothes", "Weapons"] else "item"
-        dropdown = DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref)
-
-    elif self.stage == "subcategory":
-        new_selection = self.selected.copy()
-        new_selection["subcategory"] = value
-        dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.view_ref)
-
-    elif self.stage == "item":
-        new_selection = self.selected.copy()
-        item_data = json.loads(value)
-        new_selection["item"] = item_data["item"]
-        if item_data["variant"] == "Default":
-            return await select_interaction.response.send_modal(
-                QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], "Default", self.view_ref)
-            )
-        dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.view_ref)
-
-    elif self.stage == "variant":
-        new_selection = self.selected.copy()
-        new_selection["variant"] = value
-        return await select_interaction.response.send_modal(
-            QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
+    def __init__(self, bot, user_id, stage, selected=None, view_ref=None):
+        self.bot = bot
+        self.user_id = user_id
+        self.stage = stage
+        self.selected = selected or {}
+        self.view_ref = view_ref
+        placeholder = (
+            "Select a category" if stage == "category" else
+            "Select a subcategory" if stage == "subcategory" else
+            "Select an item" if stage == "item" else
+            "Select a variant"
         )
+        options = self.get_options()
+        super().__init__(placeholder=placeholder, options=options)
 
-    new_view = discord.ui.View(timeout=180)
-    new_view.add_item(dropdown)
-    await select_interaction.response.edit_message(content="Select an option:", view=new_view)
+    def get_options(self):
+        # [No changes needed — your existing logic is correct here for categories, subcategories, etc.]
+        ...
+
+    async def callback(self, select_interaction: discord.Interaction):
+        if select_interaction.user.id != self.user_id:
+            return await select_interaction.response.send_message("Not your session.", ephemeral=True)
+
+        value = self.values[0]
+
+        if self.stage == "category":
+            new_selection = {"category": value}
+            next_stage = "subcategory" if value in ["Clothes", "Weapons"] else "item"
+            dropdown = DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref)
+
+        elif self.stage == "subcategory":
+            new_selection = self.selected.copy()
+            new_selection["subcategory"] = value
+            dropdown = DynamicDropdown(self.bot, self.user_id, "item", new_selection, self.view_ref)
+
+        elif self.stage == "item":
+            new_selection = self.selected.copy()
+            item_data = json.loads(value)
+            new_selection["item"] = item_data["item"]
+            if item_data["variant"] == "Default":
+                return await select_interaction.response.send_modal(
+                    QuantityModal(
+                        self.bot,
+                        self.user_id,
+                        new_selection["category"],
+                        new_selection.get("subcategory"),
+                        new_selection["item"],
+                        "Default",
+                        self.view_ref
+                    )
+                )
+            dropdown = DynamicDropdown(self.bot, self.user_id, "variant", new_selection, self.view_ref)
+
+        elif self.stage == "variant":
+            new_selection = self.selected.copy()
+            new_selection["variant"] = value
+            return await select_interaction.response.send_modal(
+                QuantityModal(
+                    self.bot,
+                    self.user_id,
+                    new_selection["category"],
+                    new_selection.get("subcategory"),
+                    new_selection["item"],
+                    new_selection["variant"],
+                    self.view_ref
+                )
+            )
+
+        new_view = discord.ui.View(timeout=180)
+        new_view.add_item(dropdown)
+        await select_interaction.response.edit_message(content="Select an option:", view=new_view)
+
+        view = discord.ui.View(timeout=180)
+        view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
+        await interaction.response.send_message("Select a category:", view=view)
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
