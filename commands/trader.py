@@ -6,6 +6,16 @@ import os
 import asyncio
 from utils import session_manager, variant_utils
 
+import re
+
+def extract_label_and_emoji(text):
+    match = re.search(r'(<:.*?:\d+>)', text)
+    if match:
+        emoji = match.group(1)
+        label = text.split(' <')[0].strip()
+        return label, emoji
+    return text, None
+    
 config = json.loads(os.environ.get("CONFIG_JSON"))
 
 PRICE_FILE = os.path.join("data", "Final price list.json")
@@ -173,7 +183,11 @@ class TraderView(discord.ui.View):
 
             def get_options(self):
                 if self.stage == "category":
-                    return [discord.SelectOption(label=c, value=c) for c in get_categories()[:25]]
+                    options = []
+                    for c in get_categories()[:25]:
+                        label, emoji = extract_label_and_emoji(c)
+                        options.append(discord.SelectOption(label=label, value=c, emoji=emoji))
+                    return options
                 if self.stage == "subcategory":
                     subcats = get_subcategories(self.selected["category"])
                     return [discord.SelectOption(label=s, value=s) for s in subcats[:25]]
