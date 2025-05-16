@@ -88,7 +88,7 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         self.view_ref = view_ref
         self.price = get_price(category, subcategory, item, variant)
 
-    async def on_submit(self, interaction: discord.Interaction):
+async def on_submit(self, interaction: discord.Interaction):
     try:
         quantity = int(self.quantity.value)
         if quantity <= 0:
