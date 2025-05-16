@@ -15,29 +15,22 @@ def extract_label_and_emoji(text):
         label = text.split(' <')[0].strip()
         return label, emoji
     return text, None
-    
-config = json.loads(os.environ.get("CONFIG_JSON"))
 
+# CONFIG AND PRICE DATA LOADING
+config = json.loads(os.environ.get("CONFIG_JSON"))
 PRICE_FILE = os.path.join("data", "Final price list.json")
 with open(PRICE_FILE, "r") as f:
     PRICE_DATA = json.load(f)["categories"]
 
+# HELPERS
 def get_categories():
     return list(PRICE_DATA.keys())
 
 def get_subcategories(category):
-    """
-    Returns first-level subcategories under a category.
-    Handles nested structures like Clothes > Backpacks > Assault Bag.
-    """
     sub_data = PRICE_DATA.get(category, {})
     return [key for key, val in sub_data.items() if isinstance(val, dict)]
 
 def get_items_in_subcategory(category, subcategory):
-    """
-    Returns a list of actual item names from a subcategory.
-    Handles deeply nested structures (e.g. Clothes > Backpacks > Assault Bag).
-    """
     if subcategory:
         sub_data = PRICE_DATA.get(category, {}).get(subcategory, {})
     else:
@@ -46,10 +39,8 @@ def get_items_in_subcategory(category, subcategory):
     item_list = []
     for key, val in sub_data.items():
         if isinstance(val, dict):
-            # Direct item with prices
             if all(isinstance(v, (int, float)) for v in val.values()):
                 item_list.append(key)
-            # Nested items (e.g., variants)
             else:
                 for nested_key, nested_val in val.items():
                     if isinstance(nested_val, dict) and all(isinstance(v, (int, float)) for v in nested_val.values()):
@@ -62,10 +53,8 @@ def get_variants(category, subcategory, item):
         if subcategory:
             entry = entry[subcategory]
         if item in entry:
-            # Direct variant dict (e.g., {"Default": 500})
             return [k for k, v in entry[item].items() if isinstance(v, (int, float))]
         else:
-            # Handle nested dict (e.g., Clothes > Backpacks > Assault Bag > Black)
             for parent_key, val in entry.items():
                 if isinstance(val, dict) and item in val:
                     return [k for k, v in val[item].items() if isinstance(v, (int, float))]
@@ -120,7 +109,9 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         session_manager.add_item(self.user_id, item_data)
 
         try:
-            await interaction.message.delete()
+        # Don't delete the UI — just continue with cart update
+        pass
+
         except Exception:
             pass
 
@@ -331,51 +322,58 @@ class DynamicDropdown(discord.ui.Select):
                 QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
             )
 
-        # 🔁 Replace dropdown in existing view instead of recreating view
         for child in self.view_ref.children[:]:
-            if isinstance(child, DynamicDropdown):
+            if isinstance(child, DynamicDropdown) or isinstance(child, BackButton):
                 self.view_ref.remove_item(child)
 
         self.view_ref.add_item(DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref))
 
-        # ⬅️ Add back button if not at root
         if self.stage != "category":
-            class BackButton(discord.ui.Button):
-                def __init__(inner_self):
-                    super().__init__(label="Back", style=discord.ButtonStyle.secondary)
+            self.view_ref.add_item(BackButton(self.bot, self.user_id, self.stage, self.selected, self.view_ref))
 
-                async def callback(inner_self, back_interaction: discord.Interaction):
-                    if back_interaction.user.id != self.user_id:
-                        return await back_interaction.response.send_message("Not your session.", ephemeral=True)
+        await select_interaction.response.edit_message(content="Select an option:", view=self.view_ref)
 
-                    back_selection = self.selected.copy()
-                    if self.stage == "subcategory":
-                        back_stage = "category"
-                        back_selection = {}
-                    elif self.stage == "item":
-                        if "subcategory" in back_selection:
-                            back_stage = "subcategory"
-                            back_selection.pop("item", None)
-                        else:
-                            back_stage = "category"
-                            back_selection = {}
-                    elif self.stage == "variant":
-                        back_stage = "item"
-                        back_selection.pop("item", None)
-                    else:
-                        return await back_interaction.response.send_message("Cannot go back further.", ephemeral=True)
 
-                    for child in self.view_ref.children[:]:
-                        if isinstance(child, DynamicDropdown):
-                            self.view_ref.remove_item(child)
+class BackButton(discord.ui.Button):
+    def __init__(self, bot, user_id, stage, selected, view_ref):
+        super().__init__(label="Back", style=discord.ButtonStyle.secondary)
+        self.bot = bot
+        self.user_id = user_id
+        self.stage = stage
+        self.selected = selected
+        self.view_ref = view_ref
 
-                    self.view_ref.add_item(DynamicDropdown(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
-                    if back_stage != "category":
-                        self.view_ref.add_item(BackButton())
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("Not your session.", ephemeral=True)
 
-                    await back_interaction.response.edit_message(content="Back to previous step:", view=self.view_ref)
+        back_selection = self.selected.copy()
 
-            self.view_ref.add_item(BackButton())
+        if self.stage == "subcategory":
+            back_stage = "category"
+            back_selection = {}
+        elif self.stage == "item":
+            if "subcategory" in back_selection:
+                back_stage = "subcategory"
+                back_selection.pop("item", None)
+            else:
+                back_stage = "category"
+                back_selection = {}
+        elif self.stage == "variant":
+            back_stage = "item"
+            back_selection.pop("item", None)
+        else:
+            return await interaction.response.send_message("Cannot go back further.", ephemeral=True)
+
+        for child in self.view_ref.children[:]:
+            if isinstance(child, DynamicDropdown) or isinstance(child, BackButton):
+                self.view_ref.remove_item(child)
+
+        self.view_ref.add_item(DynamicDropdown(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
+        if back_stage != "category":
+            self.view_ref.add_item(BackButton(self.bot, self.user_id, back_stage, back_selection, self.view_ref))
+
+        await interaction.response.edit_message(content="Back to previous step:", view=self.view_ref)
 
         await select_interaction.response.edit_message(content="Select an option:", view=self.view_ref)
 
