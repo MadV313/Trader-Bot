@@ -22,13 +22,30 @@ def get_subcategories(category):
     return []
 
 def get_items_in_subcategory(category, subcategory):
+    """
+    Handles both flat and deeply nested subcategory structures.
+    Returns a list of actual item names (i.e., keys that contain price variants).
+    """
     if subcategory:
         sub_data = PRICE_DATA.get(category, {}).get(subcategory, {})
     else:
         sub_data = PRICE_DATA.get(category, {})
-    if isinstance(sub_data, dict):
-        return list(sub_data.keys())
-    return []
+
+    if not isinstance(sub_data, dict):
+        return []
+
+    item_list = []
+    for key, val in sub_data.items():
+        if isinstance(val, dict):
+            # Case 1: This key directly has price variants
+            if all(isinstance(v, (int, float)) for v in val.values()):
+                item_list.append(key)
+            # Case 2: Still nested (like clothes → backpacks → assault)
+            else:
+                for nested_key, nested_val in val.items():
+                    if isinstance(nested_val, dict) and all(isinstance(v, (int, float)) for v in nested_val.values()):
+                        item_list.append(nested_key)
+    return item_list
 
 def get_variants(category, subcategory, item):
     try:
