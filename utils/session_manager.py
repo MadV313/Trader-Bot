@@ -48,6 +48,14 @@ def get_session_items(user_id):
         return []
     return session["items"]
 
+def set_session_items(user_id, items):
+    """Replace the list of items in a user's session."""
+    if user_id not in SESSION_CACHE:
+        start_session(user_id)
+    SESSION_CACHE[user_id]["items"] = items
+    SESSION_CACHE[user_id]["last_active"] = time.time()
+    log(f"Session items replaced for user {user_id}.")
+
 def clear_session(user_id, force_clear=False):
     """Clear a user's session, with optional force override."""
     if user_id in SESSION_CACHE or force_clear:
