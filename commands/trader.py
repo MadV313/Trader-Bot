@@ -151,7 +151,7 @@ class BackButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Not your session.", ephemeral=True)
+            return await interaction.response.send_message("Not your session.")
 
         if self.current_stage == "variant":
             prev_stage = "item"
@@ -224,7 +224,7 @@ class DynamicDropdown(discord.ui.Select):
 
             async def callback(self, select_interaction: discord.Interaction):
                 if select_interaction.user.id != self.user_id:
-                    return await select_interaction.response.send_message("Not your session.", ephemeral=True)
+                    return await select_interaction.response.send_message("Not your session.")
                 value = self.values[0]
                 if self.stage == "category":
                     category_name = value.lower()
@@ -301,11 +301,11 @@ class TraderView(discord.ui.View):
     @discord.ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary)
     async def remove_last_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Not your session.", ephemeral=True)
+            return await interaction.response.send_message("Not your session.")
 
         items = session_manager.get_session_items(self.user_id)
         if not items:
-            return await interaction.response.send_message("Cart is already empty.", ephemeral=True)
+            return await interaction.response.send_message("Cart is already empty.")
 
         removed_item = items.pop()
         session_manager.set_session_items(self.user_id, items)  # update the session
@@ -321,7 +321,7 @@ class TraderView(discord.ui.View):
             except:
                 self.cart_message = await interaction.followup.send(content=message)
 
-            await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.", ephemeral=True)
+            await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.")
             return
 
         lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
