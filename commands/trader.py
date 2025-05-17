@@ -272,7 +272,6 @@ class TraderView(discord.ui.View):
         self.user_id = user_id
         self.cart_message = None
         self.ui_message = None
-        self.start_message = None
 
     async def update_cart_message(self, interaction):
         items = session_manager.get_session_items(self.user_id)
@@ -380,54 +379,25 @@ class TraderView(discord.ui.View):
 
         await interaction.response.send_message("✅ Order submitted to trader channel.")
 
-        # Clean tracked cart messages and intro message FIRST
-        session = session_manager.sessions.get(interaction.user.id, {})
-        try:
-            user_dm = await interaction.user.create_dm()
-
-            # Delete all tracked cart messages (including UI)
-            for msg_id in session.get("cart_messages", []):
-                try:
-                    msg = await user_dm.fetch_message(msg_id)
-                    await msg.delete()
-                except:
-                    pass
-
-            # Delete the "Buying session started!" message
-            start_msg_id = session.get("start_msg_id")
-            if start_msg_id:
-                try:
-                    msg = await user_dm.fetch_message(start_msg_id)
-                    await msg.delete()
-                except Exception as e:
-                    print(f"[Start Message Cleanup] {e}")
-
-        except Exception as e:
-            print(f"[DM Cleanup Error] {e}")
-
-        # Delete cart message object
-        if self.cart_message:
-            try:
-                await self.cart_message.delete()
-                self.cart_message = None
-            except:
-                pass
-
-        # Delete the persistent UI message
-        if self.ui_message:
-            try:
-                await self.ui_message.delete()
-                self.ui_message = None
-            except Exception as e:
-                print(f"[UI Message Cleanup - Submit] {e}")
-
-        # Delete the interaction button press
         try:
             await interaction.message.delete()
         except:
             pass
-
+        session = session_manager.sessions.get(interaction.user.id, {})
+        for msg_id in session.get("cart_messages", []):
+            try:
+                msg = await interaction.channel.fetch_message(msg_id)
+                await msg.delete()
+            except:
+                continue
         session_manager.clear_session(interaction.user.id)
+        session_manager.end_session(self.user_id)
+
+        try:
+            if self.ui_message:
+                await self.ui_message.edit(view=None)
+        except Exception as e:
+            print(f"[UI Cleanup - Submit] {e}")
 
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -437,54 +407,26 @@ class TraderView(discord.ui.View):
         session_manager.end_session(self.user_id)
         await interaction.response.send_message("❌ Order canceled.")
 
-        # Clean tracked cart messages and intro message FIRST
-        session = session_manager.sessions.get(interaction.user.id, {})
-        try:
-            user_dm = await interaction.user.create_dm()
-
-            # Delete tracked cart messages
-            for msg_id in session.get("cart_messages", []):
-                try:
-                    msg = await user_dm.fetch_message(msg_id)
-                    await msg.delete()
-                except:
-                    pass
-
-            # Delete the "Buying session started!" message
-            start_msg_id = session.get("start_msg_id")
-            if start_msg_id:
-                try:
-                    msg = await user_dm.fetch_message(start_msg_id)
-                    await msg.delete()
-                except Exception as e:
-                    print(f"[Start Message Cleanup] {e}")
-
-        except Exception as e:
-            print(f"[DM Cleanup Error] {e}")
-
-        # Delete cart message object
-        if self.cart_message:
-            try:
-                await self.cart_message.delete()
-                self.cart_message = None
-            except:
-                pass
-
-        # Delete the persistent UI message
-        if self.ui_message:
-            try:
-                await self.ui_message.delete()
-                self.ui_message = None
-            except Exception as e:
-                print(f"[UI Message Cleanup - Cancel] {e}")
-
-        # Delete the interaction response (the clicked button)
         try:
             await interaction.message.delete()
         except:
             pass
-
+            
+        session = session_manager.sessions.get(interaction.user.id, {})
+        for msg_id in session.get("cart_messages", []):
+            try:
+                msg = await interaction.channel.fetch_message(msg_id)
+                await msg.delete()
+            except:
+                pass
+                
         session_manager.clear_session(interaction.user.id)
+
+        try:
+            if self.ui_message:
+                await self.ui_message.edit(view=None)
+        except Exception as e:
+            print(f"[UI Cleanup - Cancel] {e}")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
@@ -635,27 +577,15 @@ class TraderCommand(commands.Cog):
             return await interaction.response.send_message("You must use this command in the #economy channel.")
 
         try:
+            await interaction.user.send("🛒 Buying session started! Use the buttons below to add/remove items, submit, or cancel your order.")
             view = TraderView(self.bot, interaction.user.id)
-
-            # Send the "Buying session started!" message first
-            start_msg = await interaction.user.send("🛒 Buying session started! Use the buttons below to add/remove items, submit, or cancel your order.")
-            view.start_message = start_msg  # ✅ assign this FIRST
-
-            # Then send the UI
             ui_msg = await interaction.user.send(view=view)
             view.ui_message = ui_msg
-
-            # Register the session with both messages tracked
             session_manager.start_session(interaction.user.id)
-            session_manager.update_session(interaction.user.id, {
-                "cart_messages": [ui_msg.id],
-                "start_msg_id": start_msg.id
-            })
-  
-
+            session = session_manager.get_session(interaction.user.id)
+            session["cart_messages"] = [ui_msg.id]
             await interaction.response.send_message("Trader session moved to your DMs.")
-        except Exception as e:
-            print(f"[Trader DM Start Error] {e}")
+        except:
             await interaction.response.send_message("Trader session moved to your DMs.")
 
 async def setup(bot):
