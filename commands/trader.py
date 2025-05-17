@@ -407,29 +407,23 @@ class TraderView(discord.ui.View):
         session_manager.end_session(self.user_id)
         await interaction.response.send_message("❌ Order canceled.")
 
+        # ✅ Attempt full cleanup of all bot-sent messages in DM
         try:
-            await interaction.message.delete()
-        except:
-            pass
-            
-        session = session_manager.sessions.get(interaction.user.id, {})
-        for msg_id in session.get("cart_messages", []):
-            try:
-                msg = await interaction.channel.fetch_message(msg_id)
-                await msg.delete()
-            except:
-                pass
-                
+            user_dm = await interaction.user.create_dm()
+            async for msg in user_dm.history(limit=100):
+                if msg.author == self.bot.user:
+                    try:
+                        await msg.delete()
+                    except:
+                        pass
+        except Exception as e:
+            print(f"[Full DM Wipe Error - Cancel Order] {e}")
+
+        # Clear internal session state
         session_manager.clear_session(interaction.user.id)
 
-        try:
-            if self.ui_message:
-                await self.ui_message.edit(view=None)
-        except Exception as e:
-            print(f"[UI Cleanup - Cancel] {e}")
-
 class TraderCommand(commands.Cog):
-    def __init__(self, bot):
+     def __init__(self, bot):
         self.bot = bot
         self.awaiting_payment = {}
         self.awaiting_storage = {}
