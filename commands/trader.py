@@ -418,12 +418,14 @@ class TraderView(discord.ui.View):
         session_manager.clear_session(interaction.user.id)
 
         # Delete the "Buying session started!" message
-        if self.start_message:
+        start_msg_id = session.get("start_msg_id")
+        if start_msg_id:
             try:
-                await self.start_message.delete()
-                self.start_message = None
+                user_dm = await interaction.user.create_dm()
+                msg = await user_dm.fetch_message(start_msg_id)
+                await msg.delete()
             except Exception as e:
-                print(f"[Start Message Cleanup - Cancel] {e}")
+                print(f"[Start Message Cleanup - Submit/Cancel] {e}")
 
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -471,12 +473,14 @@ class TraderView(discord.ui.View):
         session_manager.clear_session(interaction.user.id)
 
         # Delete the "Buying session started!" message
-        if self.start_message:
+        start_msg_id = session.get("start_msg_id")
+        if start_msg_id:
             try:
-                await self.start_message.delete()
-                self.start_message = None
+                user_dm = await interaction.user.create_dm()
+                msg = await user_dm.fetch_message(start_msg_id)
+                await msg.delete()
             except Exception as e:
-                print(f"[Start Message Cleanup - Cancel] {e}")
+                print(f"[Start Message Cleanup - Submit/Cancel] {e}")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
@@ -641,7 +645,8 @@ class TraderCommand(commands.Cog):
             session_manager.start_session(interaction.user.id)
             session = session_manager.get_session(interaction.user.id)
             session["cart_messages"] = [ui_msg.id, start_msg.id]
-
+            session["start_msg_id"] = start_msg.id
+            
             await interaction.response.send_message("Trader session moved to your DMs.")
         except Exception as e:
             print(f"[Trader DM Start Error] {e}")
