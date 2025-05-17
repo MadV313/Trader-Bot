@@ -230,7 +230,8 @@ async def callback(self, select_interaction: discord.Interaction):
     if self.stage == "category":
         category_name = value.lower()
         next_stage = "subcategory" if "clothes" in category_name else "item"
-        new_selection = {"category": value}
+        label, _ = extract_label_and_emoji(value)
+        new_selection = {"category": label}
         dropdown = DynamicDropdown(self.bot, self.user_id, next_stage, new_selection, self.view_ref)
 
         new_view = discord.ui.View(timeout=180)
