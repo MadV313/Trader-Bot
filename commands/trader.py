@@ -433,6 +433,8 @@ class TraderCommand(commands.Cog):
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
+        print(f"[Reaction Detected] emoji={reaction.emoji} message_id={reaction.message.id} user={user}")
+
         if user.bot or not reaction.message:
             return
 
@@ -475,7 +477,11 @@ class TraderCommand(commands.Cog):
                     )
 
         # Phase 2: Player confirms payment
-        elif emoji == "✅" and reaction.message.id in self.awaiting_payment:
+        elif emoji == "✅" and any([
+            reaction.message.id in self.awaiting_payment,
+            user.id in [entry["player"].id for entry in self.awaiting_payment.values()]
+        ]):
+            print(f"[✅ Payment Reaction] Player {user} reacted to message {reaction.message.id}")
             data = self.awaiting_payment.pop(reaction.message.id)
             await reaction.message.clear_reaction("🔴")
             await reaction.message.add_reaction("✅")
