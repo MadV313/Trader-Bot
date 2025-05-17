@@ -32,6 +32,12 @@ def start_session(user_id):
     }
     log(f"Session started for user {user_id}.")
 
+def get_session(user_id):
+    """Get the full session dictionary for a user, creating one if missing."""
+    if user_id not in SESSION_CACHE:
+        start_session(user_id)
+    return SESSION_CACHE[user_id]
+
 def add_item(user_id, item):
     """Add an item to the user's session."""
     if user_id not in SESSION_CACHE:
@@ -56,11 +62,25 @@ def set_session_items(user_id, items):
     SESSION_CACHE[user_id]["last_active"] = time.time()
     log(f"Session items replaced for user {user_id}.")
 
+def update_session(user_id, updates: dict):
+    """Update arbitrary keys in the user's session (e.g., start_msg_id, cart_messages)."""
+    if user_id not in SESSION_CACHE:
+        start_session(user_id)
+    SESSION_CACHE[user_id].update(updates)
+    SESSION_CACHE[user_id]["last_active"] = time.time()
+    log(f"Session for user {user_id} updated with: {updates}")
+
 def clear_session(user_id, force_clear=False):
     """Clear a user's session, with optional force override."""
     if user_id in SESSION_CACHE or force_clear:
         log(f"Session cleared for user {user_id}.")
     SESSION_CACHE.pop(user_id, None)
+
+def end_session(user_id):
+    """End the user's session and remove from cache."""
+    if user_id in SESSION_CACHE:
+        log(f"Session ended for user {user_id}.")
+        del SESSION_CACHE[user_id]
 
 def is_session_active(user_id):
     """Check if a session is active and hasn't timed out."""
@@ -103,20 +123,6 @@ def validate_session(user_id):
         return True
     end_session(user_id)
     return False
-
-def update_session(user_id, updates: dict):
-    """Update arbitrary keys in the user's session (e.g., start_msg_id, cart_messages)."""
-    if user_id not in SESSION_CACHE:
-        start_session(user_id)
-    SESSION_CACHE[user_id].update(updates)
-    SESSION_CACHE[user_id]["last_active"] = time.time()
-    log(f"Session for user {user_id} updated with: {updates}")
-
-def end_session(user_id):
-    """End the user's session and remove from cache."""
-    if user_id in SESSION_CACHE:
-        log(f"Session ended for user {user_id}.")
-        del SESSION_CACHE[user_id]
 
 def cleanup_inactive_sessions():
     """Periodically call this to clean up expired sessions."""
