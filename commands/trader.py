@@ -140,29 +140,6 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         except Exception:
             self.view_ref.cart_message = await interaction.followup.send(content=summary)
 
-        # After subtotal and item_data are added
-        session_manager.add_item(self.user_id, item_data)
-
-        try:
-            await interaction.message.delete()
-        except Exception:
-            pass
-
-        await interaction.response.defer()
-
-        items = session_manager.get_session_items(self.user_id)
-        lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
-        cart_total = sum(item["subtotal"] for item in items)
-        summary = "\n".join(lines)
-        summary += f"\n\n🛒 Cart Total: ${cart_total:,}"
-
-        try:
-            if self.view_ref and self.view_ref.cart_message:
-                await self.view_ref.cart_message.edit(content=summary)
-            else:
-                self.view_ref.cart_message = await interaction.followup.send(content=summary)
-        except Exception:
-            self.view_ref.cart_message = await interaction.followup.send(content=summary)
 class BackButton(discord.ui.Button):
     def __init__(self, bot, user_id, current_stage, selected, view_ref):
         super().__init__(label="Back", style=discord.ButtonStyle.secondary)
