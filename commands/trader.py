@@ -396,47 +396,58 @@ class TraderView(discord.ui.View):
         except:
             pass
 
-    @discord.ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary)
-    async def remove_last_item(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Not your session.")
+@discord.ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary)
+async def remove_last_item(self, interaction: discord.Interaction, button: discord.ui.Button):
+    if interaction.user.id != self.user_id:
+        return await interaction.response.send_message("Not your session.")
 
-        items = session_manager.get_session_items(self.user_id)
-        if not items:
-            return await interaction.response.send_message("Cart is already empty.", ephemeral=True)
+    items = session_manager.get_session_items(self.user_id)
+    if not items:
+        return await interaction.response.send_message("Cart is already empty.")
 
-        removed_item = items.pop()
-        session_manager.set_session_items(self.user_id, items)  # update the session
+    removed_item = items.pop()
+    session_manager.set_session_items(self.user_id, items)  # update the session
 
-        if not items:
-            if self.cart_message:
-                try:
-                    await self.cart_message.delete()
-                    self.cart_message = None
-                except:
-                    pass
-            return await interaction.response.send_message("🗑️ Removed last item. Cart is now empty.")
-
-        # Update cart display
-        lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
-        cart_total = sum(item["subtotal"] for item in items)
-        summary = "\n".join(lines) + f"\n\n🛒 Cart Total: ${cart_total:,}"
-
+    if not items:
+        if self.cart_message:
+            try:
+                await self.cart_message.delete()
+                self.cart_message = None
+            except:
+                pass
+        await interaction.response.send_message("🗑️ Removed last item. Cart is now empty.")
         try:
-            if self.cart_message:
-                await self.cart_message.edit(content=summary)
-            else:
-                self.cart_message = await interaction.followup.send(content=summary)
-        except:
-            self.cart_message = await interaction.followup.send(content=summary)
-
-        # Clean public feedback message after 10s
-        try:
-            msg = await interaction.followup.send(f"🗑️ Removed {removed_item['item']}.", wait=True)
             await asyncio.sleep(10)
-            await msg.delete()
+            deletion_target = await interaction.original_response()
+            await deletion_target.delete()
         except Exception as e:
-            print(f"[Remove Item Msg Fail] {e}")
+            print(f"[Remove Empty Cart Msg Fail] {e}")
+        return
+
+    # Update cart display
+    lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
+    cart_total = sum(item["subtotal"] for item in items)
+    summary = "\n".join(lines) + f"\n\n🛒 Cart Total: ${cart_total:,}"
+
+    # Respond immediately with confirmation
+    await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.")
+
+    try:
+        if self.cart_message:
+            await self.cart_message.edit(content=summary)
+        else:
+            self.cart_message = await interaction.followup.send(content=summary)
+    except:
+        self.cart_message = await interaction.followup.send(content=summary)
+
+    # Schedule delete of confirmation message
+    try:
+        await asyncio.sleep(10)
+        deletion_target = await interaction.original_response()
+        await deletion_target.delete()
+    except Exception as e:
+        print(f"[Remove Item Msg Cleanup Fail] {e}")
+
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
