@@ -312,13 +312,16 @@ class TraderView(discord.ui.View):
 
         # Update cart display
         if not items:
-            if self.cart_message:
-                try:
-                    await self.cart_message.delete()
-                    self.cart_message = None
-                except:
-                    pass
-            await interaction.response.send_message(f"🗑️ Removed last item. Cart is now empty.")
+            message = "🗑️ Your cart is now empty."
+            try:
+                if self.cart_message:
+                    await self.cart_message.edit(content=message)
+                else:
+                    self.cart_message = await interaction.followup.send(content=message)
+            except:
+                self.cart_message = await interaction.followup.send(content=message)
+
+            await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.", ephemeral=True)
             return
 
         lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
