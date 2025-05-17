@@ -408,6 +408,7 @@ async def remove_last_item(self, interaction: discord.Interaction, button: disco
     removed_item = items.pop()
     session_manager.set_session_items(self.user_id, items)  # update the session
 
+    # Update cart display
     if not items:
         if self.cart_message:
             try:
@@ -415,39 +416,29 @@ async def remove_last_item(self, interaction: discord.Interaction, button: disco
                 self.cart_message = None
             except:
                 pass
-        await interaction.response.send_message("🗑️ Removed last item. Cart is now empty.")
+        await interaction.response.send_message("🗑️ Removed last item. Cart is now empty.", ephemeral=False)
+    else:
+        lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
+        cart_total = sum(item["subtotal"] for item in items)
+        summary = "\n".join(lines) + f"\n\n🛒 Cart Total: ${cart_total:,}"
+
         try:
-            await asyncio.sleep(10)
-            deletion_target = await interaction.original_response()
-            await deletion_target.delete()
-        except Exception as e:
-            print(f"[Remove Empty Cart Msg Fail] {e}")
-        return
-
-    # Update cart display
-    lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
-    cart_total = sum(item["subtotal"] for item in items)
-    summary = "\n".join(lines) + f"\n\n🛒 Cart Total: ${cart_total:,}"
-
-    # Respond immediately with confirmation
-    await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.")
-
-    try:
-        if self.cart_message:
-            await self.cart_message.edit(content=summary)
-        else:
+            if self.cart_message:
+                await self.cart_message.edit(content=summary)
+            else:
+                self.cart_message = await interaction.followup.send(content=summary)
+        except:
             self.cart_message = await interaction.followup.send(content=summary)
-    except:
-        self.cart_message = await interaction.followup.send(content=summary)
 
-    # Schedule delete of confirmation message
+        await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.", ephemeral=False)
+
+    # Clean up the removal message after 10 seconds
     try:
         await asyncio.sleep(10)
-        deletion_target = await interaction.original_response()
-        await deletion_target.delete()
+        msg = await interaction.original_response()
+        await msg.delete()
     except Exception as e:
-        print(f"[Remove Item Msg Cleanup Fail] {e}")
-
+        print(f"[Remove Item Cleanup Fail] {e}")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
