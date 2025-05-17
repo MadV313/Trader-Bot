@@ -645,16 +645,16 @@ class TraderCommand(commands.Cog):
             ui_msg = await interaction.user.send(view=view)
             view.ui_message = ui_msg
 
-            # Register the session
+            # Register the session with both messages tracked
             session_manager.start_session(interaction.user.id)
             session = session_manager.get_session(interaction.user.id)
             session["cart_messages"] = [ui_msg.id]
-            
+            session["start_msg_id"] = start_msg.id  
+
             await interaction.response.send_message("Trader session moved to your DMs.")
         except Exception as e:
             print(f"[Trader DM Start Error] {e}")
             await interaction.response.send_message("Trader session moved to your DMs.")
-
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
