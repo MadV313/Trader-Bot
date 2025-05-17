@@ -457,6 +457,7 @@ class TraderCommand(commands.Cog):
                     dm = await player.send(
                         f"{player.mention} your order is ready for pick up!\n"
                         f"Please make a payment to {user.mention} in the amount of **${total}**.\n"
+                        f"Be sure to make payment in the #economy chanel, copy/paste available below."
                         f"React here with a ✅ once payment has been made!"
                     )
                     await dm.add_reaction("🔴")
