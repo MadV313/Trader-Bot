@@ -405,9 +405,12 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Mind your own order!")
 
         session_manager.end_session(self.user_id)
-        await interaction.response.send_message("❌ Order canceled.")
+        await interaction.response.send_message("❌ Order canceled. This session will auto-close in 15 seconds...")
 
-        # ✅ Attempt full cleanup of all bot-sent messages in DM
+        # ⏳ Wait before cleanup
+        await asyncio.sleep(7)
+
+        # ✅ Wipe all bot messages in DM
         try:
             user_dm = await interaction.user.create_dm()
             async for msg in user_dm.history(limit=100):
@@ -419,7 +422,6 @@ class TraderView(discord.ui.View):
         except Exception as e:
             print(f"[Full DM Wipe Error - Cancel Order] {e}")
 
-        # Clear internal session state
         session_manager.clear_session(interaction.user.id)
 
 class TraderCommand(commands.Cog):
