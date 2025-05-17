@@ -571,7 +571,7 @@ class TraderCommand(commands.Cog):
             return await interaction.response.send_message("You must use this command in the #economy channel.")
 
         try:
-            await interaction.user.send("🛒 Buying session started! Use the buttons below to add items, submit, or cancel your order.")
+            await interaction.user.send("🛒 Buying session started! Use the buttons below to add/remove items, submit, or cancel your order.")
             view = TraderView(self.bot, interaction.user.id)
             ui_msg = await interaction.user.send(view=view)
             view.ui_message = ui_msg
