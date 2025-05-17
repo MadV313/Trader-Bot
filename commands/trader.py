@@ -412,15 +412,14 @@ class TraderView(discord.ui.View):
                 continue
 
         session_manager.clear_session(interaction.user.id)
-        session_manager.end_session(self.user_id)
 
         # Delete the "Buying session started!" message
-    if self.start_message:
-        try:
-            await self.start_message.delete()
-            self.start_message = None
-        except Exception as e:
-            print(f"[Start Message Cleanup] {e}")
+        if self.start_message:
+            try:
+                await self.start_message.delete()
+                self.start_message = None
+            except Exception as e:
+                print(f"[Start Message Cleanup - Cancel] {e}")
 
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -463,13 +462,13 @@ class TraderView(discord.ui.View):
 
         session_manager.clear_session(interaction.user.id)
 
-    # Delete the "Buying session started!" message
-    if self.start_message:
-        try:
-            await self.start_message.delete()
-            self.start_message = None
-        except Exception as e:
-            print(f"[Start Message Cleanup] {e}")
+        # Delete the "Buying session started!" message
+        if self.start_message:
+            try:
+                await self.start_message.delete()
+                self.start_message = None
+            except Exception as e:
+                print(f"[Start Message Cleanup - Cancel] {e}")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
