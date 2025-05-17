@@ -355,7 +355,12 @@ class TraderView(discord.ui.View):
         except:
             self.cart_message = await interaction.followup.send(content=summary)
 
-        await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.", ephemeral=True)
+        msg = await interaction.followup.send(f"🗑️ Removed {removed_item['item']}.")
+        await asyncio.sleep(10)
+        try:
+            await msg.delete()
+        except:
+            pass
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
