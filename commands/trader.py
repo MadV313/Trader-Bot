@@ -163,7 +163,7 @@ class BackButton(discord.ui.Button):
             return
 
         dropdown = DynamicDropdown(self.bot, self.user_id, prev_stage, self.selected, self.view_ref)
-        view = discord.ui.View(timeout=180)
+        view = discord.ui.View(timeout=600)
         view.add_item(dropdown)
 
         if prev_stage != "category":
@@ -259,7 +259,7 @@ class DynamicDropdown(discord.ui.Select):
                     return await select_interaction.response.send_modal(
                         QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
                     )
-                new_view = discord.ui.View(timeout=180)
+                new_view = discord.ui.View(timeout=600)
                 new_view.add_item(dropdown)
                 if dropdown.stage != "category":
                     new_view.add_item(BackButton(self.bot, self.user_id, dropdown.stage, self.selected, self.view_ref))
@@ -267,7 +267,7 @@ class DynamicDropdown(discord.ui.Select):
 
 class TraderView(discord.ui.View):
     def __init__(self, bot, user_id):
-        super().__init__(timeout=180)
+        super().__init__(timeout=600)
         self.bot = bot
         self.user_id = user_id
         self.cart_message = None
@@ -294,7 +294,7 @@ class TraderView(discord.ui.View):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!")
 
-        view = discord.ui.View(timeout=180)
+        view = discord.ui.View(timeout=600)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
         await interaction.response.send_message("Select a category:", view=view)
 
