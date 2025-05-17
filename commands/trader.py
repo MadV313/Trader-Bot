@@ -322,6 +322,12 @@ class TraderView(discord.ui.View):
                 self.cart_message = await interaction.followup.send(content=message)
 
             await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.")
+            try:
+                await asyncio.sleep(10)
+                deletion_target = await interaction.original_response()
+                await deletion_target.delete()
+            except Exception as e:
+                print(f"[Remove Empty Cart Msg Cleanup Fail] {e}")
             return
 
         lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
