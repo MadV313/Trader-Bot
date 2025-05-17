@@ -321,50 +321,50 @@ class TraderView(discord.ui.View):
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
         await interaction.response.send_message("Select a category:", view=view)
 
-@discord.ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary)
-async def remove_last_item(self, interaction: discord.Interaction, button: discord.ui.Button):
-    if interaction.user.id != self.user_id:
-        return await interaction.response.send_message("Not your session.", ephemeral=True)
+    @discord.ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary)
+    async def remove_last_item(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("Not your session.", ephemeral=True)
 
-    items = session_manager.get_session_items(self.user_id)
-    if not items:
-        return await interaction.response.send_message("Cart is already empty.", ephemeral=True)
+        items = session_manager.get_session_items(self.user_id)
+        if not items:
+            return await interaction.response.send_message("Cart is already empty.", ephemeral=True)
 
-    removed_item = items.pop()
-    session_manager.set_session_items(self.user_id, items)  # update the session
+        removed_item = items.pop()
+        session_manager.set_session_items(self.user_id, items)  # update the session
 
-    # Update cart display
-    if not items:
-        if self.cart_message:
-            try:
-                await self.cart_message.delete()
-                self.cart_message = None
-            except:
-                pass
-        await interaction.response.send_message(f"🗑️ Removed last item. Cart is now empty.")
-        return
+        # Update cart display
+        if not items:
+            if self.cart_message:
+                try:
+                    await self.cart_message.delete()
+                    self.cart_message = None
+                except:
+                    pass
+            await interaction.response.send_message(f"🗑️ Removed last item. Cart is now empty.")
+            return
 
-    lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
-    cart_total = sum(item["subtotal"] for item in items)
-    summary = "\n".join(lines) + f"\n\n🛒 Cart Total: ${cart_total:,}"
+        lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
+        cart_total = sum(item["subtotal"] for item in items)
+        summary = "\n".join(lines) + f"\n\n🛒 Cart Total: ${cart_total:,}"
 
-    await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.")  # respond ONCE
+        await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.")  # respond ONCE
 
-    try:
-        if self.cart_message:
-            await self.cart_message.edit(content=summary)
-        else:
+        try:
+            if self.cart_message:
+                await self.cart_message.edit(content=summary)
+            else:
+                self.cart_message = await interaction.followup.send(content=summary)
+        except:
             self.cart_message = await interaction.followup.send(content=summary)
-    except:
-        self.cart_message = await interaction.followup.send(content=summary)
 
-    # Schedule delete of removal notice (the response message)
-    try:
-        await asyncio.sleep(10)
-        deletion_target = await interaction.original_response()
-        await deletion_target.delete()
-    except Exception as e:
-        print(f"[Remove Item Msg Cleanup Fail] {e}")
+        # Schedule delete of removal notice (the response message)
+        try:
+            await asyncio.sleep(10)
+            deletion_target = await interaction.original_response()
+            await deletion_target.delete()
+        except Exception as e:
+            print(f"[Remove Item Msg Cleanup Fail] {e}")
 
     @discord.ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
