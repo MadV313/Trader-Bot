@@ -504,9 +504,33 @@ class TraderCommand(commands.Cog):
             }
 
         # Phase 3: Admin confirms payment received
-        elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
-            data = self.awaiting_storage.pop(reaction.message.id)
-            await reaction.message.clear_reaction("🔴")
+        elif emoji == "✅" and any([
+            reaction.message.id in self.awaiting_storage,
+            user.id in [entry["admin"].id for entry in self.awaiting_storage.values()]
+        ]):
+            print(f"[✅ Storage Reaction] message_id={reaction.message.id}, awaiting_storage keys={list(self.awaiting_storage.keys())}")
+
+            # Attempt to pop by message ID first
+            data = self.awaiting_storage.pop(reaction.message.id, None)
+
+            # If that fails, fall back to match by admin ID
+            if not data:
+                for key, val in list(self.awaiting_storage.items()):
+                    if val["admin"].id == user.id:
+                        data = self.awaiting_storage.pop(key)
+                        break
+
+            if not data:
+                print("[Storage Phase] No matching storage entry found.")
+                return
+
+            # Attempt to remove 🔴 (fails silently if forbidden)
+            try:
+                if not isinstance(reaction.message.channel, discord.DMChannel):
+                    await reaction.message.clear_reaction("🔴")
+            except discord.Forbidden:
+                pass
+
             await reaction.message.add_reaction("✅")
             await reaction.message.edit(content=reaction.message.content + f"\n\nPayment confirmed by {user.mention}")
 
@@ -532,11 +556,6 @@ class TraderCommand(commands.Cog):
                     choice = self.values[0]
                     if choice == "skip":
                         msg = await self.player.send("Thanks for shopping with us, see ya next time! Stay frosty survivor!")
-                        try:
-                            if not isinstance(reaction.message.channel, discord.DMChannel):
-                                await reaction.message.clear_reaction("🔴")
-                        except discord.Forbidden:
-                            pass
                         await asyncio.sleep(20)
                         await msg.delete()
                         return await interaction.response.send_message("Skip acknowledged.")
