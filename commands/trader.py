@@ -483,7 +483,11 @@ class TraderCommand(commands.Cog):
         ]):
             print(f"[✅ Payment Reaction] Player {user} reacted to message {reaction.message.id}")
             data = self.awaiting_payment.pop(reaction.message.id)
-            await reaction.message.clear_reaction("🔴")
+            try:
+                if not isinstance(reaction.message.channel, discord.DMChannel):
+                    await reaction.message.clear_reaction("🔴")
+            except discord.Forbidden:
+                pass
             await reaction.message.add_reaction("✅")
             await reaction.message.edit(content=reaction.message.content + "\n\nPayment confirmed! Please stand by.")
 
@@ -528,7 +532,11 @@ class TraderCommand(commands.Cog):
                     choice = self.values[0]
                     if choice == "skip":
                         msg = await self.player.send("Thanks for shopping with us, see ya next time! Stay frosty survivor!")
-                        await msg.add_reaction("🔴")
+                        try:
+                            if not isinstance(reaction.message.channel, discord.DMChannel):
+                                await reaction.message.clear_reaction("🔴")
+                        except discord.Forbidden:
+                            pass
                         await asyncio.sleep(20)
                         await msg.delete()
                         return await interaction.response.send_message("Skip acknowledged.")
