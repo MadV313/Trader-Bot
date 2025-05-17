@@ -423,7 +423,7 @@ class TraderView(discord.ui.View):
         session_manager.clear_session(interaction.user.id)
 
 class TraderCommand(commands.Cog):
-     def __init__(self, bot):
+    def __init__(self, bot):
         self.bot = bot
         self.awaiting_payment = {}
         self.awaiting_storage = {}
