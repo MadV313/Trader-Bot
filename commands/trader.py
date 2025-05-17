@@ -459,12 +459,12 @@ class TraderCommand(commands.Cog):
                 if mentioned_users:
                     player = mentioned_users[0]
                     dm = await player.send(
-                        f"{player.mention} your order is ready for pick up!\n"
-                        f"Please make a payment to {user.mention} in the amount of **${total}**.\n"
-                        f"Be sure to make payment in the #economy chanel, copy/paste available below."
-                        f"React here with a ✅ once payment has been made!"
+                        f"📦 **Your order is ready for pick-up!**\n\n"
+                        f"💰 Please make a payment to {user.mention} for **${total}**.\n"
+                        f"📍 Make sure to send payment in <#{config['economy_channel_id']}> (copy/paste command below).\n\n"
+                        f"Once paid, react to this message with a ✅ to confirm."
                     )
-                    await dm.add_reaction("🔴")
+                    await dm.add_reaction("⚠️")
                     self.awaiting_payment[dm.id] = {
                         "player": player,
                         "admin": user,
