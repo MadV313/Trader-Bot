@@ -442,13 +442,13 @@ class TraderView(discord.ui.View):
             except:
                 pass
 
-# Delete the original "buying session started" message
-if self.ui_message:
-    try:
-        await self.ui_message.delete()
-        self.ui_message = None
-    except:
-        pass
+        # Delete the original "buying session started" message
+        if self.ui_message:
+            try:
+                await self.ui_message.delete()
+                self.ui_message = None
+            except:
+                pass
             
         session = session_manager.sessions.get(interaction.user.id, {})
         for msg_id in session.get("cart_messages", []):
