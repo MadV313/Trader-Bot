@@ -619,17 +619,24 @@ class TraderCommand(commands.Cog):
             return await interaction.response.send_message("You must use this command in the #economy channel.")
 
         try:
-            astart_msg = await interaction.user.send("🛒 Buying session started! Use the buttons below to add/remove items, submit, or cancel your order.")
             view = TraderView(self.bot, interaction.user.id)
+
+            # Send start message FIRST and assign
+            start_msg = await interaction.user.send("🛒 Buying session started! Use the buttons below to add/remove items, submit, or cancel your order.")
+            view.start_message = start_msg  # ✅ assign BEFORE sending UI
+
+            # Now send the UI
             ui_msg = await interaction.user.send(view=view)
             view.ui_message = ui_msg
-            view.start_message = astart_msg  # 💥 NEW: track intro message
+
             session_manager.start_session(interaction.user.id)
             session = session_manager.get_session(interaction.user.id)
             session["cart_messages"] = [ui_msg.id]
+
             await interaction.response.send_message("Trader session moved to your DMs.")
         except:
             await interaction.response.send_message("Trader session moved to your DMs.")
+
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
