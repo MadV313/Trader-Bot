@@ -272,6 +272,7 @@ class TraderView(discord.ui.View):
         self.user_id = user_id
         self.cart_message = None
         self.ui_message = None
+        self.start_message = None
 
     async def update_cart_message(self, interaction):
         items = session_manager.get_session_items(self.user_id)
@@ -413,6 +414,14 @@ class TraderView(discord.ui.View):
         session_manager.clear_session(interaction.user.id)
         session_manager.end_session(self.user_id)
 
+        # Delete the "Buying session started!" message
+    if self.start_message:
+        try:
+            await self.start_message.delete()
+            self.start_message = None
+        except Exception as e:
+            print(f"[Start Message Cleanup] {e}")
+
     @discord.ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
@@ -453,6 +462,14 @@ class TraderView(discord.ui.View):
                 pass
 
         session_manager.clear_session(interaction.user.id)
+
+    # Delete the "Buying session started!" message
+    if self.start_message:
+        try:
+            await self.start_message.delete()
+            self.start_message = None
+        except Exception as e:
+            print(f"[Start Message Cleanup] {e}")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
@@ -603,10 +620,11 @@ class TraderCommand(commands.Cog):
             return await interaction.response.send_message("You must use this command in the #economy channel.")
 
         try:
-            await interaction.user.send("🛒 Buying session started! Use the buttons below to add/remove items, submit, or cancel your order.")
+            astart_msg = await interaction.user.send("🛒 Buying session started! Use the buttons below to add/remove items, submit, or cancel your order.")
             view = TraderView(self.bot, interaction.user.id)
             ui_msg = await interaction.user.send(view=view)
             view.ui_message = ui_msg
+            view.start_message = start_msg  # 💥 NEW: track intro message
             session_manager.start_session(interaction.user.id)
             session = session_manager.get_session(interaction.user.id)
             session["cart_messages"] = [ui_msg.id]
