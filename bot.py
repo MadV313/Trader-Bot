@@ -15,11 +15,14 @@ TOKEN = config["token"]
 PREFIX = "/"
 GUILD_ID = 1166441420643639348  # Your Discord Server ID
 
+# ✅ Full intents for DM reactions and message handling
 INTENTS = discord.Intents.default()
 INTENTS.message_content = True
 INTENTS.guilds = True
 INTENTS.members = True
 INTENTS.reactions = True
+INTENTS.messages = True         # ✅ ensure bot can track messages
+INTENTS.dm_messages = True      # ✅ crucial for DM reaction triggers
 
 bot = commands.Bot(command_prefix=PREFIX, intents=INTENTS)
 extensions_loaded = False
