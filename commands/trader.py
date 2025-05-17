@@ -503,99 +503,63 @@ class TraderCommand(commands.Cog):
                 "total": data["total"]
             }
 
-        # Phase 3: Admin confirms payment received
-        elif emoji == "✅" and any([
-            reaction.message.id in self.awaiting_storage,
-            user.id in [entry["admin"].id for entry in self.awaiting_storage.values()]
-        ]):
-            print(f"[✅ Storage Reaction] message_id={reaction.message.id}, awaiting_storage keys={list(self.awaiting_storage.keys())}")
-        
-            # Attempt to pop by message ID first
-            data = self.awaiting_storage.pop(reaction.message.id, None)
-        
-            # Fallback: match by admin ID if message ID mismatch
-            if not data:
-                for key, val in list(self.awaiting_storage.items()):
-                    if val["admin"].id == user.id:
-                        data = self.awaiting_storage.pop(key)
-                        break
-        
-            if not data:
-                print("[Storage Phase] No matching storage entry found.")
-                return
-        
-            # Try removing 🔴 emoji
-            try:
-                if not isinstance(reaction.message.channel, discord.DMChannel):
+         # Phase 3: Admin confirms payment received
+                elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
+                    data = self.awaiting_storage.pop(reaction.message.id)
                     await reaction.message.clear_reaction("🔴")
-            except discord.Forbidden:
-                pass
+                    await reaction.message.add_reaction("✅")
+                    await reaction.message.edit(content=reaction.message.content + f"\n\nPayment confirmed by {user.mention}")
         
-            await reaction.message.add_reaction("✅")
-            await reaction.message.edit(content=reaction.message.content + f"\n\n✅ Payment confirmed by {user.mention}")
+                    class StorageSelect(ui.Select):
+                        def __init__(self, bot, player, admin, total):
+                            options = [
+                                discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)
+                            ] + [
+                                discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)
+                            ] + [
+                                discord.SelectOption(label="Skip", value="skip")
+                            ]
+                            super().__init__(placeholder="Select a storage unit or skip", options=options)
+                            self.bot = bot
+                            self.player = player
+                            self.admin = admin
+                            self.total = total
         
-            # Build dropdown menu for storage selection
-            class StorageSelect(ui.Select):
-                def __init__(self, bot, player, admin, total):
-                    options = [
-                        discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)
-                    ] + [
-                        discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)
-                    ] + [
-                        discord.SelectOption(label="Skip", value="skip")
-                    ]
-                    super().__init__(placeholder="Select a storage unit or skip", options=options)
-                    self.bot = bot
-                    self.player = player
-                    self.admin = admin
-                    self.total = total
+                        async def callback(self, interaction: discord.Interaction):
+                            if interaction.user.id != self.admin.id:
+                                return await interaction.response.send_message("You are not authorized to select for this order.")
         
-                async def callback(self, interaction: discord.Interaction):
-                    if interaction.user.id != self.admin.id:
-                        return await interaction.response.send_message("❌ You are not authorized for this order.", ephemeral=True)
+                            choice = self.values[0]
+                            if choice == "skip":
+                                msg = await self.player.send("Thanks for shopping with us, see ya next time! Stay frosty survivor!")
+                                await msg.add_reaction("🔴")
+                                await asyncio.sleep(20)
+                                await msg.delete()
+                                return await interaction.response.send_message("Skip acknowledged.")
         
-                    choice = self.values[0]
-                    if choice == "skip":
-                        msg = await self.player.send("Thanks for shopping with us, see ya next time! Stay frosty survivor!")
-                        await asyncio.sleep(20)
-                        await msg.delete()
-                        return await interaction.response.send_message("Skip acknowledged.", ephemeral=True)
+                            await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
         
-                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
+                    class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
+                        combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
         
-            class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
-                combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
+                        def __init__(self, bot, player, admin, unit):
+                            super().__init__()
+                            self.bot = bot
+                            self.player = player
+                            self.admin = admin
+                            self.unit = unit
         
-                def __init__(self, bot, player, admin, unit):
-                    super().__init__()
-                    self.bot = bot
-                    self.player = player
-                    self.admin = admin
-                    self.unit = unit
-        
-                async def on_submit(self, interaction: discord.Interaction):
-                    dm = await self.player.send(
-                        f"{self.player.mention}, your order is ready for pick up!\n"
-                        f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
-                        f"Please leave the lock with the same code when done!\nReact here with a ✅ when finished."
-                    )
-                    await dm.add_reaction("🔴")
-                    self.bot.get_cog("TraderCommand").awaiting_pickup[dm.id] = {
-                        "player": self.player,
-                        "unit": self.unit
-                    }
-        
-            # Send dropdown to admin via DM
-            try:
-                dropdown = StorageSelect(self.bot, data["player"], data["admin"], data["total"])
-                view = ui.View()
-                view.add_item(dropdown)
-                await data["admin"].send(
-                    f"✅ Payment received for {data['player'].mention}.\nPlease select a **storage unit** to deliver the order:",
-                    view=view
-                )
-            except Exception as e:
-                print(f"[Phase 3 Dropdown Error] {e}")
+                        async def on_submit(self, interaction: discord.Interaction):
+                            dm = await self.player.send(
+                                f"{self.player.mention}, your order is ready for pick up!\n"
+                                f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
+                                f"Please leave the lock with the same code when done!\nReact here with a ✅ when finished."
+                            )
+                            await dm.add_reaction("🔴")
+                            self.bot.get_cog("TraderCommand").awaiting_pickup[dm.id] = {
+                                "player": self.player,
+                                "unit": self.unit
+                            }
 
         # Phase 4: Player confirms pickup complete
         elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
