@@ -405,10 +405,10 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Mind your own order!")
 
         session_manager.end_session(self.user_id)
-        await interaction.response.send_message("❌ Order canceled. This session will auto-close in 15 seconds...")
+        await interaction.response.send_message("❌ Order canceled. This session will auto-close in 10 seconds...")
 
         # ⏳ Wait before cleanup
-        await asyncio.sleep(7)
+        await asyncio.sleep(10)
 
         # ✅ Wipe all bot messages in DM
         try:
