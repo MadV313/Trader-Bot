@@ -104,6 +104,14 @@ def validate_session(user_id):
     end_session(user_id)
     return False
 
+def update_session(user_id, updates: dict):
+    """Update arbitrary keys in the user's session (e.g., start_msg_id, cart_messages)."""
+    if user_id not in SESSION_CACHE:
+        start_session(user_id)
+    SESSION_CACHE[user_id].update(updates)
+    SESSION_CACHE[user_id]["last_active"] = time.time()
+    log(f"Session for user {user_id} updated with: {updates}")
+
 def end_session(user_id):
     """End the user's session and remove from cache."""
     if user_id in SESSION_CACHE:
