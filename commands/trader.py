@@ -379,10 +379,29 @@ class TraderView(discord.ui.View):
 
         await interaction.response.send_message("✅ Order submitted to trader channel.")
 
+        # Cleanup: delete the active UI message
         try:
             await interaction.message.delete()
         except:
             pass
+
+        # Cleanup: delete the cart message
+        if self.cart_message:
+            try:
+                await self.cart_message.delete()
+                self.cart_message = None
+            except:
+                pass
+
+        # Cleanup: delete the original "buying session started" message
+        if self.ui_message:
+            try:
+                await self.ui_message.delete()
+                self.ui_message = None
+            except:
+                pass
+
+        # Clear session and cart messages
         session = session_manager.sessions.get(interaction.user.id, {})
         for msg_id in session.get("cart_messages", []):
             try:
@@ -390,9 +409,11 @@ class TraderView(discord.ui.View):
                 await msg.delete()
             except:
                 continue
+
         session_manager.clear_session(interaction.user.id)
         session_manager.end_session(self.user_id)
 
+        # Cleanup: disable buttons
         try:
             if self.ui_message:
                 await self.ui_message.edit(view=None)
@@ -407,17 +428,27 @@ class TraderView(discord.ui.View):
         session_manager.end_session(self.user_id)
         await interaction.response.send_message("❌ Order canceled.")
 
+        # Delete the interactive UI message
         try:
             await interaction.message.delete()
         except:
             pass
 
+        # Delete the cart message
         if self.cart_message:
             try:
                 await self.cart_message.delete()
                 self.cart_message = None
             except:
                 pass
+
+# Delete the original "buying session started" message
+if self.ui_message:
+    try:
+        await self.ui_message.delete()
+        self.ui_message = None
+    except:
+        pass
             
         session = session_manager.sessions.get(interaction.user.id, {})
         for msg_id in session.get("cart_messages", []):
@@ -432,9 +463,10 @@ class TraderView(discord.ui.View):
                                     
         try:
             if self.ui_message:
-                await self.ui_message.edit(view=None)
+                await self.ui_message.delete()
+                self.ui_message = None
         except Exception as e:
-            print(f"[UI Cleanup - Cancel] {e}")
+            print(f"[UI Message Cleanup - Cancel] {e}")
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
