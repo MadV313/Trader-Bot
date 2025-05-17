@@ -623,7 +623,7 @@ class TraderCommand(commands.Cog):
             view = TraderView(self.bot, interaction.user.id)
             ui_msg = await interaction.user.send(view=view)
             view.ui_message = ui_msg
-            view.start_message = start_msg  # 💥 NEW: track intro message
+            view.start_message = astart_msg  # 💥 NEW: track intro message
             session_manager.start_session(interaction.user.id)
             session = session_manager.get_session(interaction.user.id)
             session["cart_messages"] = [ui_msg.id]
