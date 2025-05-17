@@ -411,6 +411,13 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
+
+        if self.cart_message:
+            try:
+                await self.cart_message.delete()
+                self.cart_message = None
+            except:
+                pass
             
         session = session_manager.sessions.get(interaction.user.id, {})
         for msg_id in session.get("cart_messages", []):
@@ -421,7 +428,8 @@ class TraderView(discord.ui.View):
                 pass
                 
         session_manager.clear_session(interaction.user.id)
-
+        session_manager.end_session(self.user_id)
+                                    
         try:
             if self.ui_message:
                 await self.ui_message.edit(view=None)
