@@ -621,20 +621,22 @@ class TraderCommand(commands.Cog):
         try:
             view = TraderView(self.bot, interaction.user.id)
 
-            # Send start message FIRST and assign
+            # Send the "Buying session started!" message first
             start_msg = await interaction.user.send("🛒 Buying session started! Use the buttons below to add/remove items, submit, or cancel your order.")
-            view.start_message = start_msg  # ✅ assign BEFORE sending UI
+            view.start_message = start_msg  # ✅ assign this FIRST
 
-            # Now send the UI
+            # Then send the UI
             ui_msg = await interaction.user.send(view=view)
             view.ui_message = ui_msg
 
+            # Register the session
             session_manager.start_session(interaction.user.id)
             session = session_manager.get_session(interaction.user.id)
             session["cart_messages"] = [ui_msg.id]
 
             await interaction.response.send_message("Trader session moved to your DMs.")
-        except:
+        except Exception as e:
+            print(f"[Trader DM Start Error] {e}")
             await interaction.response.send_message("Trader session moved to your DMs.")
 
 
