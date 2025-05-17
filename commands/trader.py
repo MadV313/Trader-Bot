@@ -99,7 +99,21 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         self.view_ref = view_ref
         self.price = get_price(category, subcategory, item, variant)
 
-    async def on_submit(self, interaction: discord.Interaction):
+class QuantityModal(ui.Modal, title="Enter Quantity"):
+    quantity = ui.TextInput(label="Quantity", placeholder="e.g. 2", max_length=3)
+
+    def __init__(self, bot, user_id, category, subcategory, item, variant, view_ref):
+        super().__init__()
+        self.bot = bot
+        self.user_id = user_id
+        self.category = category
+        self.subcategory = subcategory
+        self.item = item
+        self.variant = variant
+        self.view_ref = view_ref
+        self.price = get_price(category, subcategory, item, variant)
+
+    async def on_submit(self, interaction: discord.Interaction):  # ← THIS MUST BE INDENTED INSIDE
         try:
             quantity = int(self.quantity.value)
             if quantity <= 0:
@@ -126,18 +140,19 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
 
         await interaction.response.defer()
 
-        latest_summary = f"✅ Added {quantity}x {self.item} to your cart.\n"
         items = session_manager.get_session_items(self.user_id)
+        lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
         cart_total = sum(item["subtotal"] for item in items)
-        latest_summary += f"🛒 Cart Total: ${cart_total:,}"
+        summary = "\n".join(lines)
+        summary += f"\n\n🛒 Cart Total: ${cart_total:,}"
 
         try:
             if self.view_ref and self.view_ref.cart_message:
-                await self.view_ref.cart_message.edit(content=latest_summary)
+                await self.view_ref.cart_message.edit(content=summary)
             else:
-                self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+                self.view_ref.cart_message = await interaction.followup.send(content=summary)
         except Exception:
-            self.view_ref.cart_message = await interaction.followup.send(content=latest_summary)
+            self.view_ref.cart_message = await interaction.followup.send(content=summary)
 
 class BackButton(discord.ui.Button):
     def __init__(self, bot, user_id, current_stage, selected, view_ref):
@@ -356,13 +371,15 @@ class TraderView(discord.ui.View):
             await interaction.message.delete()
         except:
             pass
+
         session = session_manager.sessions.get(interaction.user.id, {})
         for msg_id in session.get("cart_messages", []):
             try:
                 msg = await interaction.channel.fetch_message(msg_id)
                 await msg.delete()
             except:
-                continue
+                pass
+
         session_manager.clear_session(interaction.user.id)
 
         try:
