@@ -323,7 +323,7 @@ class TraderView(discord.ui.View):
 
             await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.")
             try:
-                await asyncio.sleep(10)
+                await asyncio.sleep(6)
                 deletion_target = await interaction.original_response()
                 await deletion_target.delete()
             except Exception as e:
@@ -346,7 +346,7 @@ class TraderView(discord.ui.View):
 
         # Schedule delete of removal notice (the response message)
         try:
-            await asyncio.sleep(10)
+            await asyncio.sleep(6)
             deletion_target = await interaction.original_response()
             await deletion_target.delete()
         except Exception as e:
