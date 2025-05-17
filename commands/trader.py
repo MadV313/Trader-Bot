@@ -404,12 +404,16 @@ class TraderView(discord.ui.View):
 
         # Clean tracked cart messages
         session = session_manager.sessions.get(interaction.user.id, {})
-        for msg_id in session.get("cart_messages", []):
-            try:
-                msg = await interaction.channel.fetch_message(msg_id)
-                await msg.delete()
-            except:
-                continue
+        try:
+            user_dm = await interaction.user.create_dm()
+            for msg_id in session.get("cart_messages", []):
+                try:
+                    msg = await user_dm.fetch_message(msg_id)
+                    await msg.delete()
+                except:
+                    pass
+        except Exception as e:
+            print(f"[DM Cleanup Error] {e}")
 
         session_manager.clear_session(interaction.user.id)
 
@@ -453,12 +457,16 @@ class TraderView(discord.ui.View):
 
         # Clean tracked cart messages
         session = session_manager.sessions.get(interaction.user.id, {})
-        for msg_id in session.get("cart_messages", []):
-            try:
-                msg = await interaction.channel.fetch_message(msg_id)
-                await msg.delete()
-            except:
-                pass
+        try:
+            user_dm = await interaction.user.create_dm()
+            for msg_id in session.get("cart_messages", []):
+                try:
+                    msg = await user_dm.fetch_message(msg_id)
+                    await msg.delete()
+                except:
+                    pass
+        except Exception as e:
+            print(f"[DM Cleanup Error] {e}")
 
         session_manager.clear_session(interaction.user.id)
 
