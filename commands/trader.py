@@ -321,7 +321,7 @@ class TraderView(discord.ui.View):
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
         await interaction.response.send_message("Select a category:", view=view)
 
-    @discord.ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary)
+@discord.ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary)
 async def remove_last_item(self, interaction: discord.Interaction, button: discord.ui.Button):
     if interaction.user.id != self.user_id:
         return await interaction.response.send_message("Not your session.", ephemeral=True)
