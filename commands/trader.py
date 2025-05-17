@@ -430,12 +430,12 @@ class TraderView(discord.ui.View):
         except:
             self.cart_message = await interaction.followup.send(content=summary)
 
-msg = await interaction.followup.send(f"🗑️ Removed {removed_item['item']}.")
-await asyncio.sleep(10)
-try:
-    await msg.delete()
-except:
-    pass
+        msg = await interaction.followup.send(f"🗑️ Removed {removed_item['item']}.")
+        await asyncio.sleep(10)
+        try:
+            await msg.delete()
+        except:
+            pass
 
 class TraderCommand(commands.Cog):
     def __init__(self, bot):
