@@ -632,7 +632,7 @@ class TraderCommand(commands.Cog):
             # Register the session
             session_manager.start_session(interaction.user.id)
             session = session_manager.get_session(interaction.user.id)
-            session["cart_messages"] = [ui_msg.id]
+            session["cart_messages"] = [ui_msg.id, start_msg.id]
 
             await interaction.response.send_message("Trader session moved to your DMs.")
         except Exception as e:
