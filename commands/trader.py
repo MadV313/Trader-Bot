@@ -491,6 +491,10 @@ class TraderCommand(commands.Cog):
             await reaction.message.edit(content=reaction.message.content + "\n\n✅ Payment confirmed! Please stand by.")
         
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
+            payment_notice = await trader_channel.send(
+                f"{data['player'].mention} has confirmed payment.\nPlease select a storage unit below:"
+            )
+            print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
         
             class StorageSelect(ui.Select):
                 def __init__(self, bot, player, confirm_message):
@@ -504,14 +508,14 @@ class TraderCommand(commands.Cog):
         
                 async def callback(self, interaction: discord.Interaction):
                     choice = self.values[0]
-                    print(f"[PHASE 2] Storage option selected: {choice}")
+                    print(f"[PHASE 2/3] Storage option selected: {choice}")
         
                     try:
                         await self.confirm_message.edit(
-                            content=self.confirm_message.content + f"\n\n✅ Storage assigned by {interaction.user.mention}"
+                            content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {interaction.user.mention}"
                         )
                     except Exception as e:
-                        print(f"[PHASE 2] Could not update confirmation message: {e}")
+                        print(f"[PHASE 2/3] Could not update confirmation message: {e}")
         
                     if choice == "skip":
                         try:
@@ -521,9 +525,13 @@ class TraderCommand(commands.Cog):
                             )
                             await msg.add_reaction("⚠️")
                             await asyncio.sleep(20)
-                            await msg.delete()
+        
+                            # Wipe all bot messages in DM
+                            async for m in self.player.dm_channel.history(limit=100):
+                                if m.author == self.bot.user:
+                                    await m.delete()
                         except Exception as e:
-                            print(f"[PHASE 2] Skip DM Error: {e}")
+                            print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
                         return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
         
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
@@ -549,39 +557,21 @@ class TraderCommand(commands.Cog):
                             "player": self.player,
                             "unit": self.unit
                         }
+                        await interaction.response.send_message("✅ Combo submitted. Player has been notified.", ephemeral=True)
                     except Exception as e:
-                        print(f"[PHASE 2] Combo DM Error: {e}")
+                        print(f"[PHASE 2/3] Combo DM Error: {e}")
+                        await interaction.response.send_message("❌ Failed to notify player.", ephemeral=True)
         
             try:
-                confirmation_msg = await trader_channel.send(
-                    f"{data['player'].mention} has confirmed payment.\nPlease select a storage unit:"
-                )
+                dropdown = StorageSelect(self.bot, data["player"], payment_notice)
                 view = ui.View()
-                view.add_item(StorageSelect(self.bot, data["player"], confirmation_msg))
-                await trader_channel.send(view=view)
-                print(f"[PHASE 2] ✅ Sent dropdown for storage assignment")
+                view.add_item(dropdown)
+                await payment_notice.edit(view=view)
+                print(f"[PHASE 2/3] Dropdown view attached to message ID: {payment_notice.id}")
             except Exception as e:
-                print(f"[PHASE 2] ❌ Failed to send dropdown")
+                print("[PHASE 2/3 DROPDOWN ERROR]")
                 import traceback
                 traceback.print_exc()
-        
-        # Phase 3: REMOVED — now merged into Phase 2
-        
-        # Phase 4: Player confirms pickup complete
-        elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
-            data = self.awaiting_pickup.pop(reaction.message.id)
-            await reaction.message.clear_reaction("🔴")
-            await reaction.message.add_reaction("✅")
-            await reaction.message.edit(content="All set, see ya next time!")
-        
-            await asyncio.sleep(20)
-            try:
-                await reaction.message.delete()
-            except:
-                pass
-        
-            payout_channel = self.bot.get_channel(config["trader_payout_channel_id"])
-            await payout_channel.send(f"<@&{config['trader_role_id']}> {data['player'].mention} cleared their unit!")
 
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
     async def trader(self, interaction: discord.Interaction):
