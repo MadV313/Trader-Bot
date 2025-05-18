@@ -497,106 +497,140 @@ class TraderCommand(commands.Cog):
             )
             print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
         
-            class StorageSelect(ui.Select):
-            def __init__(self, bot, player, confirm_message):
-                all_units = [f"shed{i}" for i in range(1, 5)] + [f"container{i}" for i in range(1, 7)]
-                used_units = bot.get_cog("TraderCommand").in_use_units.keys()
-                available_units = [u for u in all_units if u not in used_units]
-        
-                options = [discord.SelectOption(label=u.replace("shed", "Shed ").replace("container", "Container "), value=u)
-                           for u in available_units]
-                options.append(discord.SelectOption(label="Skip", value="skip"))
-        
-                super().__init__(placeholder="Select a storage unit or skip", options=options)
-                self.bot = bot
-                self.player = player
-                self.confirm_message = confirm_message
-        
-            async def callback(self, interaction: discord.Interaction):
-                choice = self.values[0]
-                print(f"[PHASE 2/3] Storage option selected: {choice}")
-        
-                if choice in self.bot.get_cog("TraderCommand").in_use_units:
-                    return await interaction.response.send_message(
-                        f"⚠️ **{choice.upper()}** is currently in use. Please select another one.", ephemeral=True
-                    )
-        
-                try:
-                    await self.confirm_message.edit(
-                        content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {interaction.user.mention}",
-                        view=None
-                    )
-                except Exception as e:
-                    print(f"[PHASE 2/3] Could not update confirmation message: {e}")
-        
-                if choice == "skip":
-                    try:
-                        msg = await self.player.send(
-                            content=(
-                                "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
-                                "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
-                                "📦 Your order has been processed — no storage was assigned this time.\n"
-                                "Thanks for shopping with us, survivor! Stay Frosty! 🧑‍🌾"
-                            )
-                        )
-                        await asyncio.sleep(15)
-                        async for m in self.player.dm_channel.history(limit=100):
-                            if m.author == self.bot.user:
-                                await m.delete()
-                    except Exception as e:
-                        print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
-                    return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
-        
-                # ✅ Mark unit as in use
-                self.bot.get_cog("TraderCommand").in_use_units[choice] = self.player.id
-                await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
-        
-            class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
-                combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
-        
-                def __init__(self, bot, player, unit):
-                    super().__init__()
-                    self.bot = bot
-                    self.player = player
-                    self.unit = unit
-        
-                async def on_submit(self, interaction: discord.Interaction):
-                    try:
-                        dm = await self.player.send(
-                            f"{self.player.mention}, your order is ready for pick up!\n"
-                            f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
-                            f"Please leave the lock with the same code when done!\n"
-                        )
-                        view = PickupConfirmView(self.bot, self.player, self.unit, dm)
-                        await dm.edit(view=view)
-                        self.bot.get_cog("TraderCommand").awaiting_pickup[dm.id] = {
-                            "player": self.player,
-                            "unit": self.unit
-                        }
-                        await interaction.response.send_message("✅ Combo submitted. Player has been notified.")
-                    except Exception as e:
-                        print(f"[PHASE 2/3] Combo DM Error: {e}")
-                        await interaction.response.send_message("❌ Failed to notify player.", ephemeral=True)
-        
+class StorageSelect(ui.Select):
+    def __init__(self, bot, player, confirm_message):
+        all_units = [f"shed{i}" for i in range(1, 5)] + [f"container{i}" for i in range(1, 7)]
+        used_units = bot.get_cog("TraderCommand").in_use_units.keys()
+        available_units = [u for u in all_units if u not in used_units]
+
+        options = [discord.SelectOption(label=u.replace("shed", "Shed ").replace("container", "Container "), value=u)
+                   for u in available_units]
+        options.append(discord.SelectOption(label="Skip", value="skip"))
+
+        super().__init__(placeholder="Select a storage unit or skip", options=options)
+        self.bot = bot
+        self.player = player
+        self.confirm_message = confirm_message
+
+    async def callback(self, interaction: discord.Interaction):
+        choice = self.values[0]
+        print(f"[PHASE 2/3] Storage option selected: {choice}")
+
+        if choice in self.bot.get_cog("TraderCommand").in_use_units:
+            return await interaction.response.send_message(
+                f"\u26a0\ufe0f **{choice.upper()}** is currently in use. Please select another one.", ephemeral=True
+            )
+
+        try:
+            await self.confirm_message.edit(
+                content=self.confirm_message.content + f"\n\n\u2705 Payment confirmed by {interaction.user.mention}",
+                view=None
+            )
+        except Exception as e:
+            print(f"[PHASE 2/3] Could not update confirmation message: {e}")
+
+        if choice == "skip":
             try:
-                dropdown = StorageSelect(self.bot, data["player"], payment_notice)
-                view = ui.View()
-                view.add_item(dropdown)
-                await payment_notice.edit(view=view)
-                print(f"[PHASE 2/3] Dropdown view attached to message ID: {payment_notice.id}")
+                msg = await self.player.send(
+                    content=(
+                        "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
+                        "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
+                        "\ud83d\udce6 Your order has been processed \u2014 no storage was assigned this time.\n"
+                        "Thanks for shopping with us, survivor! Stay Frosty! \ud83e\uddd1\u200d\ud83c\udf3e"
+                    )
+                )
+                await asyncio.sleep(15)
+                async for m in self.player.dm_channel.history(limit=100):
+                    if m.author == self.bot.user:
+                        await m.delete()
             except Exception as e:
-                print("[PHASE 2/3 DROPDOWN ERROR]")
-                import traceback
-                traceback.print_exc()
-        
-        # Phase 4: Player confirms pickup complete (now using button instead of reaction)
-        class PickupConfirmView(ui.View):
-            def __init__(self, bot, player, unit, message_to_cleanup):
-                super().__init__(timeout=60)
-                self.bot = bot
-                self.player = player
-                self.unit = unit
-                self.message_to_cleanup = message_to_cleanup
+                print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
+            return await interaction.response.send_message("\u2705 Skip acknowledged.", ephemeral=True)
+
+        self.bot.get_cog("TraderCommand").in_use_units[choice] = self.player.id
+        await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
+
+
+class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
+    combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
+
+    def __init__(self, bot, player, unit):
+        super().__init__()
+        self.bot = bot
+        self.player = player
+        self.unit = unit
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            dm = await self.player.send(
+                f"{self.player.mention}, your order is ready for pick up!\n"
+                f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
+                f"Please leave the lock with the same code when done!\n"
+            )
+            view = PickupConfirmView(self.bot, self.player, self.unit, dm)
+            await dm.edit(view=view)
+            self.bot.get_cog("TraderCommand").awaiting_pickup[dm.id] = {
+                "player": self.player,
+                "unit": self.unit
+            }
+            await interaction.response.send_message("\u2705 Combo submitted. Player has been notified.")
+        except Exception as e:
+            print(f"[PHASE 2/3] Combo DM Error: {e}")
+            await interaction.response.send_message("\u274c Failed to notify player.", ephemeral=True)
+
+class PickupConfirmView(ui.View):
+    def __init__(self, bot, player, unit, message_to_cleanup):
+        super().__init__(timeout=60)
+        self.bot = bot
+        self.player = player
+        self.unit = unit
+        self.message_to_cleanup = message_to_cleanup
+
+    @ui.button(label="\u2705 Confirm Pickup", style=discord.ButtonStyle.success)
+    async def confirm_pickup(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.player.id:
+            return await interaction.response.send_message("You're not the assigned player.", ephemeral=True)
+
+        try:
+            await self.message_to_cleanup.edit(
+                content=(
+                    "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
+                    "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
+                    "\u2705 All set, see ya next time!"
+                ),
+                view=None
+            )
+        except Exception as e:
+            print(f"[PHASE 4] Failed to edit message: {e}")
+
+        try:
+            orders_channel = self.bot.get_channel(config["trader_orders_channel_id"])
+            if orders_channel is None:
+                orders_channel = await self.bot.fetch_channel(config["trader_orders_channel_id"])
+            await orders_channel.send(
+                f"<@&{config['trader_role_id']}> {self.player.mention} cleared **{self.unit.upper()}**!"
+            )
+            print(f"[PHASE 4] \u2705 Trader Orders message sent.")
+        except Exception as e:
+            print(f"[PHASE 4] Failed to notify trader orders channel: {e}")
+
+        await interaction.response.send_message("\u2705 Thanks! Your pickup has been confirmed.")
+
+        await asyncio.sleep(10)
+        try:
+            async for m in self.player.dm_channel.history(limit=100):
+                if m.author == self.bot.user:
+                    await m.delete()
+            print(f"[PHASE 4] Cleaned up bot DMs.")
+        except Exception as e:
+            print(f"[PHASE 4] DM Cleanup Error: {e}")
+
+        try:
+            if self.unit in self.bot.get_cog("TraderCommand").in_use_units:
+                del self.bot.get_cog("TraderCommand").in_use_units[self.unit]
+                print(f"[PHASE 4] Released {self.unit.upper()} for reuse.")
+        except Exception as e:
+            print(f"[PHASE 4] Failed to release unit: {e}")
         
             @ui.button(label="✅ Confirm Pickup", style=discord.ButtonStyle.success)
             async def confirm_pickup(self, interaction: discord.Interaction, button: discord.ui.Button):
