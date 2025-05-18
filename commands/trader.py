@@ -590,7 +590,7 @@ class TraderCommand(commands.Cog):
                 if interaction.user.id != self.player.id:
                     return await interaction.response.send_message("You're not the assigned player.", ephemeral=True)
             
-                # ✅ Edit the original DM message to show confirmation
+                # ✅ Edit the original DM message to show confirmation with GIF
                 try:
                     await self.message_to_cleanup.edit(
                         content=(
@@ -603,20 +603,24 @@ class TraderCommand(commands.Cog):
                 except Exception as e:
                     print(f"[PHASE 4] Failed to edit message: {e}")
             
-                # ✅ Immediately ping trader payout channel BEFORE delay
+                # ✅ Send message to trader_orders_channel_id (NOT payout)
                 try:
-                    payout_channel = self.bot.get_channel(config["trader_payout_channel_id"])
-                    await payout_channel.send(
+                    orders_channel = self.bot.get_channel(config["trader_orders_channel_id"])
+                    if orders_channel is None:
+                        print("[PHASE 4] get_channel returned None, trying fetch_channel...")
+                        orders_channel = await self.bot.fetch_channel(config["trader_orders_channel_id"])
+            
+                    await orders_channel.send(
                         f"<@&{config['trader_role_id']}> {self.player.mention} cleared **{self.unit.upper()}**!"
                     )
-                    print(f"[PHASE 4] Payout channel ping sent.")
+                    print(f"[PHASE 4] ✅ Trader Orders message sent.")
                 except Exception as e:
-                    print(f"[PHASE 4] Failed to notify payout channel: {e}")
+                    print(f"[PHASE 4] Failed to notify trader orders channel: {e}")
             
                 # ✅ Acknowledge to user
-                await interaction.response.send_message("✅ Thanks! Your pickup has been confirmed.", ephemeral=True)
+                await interaction.response.send_message("✅ Thanks! Your pickup has been confirmed.")
             
-                # ⏳ Delay cleanup to ensure all messages are visible first
+                # ⏳ Delay cleanup to ensure visibility
                 await asyncio.sleep(10)
                 try:
                     async for m in self.player.dm_channel.history(limit=100):
