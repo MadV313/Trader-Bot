@@ -521,21 +521,23 @@ class TraderCommand(commands.Cog):
                     if choice == "skip":
                         try:
                             msg = await self.player.send(
-                                content="https://cdn.discordapp.com/attachments/1351365150287855739/1373717921603260416/Trader_2.mov\n\n"
-                                        "📦 Your order has been processed — no storage was assigned this time.\n"
-                                        "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
+                                content=(
+                                    "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
+                                    "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
+                                    "📦 Your order has been processed — no storage was assigned this time.\n"
+                                    "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
+                                )
                             )
-                            await msg.add_reaction("⚠️")
-                            await asyncio.sleep(20)  # ⏳ Give player time to read it
-        
+                            await asyncio.sleep(15)
+                    
+                            # 🧼 Wipe all bot messages in DM after short delay
                             async for m in self.player.dm_channel.history(limit=100):
                                 if m.author == self.bot.user:
                                     await m.delete()
                         except Exception as e:
                             print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
-        
                         return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
-        
+
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
         
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
