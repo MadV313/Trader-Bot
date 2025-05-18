@@ -506,14 +506,15 @@ class TraderCommand(commands.Cog):
         elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
             print(f"[PHASE 3] ✅ Storage Reaction Triggered for message_id={reaction.message.id}")
             print(f"[PHASE 3] Awaiting storage keys before pop: {list(self.awaiting_storage.keys())}")
-            
+        
             try:
                 data = self.awaiting_storage.pop(reaction.message.id)
                 print(f"[PHASE 3] Retrieved data from awaiting_storage: {data}")
                 if "player" not in data or data["player"] is None:
                     print("[PHASE 3 ERROR] Player is missing or None — cannot continue.")
                     return
-
+                print(f"[PHASE 3] data['player'] = {data['player']} (type={type(data['player'])})")
+        
                 try:
                     if not isinstance(reaction.message.channel, discord.DMChannel):
                         await reaction.message.clear_reaction("🔴")
@@ -522,13 +523,18 @@ class TraderCommand(commands.Cog):
         
                 try:
                     await reaction.message.add_reaction("✅")
+                    await asyncio.sleep(0.5)  # Let Discord process reaction
                     await reaction.message.edit(
                         content=reaction.message.content + f"\n\n✅ Payment confirmed by {user.mention}"
                     )
+                    await asyncio.sleep(0.5)  # Let Discord process edit
+                    print("[PHASE 3] ✅ Reaction added and message edited successfully.")
                 except Exception as e:
-                    print("[PHASE 3] ❌ Failed to update message with confirmation")
+                    print("[PHASE 3] ❌ Failed during reaction/edit block")
                     import traceback
                     traceback.print_exc()
+        
+                await reaction.message.channel.send("🧪 Phase 3: Preparing dropdown...")
         
                 class StorageSelect(ui.Select):
                     def __init__(self, bot, player):
@@ -581,7 +587,6 @@ class TraderCommand(commands.Cog):
                         except Exception as e:
                             print(f"[PHASE 3] Combo DM Error: {e}")
         
-                # Attempt to send dropdown view
                 try:
                     dropdown = StorageSelect(self.bot, data["player"])
                     view = ui.View()
@@ -590,11 +595,16 @@ class TraderCommand(commands.Cog):
                         f"{user.mention}, please select a **storage unit** for {data['player'].mention}:",
                         view=view
                     )
-                    print(f"[PHASE 3] Dropdown sent successfully to message ID: {msg.id}")
+                    print(f"[PHASE 3] ✅ Dropdown sent successfully to message ID: {msg.id}")
                 except Exception as e:
                     print("[PHASE 3 DROPDOWN ERROR]")
                     import traceback
                     traceback.print_exc()
+        
+            except Exception as final_phase3_error:
+                print("[PHASE 3] ❌ Entire block failed")
+                import traceback
+                traceback.print_exc()
                   
         # Phase 4: Player confirms pickup complete
         elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
