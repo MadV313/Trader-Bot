@@ -505,18 +505,19 @@ class TraderCommand(commands.Cog):
 
 class StorageSelect(ui.Select):
     def __init__(self, bot, player, confirm_message):
+        self.bot = bot
+        self.player = player
+        self.confirm_message = confirm_message
+
         all_units = [f"shed{i}" for i in range(1, 5)] + [f"container{i}" for i in range(1, 7)]
-        used_units = bot.get_cog("TraderCommand").in_use_units.keys()
-        available_units = [u for u in all_units if u not in used_units]
+        in_use = bot.get_cog("TraderCommand").in_use_units
+        available_units = [u for u in all_units if u not in in_use]
 
         options = [discord.SelectOption(label=u.replace("shed", "Shed ").replace("container", "Container "), value=u)
                    for u in available_units]
         options.append(discord.SelectOption(label="Skip", value="skip"))
 
         super().__init__(placeholder="Select a storage unit or skip", options=options)
-        self.bot = bot
-        self.player = player
-        self.confirm_message = confirm_message
 
     async def callback(self, interaction: discord.Interaction):
         choice = self.values[0]
