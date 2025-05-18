@@ -31,6 +31,8 @@ class ClearChat(commands.Cog):
                 try:
                     if isinstance(channel, discord.DMChannel):
                         # Use larger history scope to catch ALL bot messages
+                        await asyncio.sleep(1)  # Let the message register
+
                         async for msg in channel.history(limit=200):
                             if msg.author == self.bot.user:
                                 await msg.delete()
@@ -46,7 +48,7 @@ class ClearChat(commands.Cog):
             await interaction.response.send_message(
                 "⚠️ Are you sure you want to clear this?",
                 view=ConfirmClearView(),
-                ephemeral=True
+                ephemeral=False
             )
         else:
             await interaction.response.send_message(
