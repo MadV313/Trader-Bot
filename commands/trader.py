@@ -384,7 +384,7 @@ class TraderView(discord.ui.View):
         except:
             pass
         session = session_manager.get_session(interaction.user.id)
-        for msg_id in session.get("cart_messages", []):
+        for msg_id in session.get("cart_messages", [])[1:]:
             try:
                 msg = await interaction.channel.fetch_message(msg_id)
                 await msg.delete()
