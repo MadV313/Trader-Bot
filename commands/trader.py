@@ -504,16 +504,16 @@ class TraderCommand(commands.Cog):
                 "channel": payment_notice.channel.id  # ⬅ Save this so we can send dropdown later
             }
 
-        # Phase 3: Admin confirms payment received
+        # Phase 3: Admin (or any user) confirms payment received
         elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
-            print(f"[✅ Storage Reaction] message_id={reaction.message.id}")
+            print(f"[✅ Storage Reaction] Triggered for message_id={reaction.message.id}")
         
-            data = self.awaiting_storage.get(reaction.message.id)
-        
+            data = self.awaiting_storage.pop(reaction.message.id, None)
             if not data:
-                print("[Storage Phase] No data found.")
+                print("[Storage Phase] No matching entry found.")
                 return
         
+            # Try removing 🔴 emoji
             try:
                 if not isinstance(reaction.message.channel, discord.DMChannel):
                     await reaction.message.clear_reaction("🔴")
@@ -525,13 +525,11 @@ class TraderCommand(commands.Cog):
         
             class StorageSelect(ui.Select):
                 def __init__(self, bot, player, admin, total):
-                    options = [
-                        discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)
-                    ] + [
-                        discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)
-                    ] + [
-                        discord.SelectOption(label="Skip", value="skip")
-                    ]
+                    options = (
+                        [discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)] +
+                        [discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)] +
+                        [discord.SelectOption(label="Skip", value="skip")]
+                    )
                     super().__init__(placeholder="Select a storage unit or skip", options=options)
                     self.bot = bot
                     self.player = player
@@ -543,6 +541,7 @@ class TraderCommand(commands.Cog):
                         return await interaction.response.send_message("❌ You are not authorized for this order.", ephemeral=True)
         
                     choice = self.values[0]
+        
                     if choice == "skip":
                         try:
                             dm = await self.player.send(
@@ -554,6 +553,7 @@ class TraderCommand(commands.Cog):
                             await dm.delete()
                         except Exception as e:
                             print(f"[Skip DM Error] {e}")
+        
                         return await interaction.response.send_message("✅ Skip acknowledged. Player has been notified.", ephemeral=True)
         
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
@@ -581,18 +581,14 @@ class TraderCommand(commands.Cog):
                     }
         
             try:
-                dropdown = StorageSelect(self.bot, data["player"], data["admin"], data["total"])
-                view = ui.View()
+                dropdown = StorageSelect(self.bot, data["player"], user, data["total"])
+                view = ui.View(timeout=60)
                 view.add_item(dropdown)
                 await reaction.message.channel.send(
                     f"{user.mention}, please select a **storage unit** to deliver the order for {data['player'].mention}:",
                     view=view
                 )
                 print("[Dropdown Sent]")
-        
-                # Only remove storage entry after successful dropdown display
-                self.awaiting_storage.pop(reaction.message.id, None)
-        
             except Exception as e:
                 import traceback
                 print("[Phase 3 Dropdown Error]")
