@@ -505,27 +505,15 @@ class TraderCommand(commands.Cog):
             }
 
         # Phase 3: Admin confirms payment received
-        elif emoji == "✅" and any([
-            reaction.message.id in self.awaiting_storage,
-            user.id in [entry["admin"].id for entry in self.awaiting_storage.values()]
-        ]):
-            print(f"[✅ Storage Reaction] message_id={reaction.message.id}, awaiting_storage keys={list(self.awaiting_storage.keys())}")
+        elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
+            print(f"[✅ Storage Reaction] message_id={reaction.message.id}")
         
-            # Attempt to pop by message ID first
-            data = self.awaiting_storage.pop(reaction.message.id, None)
-        
-            # Fallback: match by admin ID if message ID mismatch
-            if not data:
-                for key, val in list(self.awaiting_storage.items()):
-                    if val["admin"].id == user.id:
-                        data = self.awaiting_storage.pop(key)
-                        break
+            data = self.awaiting_storage.get(reaction.message.id)
         
             if not data:
-                print("[Storage Phase] No matching storage entry found.")
+                print("[Storage Phase] No data found.")
                 return
         
-            # Try removing 🔴 emoji
             try:
                 if not isinstance(reaction.message.channel, discord.DMChannel):
                     await reaction.message.clear_reaction("🔴")
@@ -555,7 +543,6 @@ class TraderCommand(commands.Cog):
                         return await interaction.response.send_message("❌ You are not authorized for this order.", ephemeral=True)
         
                     choice = self.values[0]
-        
                     if choice == "skip":
                         try:
                             dm = await self.player.send(
@@ -567,7 +554,6 @@ class TraderCommand(commands.Cog):
                             await dm.delete()
                         except Exception as e:
                             print(f"[Skip DM Error] {e}")
-        
                         return await interaction.response.send_message("✅ Skip acknowledged. Player has been notified.", ephemeral=True)
         
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, self.admin, choice))
@@ -596,23 +582,17 @@ class TraderCommand(commands.Cog):
         
             try:
                 dropdown = StorageSelect(self.bot, data["player"], data["admin"], data["total"])
-                view = ui.View(timeout=60)
+                view = ui.View()
                 view.add_item(dropdown)
-            
-                channel_id = data["channel"]
-                channel = self.bot.get_channel(channel_id)
-                if not channel:
-                    print(f"[Dropdown Error] Channel ID {channel_id} could not be resolved.")
-                    return
-                   
-                else:
-                    print(f"[Dropdown Success] Channel resolved: {channel.name}")
-
-                await channel.send(
+                await reaction.message.channel.send(
                     f"{user.mention}, please select a **storage unit** to deliver the order for {data['player'].mention}:",
                     view=view
                 )
                 print("[Dropdown Sent]")
+        
+                # Only remove storage entry after successful dropdown display
+                self.awaiting_storage.pop(reaction.message.id, None)
+        
             except Exception as e:
                 import traceback
                 print("[Phase 3 Dropdown Error]")
