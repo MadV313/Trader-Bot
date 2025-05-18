@@ -586,21 +586,16 @@ class TraderCommand(commands.Cog):
                     dropdown = StorageSelect(self.bot, data["player"])
                     view = ui.View()
                     view.add_item(dropdown)
-                    await reaction.message.channel.send(
+                    msg = await reaction.message.channel.send(
                         f"{user.mention}, please select a **storage unit** for {data['player'].mention}:",
                         view=view
                     )
-                    print("[PHASE 3] ✅ Dropdown Sent")
+                    print(f"[PHASE 3] Dropdown sent successfully to message ID: {msg.id}")
                 except Exception as e:
-                    print("[PHASE 3] ❌ Failed to send dropdown")
+                    print("[PHASE 3 DROPDOWN ERROR]")
                     import traceback
                     traceback.print_exc()
-        
-            except Exception as final_phase3_error:
-                print("[PHASE 3] ❌ Entire block failed")
-                import traceback
-                traceback.print_exc()
-                    
+                  
         # Phase 4: Player confirms pickup complete
         elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
             data = self.awaiting_pickup.pop(reaction.message.id)
