@@ -1,54 +1,58 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
+from discord import app_commands, ui
 import json
 import os
-from datetime import datetime
 
-# Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
-
-ORDERS_FILE = "data/orders.json"
-LOG_DIR = os.path.join("data", "logs")
-LOG_FILE = os.path.join(LOG_DIR, "order_clear.log")
-ADMIN_ROLE_IDS = config["admin_role_ids"]
+TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 
 
-def log_order_clear(admin_id):
-    os.makedirs(LOG_DIR, exist_ok=True)
-    with open(LOG_FILE, "a") as log_file:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_file.write(f"[{timestamp}] Orders cleared by Admin: {admin_id}\n")
-
-
-class ClearOrders(commands.Cog):
+class ClearChat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="clearorders", description="Clear all trader orders. Admins only.")
-    async def clearorders(self, interaction: discord.Interaction):
-        user_roles = [role.id for role in interaction.user.roles]
-        if not any(role_id in ADMIN_ROLE_IDS for role_id in user_roles):
-            return await interaction.response.send_message("You don’t have permission to use this command.", ephemeral=True)
+    @app_commands.command(name="clear", description="Clears this DM or trader-orders channel.")
+    async def clear(self, interaction: discord.Interaction):
+        channel = interaction.channel
+        user = interaction.user
 
-        if not os.path.exists(ORDERS_FILE):
-            return await interaction.response.send_message("No orders to clear.", ephemeral=True)
+        class ConfirmClearView(ui.View):
+            def __init__(self):
+                super().__init__(timeout=30)
 
-        # Clear orders file
-        with open(ORDERS_FILE, "w") as f:
-            json.dump({}, f)
+            @ui.button(label="✅ Confirm Clear", style=discord.ButtonStyle.danger)
+            async def confirm(self, interaction2: discord.Interaction, button: discord.ui.Button):
+                if interaction2.user.id != user.id:
+                    return await interaction2.response.send_message("This button isn’t for you.", ephemeral=True)
 
-        log_order_clear(interaction.user.id)
+                await interaction2.response.edit_message(content="🧹 Clearing...", view=None)
 
-        await interaction.response.send_message("All orders have been cleared.", ephemeral=True)
+                try:
+                    if isinstance(channel, discord.DMChannel):
+                        async for msg in channel.history(limit=100):
+                            if msg.author == self.bot.user:
+                                await msg.delete()
+                        print("[CLEAR] DM wiped.")
+                    elif channel.id == TRADER_ORDERS_CHANNEL_ID:
+                        await channel.purge(limit=200, check=lambda m: True)
+                        print("[CLEAR] trader-orders channel wiped.")
+                except Exception as e:
+                    print(f"[CLEAR ERROR] {e}")
 
-        # Optional confirmation reaction (only if non-ephemeral message exists)
-        try:
-            if interaction.message:
-                await interaction.message.add_reaction("✅")
-        except Exception:
-            pass  # Ignore if not applicable
+        # DM or correct channel — show confirmation
+        if isinstance(channel, discord.DMChannel) or channel.id == TRADER_ORDERS_CHANNEL_ID:
+            await interaction.response.send_message(
+                "⚠️ Are you sure you want to clear this?",
+                view=ConfirmClearView(),
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ This command can only be used in a DM or the trader-orders channel.",
+                ephemeral=True
+            )
 
 
 async def setup(bot):
-    await bot.add_cog(ClearOrders(bot))
+    await bot.add_cog(ClearChat(bot))
