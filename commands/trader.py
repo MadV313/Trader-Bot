@@ -432,6 +432,43 @@ class TraderCommand(commands.Cog):
         self.awaiting_pickup = {}
         self.in_use_units = {}
 
+     @app_commands.command(name="trader", description="Start a buying session with the trader.")
+    async def trader(self, interaction: discord.Interaction):
+        if interaction.channel.id != config["economy_channel_id"]:
+            return await interaction.response.send_message("You must use this command in the #economy channel.")
+
+        try:
+            # Step 1: Send the animated GIF
+            gif_msg = await interaction.user.send("https://cdn.discordapp.com/attachments/1371698983604326440/1373359533304582237/ezgif.com-optimize.gif")
+
+            # Step 2: Send boxed session start message
+            start_msg = await interaction.user.send(
+                "┏━━━━━━━━━━━━━━━━━━━━━━━┓\n"
+                "🛒 **BUYING SESSION STARTED!**\n"
+                "┗━━━━━━━━━━━━━━━━━━━━━━━┛\n"
+                "Use the buttons below to add/remove items,\nsubmit, or cancel your order."
+            )
+
+            # Step 3: Send the interactive UI
+            view = TraderView(self.bot, interaction.user.id)
+            ui_msg = await interaction.user.send(view=view)
+            view.ui_message = ui_msg
+            view.start_message = start_msg  # Optional if still used in cleanup
+
+            # Step 4: Track all messages for cleanup
+            session_manager.start_session(interaction.user.id)
+            session = session_manager.get_session(interaction.user.id)
+            session["cart_messages"] = [gif_msg.id, start_msg.id, ui_msg.id]
+            session["start_msg_id"] = start_msg.id
+
+            await interaction.response.send_message("Trader session moved to your DMs.")
+        except Exception as e:
+            print(f"[Trader DM Start Error] {e}")
+            await interaction.response.send_message("Trader session moved to your DMs.")
+
+async def setup(bot):
+    await bot.add_cog(TraderCommand(bot))
+
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         print(f"[Reaction Detected] emoji={reaction.emoji} message_id={reaction.message.id} user={user}")
@@ -634,40 +671,3 @@ class PickupConfirmView(ui.View):
                 del self.bot.get_cog("TraderCommand").in_use_units[self.unit]
         except Exception as e:
             print(f"[PHASE 4] Failed to release unit: {e}")
-
-    @app_commands.command(name="trader", description="Start a buying session with the trader.")
-    async def trader(self, interaction: discord.Interaction):
-        if interaction.channel.id != config["economy_channel_id"]:
-            return await interaction.response.send_message("You must use this command in the #economy channel.")
-
-        try:
-            # Step 1: Send the animated GIF
-            gif_msg = await interaction.user.send("https://cdn.discordapp.com/attachments/1371698983604326440/1373359533304582237/ezgif.com-optimize.gif")
-
-            # Step 2: Send boxed session start message
-            start_msg = await interaction.user.send(
-                "┏━━━━━━━━━━━━━━━━━━━━━━━┓\n"
-                "🛒 **BUYING SESSION STARTED!**\n"
-                "┗━━━━━━━━━━━━━━━━━━━━━━━┛\n"
-                "Use the buttons below to add/remove items,\nsubmit, or cancel your order."
-            )
-
-            # Step 3: Send the interactive UI
-            view = TraderView(self.bot, interaction.user.id)
-            ui_msg = await interaction.user.send(view=view)
-            view.ui_message = ui_msg
-            view.start_message = start_msg  # Optional if still used in cleanup
-
-            # Step 4: Track all messages for cleanup
-            session_manager.start_session(interaction.user.id)
-            session = session_manager.get_session(interaction.user.id)
-            session["cart_messages"] = [gif_msg.id, start_msg.id, ui_msg.id]
-            session["start_msg_id"] = start_msg.id
-
-            await interaction.response.send_message("Trader session moved to your DMs.")
-        except Exception as e:
-            print(f"[Trader DM Start Error] {e}")
-            await interaction.response.send_message("Trader session moved to your DMs.")
-
-async def setup(bot):
-    await bot.add_cog(TraderCommand(bot))
