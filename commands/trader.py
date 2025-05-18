@@ -589,22 +589,15 @@ class TraderCommand(commands.Cog):
             async def confirm_pickup(self, interaction: discord.Interaction, button: discord.ui.Button):
                 if interaction.user.id != self.player.id:
                     return await interaction.response.send_message("You're not the assigned player.", ephemeral=True)
-        
+            
                 try:
                     await self.message_to_cleanup.edit(content="All set, see ya next time! ✅", view=None)
                 except Exception as e:
                     print(f"[PHASE 4] Failed to edit message: {e}")
-        
-                await interaction.response.send_message("✅ Thanks! Your pickup has been confirmed.", ephemeral=True)
-        
-                await asyncio.sleep(15)
-                try:
-                    async for m in self.player.dm_channel.history(limit=100):
-                        if m.author == self.bot.user:
-                            await m.delete()
-                except Exception as e:
-                    print(f"[PHASE 4] DM Cleanup Error: {e}")
-        
+            
+                await interaction.response.send_message("✅ Thanks! Your pickup has been confirmed.")
+            
+                # ✅ Give trader channel time to update BEFORE cleaning DM
                 try:
                     payout_channel = self.bot.get_channel(config["trader_payout_channel_id"])
                     await payout_channel.send(
@@ -612,6 +605,15 @@ class TraderCommand(commands.Cog):
                     )
                 except Exception as e:
                     print(f"[PHASE 4] Failed to notify payout channel: {e}")
+            
+                # ⏳ Delay DM cleanup to ensure above message sends
+                await asyncio.sleep(15)
+                try:
+                    async for m in self.player.dm_channel.history(limit=100):
+                        if m.author == self.bot.user:
+                            await m.delete()
+                except Exception as e:
+                    print(f"[PHASE 4] DM Cleanup Error: {e}")
 
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
     async def trader(self, interaction: discord.Interaction):
