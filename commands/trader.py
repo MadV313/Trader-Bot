@@ -590,28 +590,39 @@ class TraderCommand(commands.Cog):
                 if interaction.user.id != self.player.id:
                     return await interaction.response.send_message("You're not the assigned player.", ephemeral=True)
             
+                # ✅ Edit the original DM message to show confirmation
                 try:
-                    await self.message_to_cleanup.edit(content="All set, see ya next time! ✅", view=None)
+                    await self.message_to_cleanup.edit(
+                        content=(
+                            "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
+                            "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
+                            "✅ All set, see ya next time!"
+                        ),
+                        view=None
+                    )
                 except Exception as e:
                     print(f"[PHASE 4] Failed to edit message: {e}")
             
-                await interaction.response.send_message("✅ Thanks! Your pickup has been confirmed.")
-            
-                # ✅ Give trader channel time to update BEFORE cleaning DM
+                # ✅ Immediately ping trader payout channel BEFORE delay
                 try:
                     payout_channel = self.bot.get_channel(config["trader_payout_channel_id"])
                     await payout_channel.send(
                         f"<@&{config['trader_role_id']}> {self.player.mention} cleared **{self.unit.upper()}**!"
                     )
+                    print(f"[PHASE 4] Payout channel ping sent.")
                 except Exception as e:
                     print(f"[PHASE 4] Failed to notify payout channel: {e}")
             
-                # ⏳ Delay DM cleanup to ensure above message sends
-                await asyncio.sleep(15)
+                # ✅ Acknowledge to user
+                await interaction.response.send_message("✅ Thanks! Your pickup has been confirmed.", ephemeral=True)
+            
+                # ⏳ Delay cleanup to ensure all messages are visible first
+                await asyncio.sleep(10)
                 try:
                     async for m in self.player.dm_channel.history(limit=100):
                         if m.author == self.bot.user:
                             await m.delete()
+                    print(f"[PHASE 4] Cleaned up bot DMs.")
                 except Exception as e:
                     print(f"[PHASE 4] DM Cleanup Error: {e}")
 
