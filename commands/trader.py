@@ -509,7 +509,11 @@ class TraderCommand(commands.Cog):
             
             try:
                 data = self.awaiting_storage.pop(reaction.message.id)
-        
+                print(f"[PHASE 3] Retrieved data from awaiting_storage: {data}")
+                if "player" not in data or data["player"] is None:
+                    print("[PHASE 3 ERROR] Player is missing or None — cannot continue.")
+                    return
+
                 try:
                     if not isinstance(reaction.message.channel, discord.DMChannel):
                         await reaction.message.clear_reaction("🔴")
