@@ -492,17 +492,17 @@ class TraderCommand(commands.Cog):
         
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
             payment_notice = await trader_channel.send(
-                f"{data['player'].mention} sent their payment. Please confirm with a ✅ to proceed."
+                f"{data['player'].mention} has confirmed payment.\nPlease react ✅ to assign a storage unit."
             )
             await payment_notice.add_reaction("🔴")
         
-            # No admin ID stored — open to whoever reacts first
+            # Store only player and total — no admin lock
             self.awaiting_storage[payment_notice.id] = {
                 "player": data["player"],
                 "total": data["total"]
             }
         
-        # Phase 3: Confirm payment and show dropdown
+        # Phase 3: Anyone confirms by reacting in trader-orders
         elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
             print(f"[✅ Storage Reaction] Triggered for message_id={reaction.message.id}")
             data = self.awaiting_storage.pop(reaction.message.id)
@@ -528,12 +528,16 @@ class TraderCommand(commands.Cog):
                 async def callback(self, interaction: discord.Interaction):
                     choice = self.values[0]
                     if choice == "skip":
-                        msg = await self.player.send(
-                            "📦 Your order has been processed — no storage was assigned this time.\nThanks for shopping with us, survivor! Stay Frosty! 🧭"
-                        )
-                        await msg.add_reaction("⚠️")
-                        await asyncio.sleep(20)
-                        await msg.delete()
+                        try:
+                            msg = await self.player.send(
+                                "📦 Your order has been processed — no storage was assigned this time.\n"
+                                "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
+                            )
+                            await msg.add_reaction("⚠️")
+                            await asyncio.sleep(20)
+                            await msg.delete()
+                        except Exception as e:
+                            print(f"[Skip DM Error] {e}")
                         return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
         
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
