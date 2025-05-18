@@ -521,8 +521,9 @@ class TraderCommand(commands.Cog):
                     if choice == "skip":
                         try:
                             msg = await self.player.send(
-                                "📦 Your order has been processed — no storage was assigned this time.\n"
-                                "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
+                                content="https://cdn.discordapp.com/attachments/1351365150287855739/1373717921603260416/Trader_2.mov\n\n"
+                                        "📦 Your order has been processed — no storage was assigned this time.\n"
+                                        "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
                             )
                             await msg.add_reaction("⚠️")
                             await asyncio.sleep(20)  # ⏳ Give player time to read it
