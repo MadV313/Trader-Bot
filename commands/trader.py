@@ -507,14 +507,18 @@ class TraderCommand(commands.Cog):
             print(f"[PHASE 3] Awaiting storage keys before pop: {list(self.awaiting_storage.keys())}")
         
             try:
-                data = self.awaiting_storage.pop(reaction.message.id)
+                data = self.awaiting_storage.get(reaction.message.id)
+                if not data:
+                    print(f"[PHASE 3 ERROR] No data found for message ID {reaction.message.id}")
+                    return
+        
+                # Now safe to pop
+                self.awaiting_storage.pop(reaction.message.id)
                 print(f"[PHASE 3] Retrieved data from awaiting_storage: {data}")
                 if "player" not in data or data["player"] is None:
                     print("[PHASE 3 ERROR] Player is missing or None — cannot continue.")
                     return
                 print(f"[PHASE 3] data['player'] = {data['player']} (type={type(data['player'])})")
-        
-                # No emoji edit here anymore
         
                 class StorageSelect(ui.Select):
                     def __init__(self, bot, player, confirm_message, confirming_user):
@@ -531,7 +535,6 @@ class TraderCommand(commands.Cog):
                         choice = self.values[0]
                         print(f"[PHASE 3] Storage option selected: {choice}")
         
-                        # Update original confirmation message AFTER selection
                         try:
                             await self.confirm_message.edit(
                                 content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {self.confirming_user.mention}"
