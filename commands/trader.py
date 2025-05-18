@@ -500,7 +500,8 @@ class TraderCommand(commands.Cog):
             self.awaiting_storage[payment_notice.id] = {
                 "player": data["player"],
                 "admin": data["admin"],
-                "total": data["total"]
+                "total": data["total"],
+                "channel": payment_notice.channel  # ⬅ Save this so we can send dropdown later
             }
 
         # Phase 3: Admin confirms payment received
@@ -597,7 +598,7 @@ class TraderCommand(commands.Cog):
                 dropdown = StorageSelect(self.bot, data["player"], data["admin"], data["total"])
                 view = ui.View()
                 view.add_item(dropdown)
-                await reaction.message.channel.send(
+                await data["channel"].send(
                     f"{user.mention}, please select a **storage unit** to deliver the order for {data['player'].mention}:",
                     view=view
                 )
