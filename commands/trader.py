@@ -497,46 +497,58 @@ class TraderCommand(commands.Cog):
             print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
         
             class StorageSelect(ui.Select):
-                def __init__(self, bot, player, confirm_message):
-                    options = [discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)] + \
-                              [discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)] + \
-                              [discord.SelectOption(label="Skip", value="skip")]
-                    super().__init__(placeholder="Select a storage unit or skip", options=options)
-                    self.bot = bot
-                    self.player = player
-                    self.confirm_message = confirm_message
+            def __init__(self, bot, player, confirm_message):
+                all_units = [f"shed{i}" for i in range(1, 5)] + [f"container{i}" for i in range(1, 7)]
+                used_units = bot.get_cog("TraderCommand").in_use_units.keys()
+                available_units = [u for u in all_units if u not in used_units]
         
-                async def callback(self, interaction: discord.Interaction):
-                    choice = self.values[0]
-                    print(f"[PHASE 2/3] Storage option selected: {choice}")
+                options = [discord.SelectOption(label=u.replace("shed", "Shed ").replace("container", "Container "), value=u)
+                           for u in available_units]
+                options.append(discord.SelectOption(label="Skip", value="skip"))
         
+                super().__init__(placeholder="Select a storage unit or skip", options=options)
+                self.bot = bot
+                self.player = player
+                self.confirm_message = confirm_message
+        
+            async def callback(self, interaction: discord.Interaction):
+                choice = self.values[0]
+                print(f"[PHASE 2/3] Storage option selected: {choice}")
+        
+                if choice in self.bot.get_cog("TraderCommand").in_use_units:
+                    return await interaction.response.send_message(
+                        f"⚠️ **{choice.upper()}** is currently in use. Please select another one.", ephemeral=True
+                    )
+        
+                try:
+                    await self.confirm_message.edit(
+                        content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {interaction.user.mention}",
+                        view=None
+                    )
+                except Exception as e:
+                    print(f"[PHASE 2/3] Could not update confirmation message: {e}")
+        
+                if choice == "skip":
                     try:
-                        await self.confirm_message.edit(
-                            content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {interaction.user.mention}",
-                            view=None
-                        )
-                    except Exception as e:
-                        print(f"[PHASE 2/3] Could not update confirmation message: {e}")
-        
-                    if choice == "skip":
-                        try:
-                            msg = await self.player.send(
-                                content=(
-                                    "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
-                                    "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
-                                    "📦 Your order has been processed — no storage was assigned this time.\n"
-                                    "Thanks for shopping with us, survivor! Stay Frosty! 🧑‍🌾"
-                                )
+                        msg = await self.player.send(
+                            content=(
+                                "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
+                                "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
+                                "📦 Your order has been processed — no storage was assigned this time.\n"
+                                "Thanks for shopping with us, survivor! Stay Frosty! 🧑‍🌾"
                             )
-                            await asyncio.sleep(15)
-                            async for m in self.player.dm_channel.history(limit=100):
-                                if m.author == self.bot.user:
-                                    await m.delete()
-                        except Exception as e:
-                            print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
-                        return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
+                        )
+                        await asyncio.sleep(15)
+                        async for m in self.player.dm_channel.history(limit=100):
+                            if m.author == self.bot.user:
+                                await m.delete()
+                    except Exception as e:
+                        print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
+                    return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
         
-                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
+                # ✅ Mark unit as in use
+                self.bot.get_cog("TraderCommand").in_use_units[choice] = self.player.id
+                await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
         
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
                 combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
@@ -589,8 +601,7 @@ class TraderCommand(commands.Cog):
             async def confirm_pickup(self, interaction: discord.Interaction, button: discord.ui.Button):
                 if interaction.user.id != self.player.id:
                     return await interaction.response.send_message("You're not the assigned player.", ephemeral=True)
-            
-                # ✅ Edit the original DM message to show confirmation with GIF
+        
                 try:
                     await self.message_to_cleanup.edit(
                         content=(
@@ -602,25 +613,21 @@ class TraderCommand(commands.Cog):
                     )
                 except Exception as e:
                     print(f"[PHASE 4] Failed to edit message: {e}")
-            
-                # ✅ Send message to trader_orders_channel_id (NOT payout)
+        
+                # Notify trader channel
                 try:
                     orders_channel = self.bot.get_channel(config["trader_orders_channel_id"])
                     if orders_channel is None:
-                        print("[PHASE 4] get_channel returned None, trying fetch_channel...")
                         orders_channel = await self.bot.fetch_channel(config["trader_orders_channel_id"])
-            
                     await orders_channel.send(
                         f"<@&{config['trader_role_id']}> {self.player.mention} cleared **{self.unit.upper()}**!"
                     )
                     print(f"[PHASE 4] ✅ Trader Orders message sent.")
                 except Exception as e:
                     print(f"[PHASE 4] Failed to notify trader orders channel: {e}")
-            
-                # ✅ Acknowledge to user
+        
                 await interaction.response.send_message("✅ Thanks! Your pickup has been confirmed.")
-            
-                # ⏳ Delay cleanup to ensure visibility
+        
                 await asyncio.sleep(10)
                 try:
                     async for m in self.player.dm_channel.history(limit=100):
@@ -629,6 +636,14 @@ class TraderCommand(commands.Cog):
                     print(f"[PHASE 4] Cleaned up bot DMs.")
                 except Exception as e:
                     print(f"[PHASE 4] DM Cleanup Error: {e}")
+        
+                # ✅ Free the unit
+                try:
+                    if self.unit in self.bot.get_cog("TraderCommand").in_use_units:
+                        del self.bot.get_cog("TraderCommand").in_use_units[self.unit]
+                        print(f"[PHASE 4] Released {self.unit.upper()} for reuse.")
+                except Exception as e:
+                    print(f"[PHASE 4] Failed to release unit: {e}")
 
     @app_commands.command(name="trader", description="Start a buying session with the trader.")
     async def trader(self, interaction: discord.Interaction):
