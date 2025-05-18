@@ -704,7 +704,7 @@ class TraderOfTheWeek(commands.Cog):
             with open(TRADER_STATS_FILE, "w") as f:
                 json.dump({}, f)
 
-            public_channel = self.bot.get_channel(config["trader_orders_channel_id"])
+            public_channel = self.bot.get_channel(config["trader_of_the_week_channel_id"])
             await public_channel.send(
                 f"🏆 {top_admin.mention} was **Trader of the Week** with {count} confirmed orders!\nBe sure to thank them for supplying all your needs!"
             )
