@@ -494,14 +494,13 @@ class TraderCommand(commands.Cog):
             payment_notice = await trader_channel.send(
                 f"{data['player'].mention} has confirmed payment.\nPlease react ✅ to assign a storage unit."
             )
-            await payment_notice.add_reaction("🔴")
-        
-            # Store only player and total — no admin lock
+            # 🔴 REMOVED — no reaction added here
+            print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
             self.awaiting_storage[payment_notice.id] = {
                 "player": data["player"],
                 "total": data["total"]
             }
-        
+               
         # Phase 3: Anyone confirms by reacting in trader-orders
         elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
             print(f"[PHASE 3] ✅ Storage Reaction Triggered for message_id={reaction.message.id}")
