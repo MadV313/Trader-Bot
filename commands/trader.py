@@ -491,128 +491,95 @@ class TraderCommand(commands.Cog):
             await reaction.message.edit(content=reaction.message.content + "\n\n✅ Payment confirmed! Please stand by.")
         
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
-            payment_notice = await trader_channel.send(
-                f"{data['player'].mention} has confirmed payment.\nPlease react ✅ to assign a storage unit."
-            )
-            # 🔴 REMOVED — no reaction added here
-            print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
-            self.awaiting_storage[payment_notice.id] = {
-                "player": data["player"],
-                "total": data["total"]
-            }
-               
-        # Phase 3: Anyone confirms by reacting in trader-orders
-        elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
-            print(f"[PHASE 3] ✅ Storage Reaction Triggered for message_id={reaction.message.id}")
-            print(f"[PHASE 3] Awaiting storage keys before pop: {list(self.awaiting_storage.keys())}")
+        
+            class StorageSelect(ui.Select):
+                def __init__(self, bot, player, confirm_message):
+                    options = [discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)] + \
+                              [discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)] + \
+                              [discord.SelectOption(label="Skip", value="skip")]
+                    super().__init__(placeholder="Select a storage unit or skip", options=options)
+                    self.bot = bot
+                    self.player = player
+                    self.confirm_message = confirm_message
+        
+                async def callback(self, interaction: discord.Interaction):
+                    choice = self.values[0]
+                    print(f"[PHASE 2] Storage option selected: {choice}")
+        
+                    try:
+                        await self.confirm_message.edit(
+                            content=self.confirm_message.content + f"\n\n✅ Storage assigned by {interaction.user.mention}"
+                        )
+                    except Exception as e:
+                        print(f"[PHASE 2] Could not update confirmation message: {e}")
+        
+                    if choice == "skip":
+                        try:
+                            msg = await self.player.send(
+                                "📦 Your order has been processed — no storage was assigned this time.\n"
+                                "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
+                            )
+                            await msg.add_reaction("⚠️")
+                            await asyncio.sleep(20)
+                            await msg.delete()
+                        except Exception as e:
+                            print(f"[PHASE 2] Skip DM Error: {e}")
+                        return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
+        
+                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
+        
+            class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
+                combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
+        
+                def __init__(self, bot, player, unit):
+                    super().__init__()
+                    self.bot = bot
+                    self.player = player
+                    self.unit = unit
+        
+                async def on_submit(self, interaction: discord.Interaction):
+                    try:
+                        dm = await self.player.send(
+                            f"{self.player.mention}, your order is ready for pick up!\n"
+                            f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
+                            f"Please leave the lock with the same code when done!\nReact here with a ✅ when finished."
+                        )
+                        await dm.add_reaction("🔴")
+                        self.bot.get_cog("TraderCommand").awaiting_pickup[dm.id] = {
+                            "player": self.player,
+                            "unit": self.unit
+                        }
+                    except Exception as e:
+                        print(f"[PHASE 2] Combo DM Error: {e}")
         
             try:
-                data = self.awaiting_storage.get(reaction.message.id)
-                if not data:
-                    print(f"[PHASE 3 ERROR] No data found for message ID {reaction.message.id}")
-                    return
-        
-                # Now safe to pop
-                self.awaiting_storage.pop(reaction.message.id)
-                print(f"[PHASE 3] Retrieved data from awaiting_storage: {data}")
-                if "player" not in data or data["player"] is None:
-                    print("[PHASE 3 ERROR] Player is missing or None — cannot continue.")
-                    return
-                print(f"[PHASE 3] data['player'] = {data['player']} (type={type(data['player'])})")
-        
-                class StorageSelect(ui.Select):
-                    def __init__(self, bot, player, confirm_message, confirming_user):
-                        options = [discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)] + \
-                                  [discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)] + \
-                                  [discord.SelectOption(label="Skip", value="skip")]
-                        super().__init__(placeholder="Select a storage unit or skip", options=options)
-                        self.bot = bot
-                        self.player = player
-                        self.confirm_message = confirm_message
-                        self.confirming_user = confirming_user
-        
-                    async def callback(self, interaction: discord.Interaction):
-                        choice = self.values[0]
-                        print(f"[PHASE 3] Storage option selected: {choice}")
-        
-                        try:
-                            await self.confirm_message.edit(
-                                content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {self.confirming_user.mention}"
-                            )
-                        except Exception as e:
-                            print(f"[PHASE 3] Could not update confirmation message: {e}")
-        
-                        if choice == "skip":
-                            try:
-                                msg = await self.player.send(
-                                    "📦 Your order has been processed — no storage was assigned this time.\n"
-                                    "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
-                                )
-                                await msg.add_reaction("⚠️")
-                                await asyncio.sleep(20)
-                                await msg.delete()
-                            except Exception as e:
-                                print(f"[PHASE 3] Skip DM Error: {e}")
-                            return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
-        
-                        await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
-        
-                class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
-                    combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
-        
-                    def __init__(self, bot, player, unit):
-                        super().__init__()
-                        self.bot = bot
-                        self.player = player
-                        self.unit = unit
-        
-                    async def on_submit(self, interaction: discord.Interaction):
-                        try:
-                            dm = await self.player.send(
-                                f"{self.player.mention}, your order is ready for pick up!\n"
-                                f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
-                                f"Please leave the lock with the same code when done!\nReact here with a ✅ when finished."
-                            )
-                            await dm.add_reaction("🔴")
-                            self.bot.get_cog("TraderCommand").awaiting_pickup[dm.id] = {
-                                "player": self.player,
-                                "unit": self.unit
-                            }
-                        except Exception as e:
-                            print(f"[PHASE 3] Combo DM Error: {e}")
-        
-                try:
-                    dropdown = StorageSelect(self.bot, data["player"], reaction.message, user)
-                    view = ui.View()
-                    view.add_item(dropdown)
-                    msg = await reaction.message.channel.send(
-                        f"{user.mention}, please select a **storage unit** for {data['player'].mention}:",
-                        view=view
-                    )
-                    print(f"[PHASE 3] ✅ Dropdown sent successfully to message ID: {msg.id}")
-                except Exception as e:
-                    print("[PHASE 3 DROPDOWN ERROR]")
-                    import traceback
-                    traceback.print_exc()
-        
-            except Exception as final_phase3_error:
-                print("[PHASE 3] ❌ Entire block failed")
+                confirmation_msg = await trader_channel.send(
+                    f"{data['player'].mention} has confirmed payment.\nPlease select a storage unit:"
+                )
+                view = ui.View()
+                view.add_item(StorageSelect(self.bot, data["player"], confirmation_msg))
+                await trader_channel.send(view=view)
+                print(f"[PHASE 2] ✅ Sent dropdown for storage assignment")
+            except Exception as e:
+                print(f"[PHASE 2] ❌ Failed to send dropdown")
                 import traceback
                 traceback.print_exc()
-                  
+        
+        # Phase 3: REMOVED — now merged into Phase 2
+        
         # Phase 4: Player confirms pickup complete
         elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
             data = self.awaiting_pickup.pop(reaction.message.id)
             await reaction.message.clear_reaction("🔴")
             await reaction.message.add_reaction("✅")
             await reaction.message.edit(content="All set, see ya next time!")
-
+        
             await asyncio.sleep(20)
             try:
                 await reaction.message.delete()
             except:
                 pass
-
+        
             payout_channel = self.bot.get_channel(config["trader_payout_channel_id"])
             await payout_channel.send(f"<@&{config['trader_role_id']}> {data['player'].mention} cleared their unit!")
 
