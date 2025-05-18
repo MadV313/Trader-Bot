@@ -30,7 +30,8 @@ class ClearChat(commands.Cog):
 
                 try:
                     if isinstance(channel, discord.DMChannel):
-                        async for msg in channel.history(limit=100):
+                        # Use larger history scope to catch ALL bot messages
+                        async for msg in channel.history(limit=200):
                             if msg.author == self.bot.user:
                                 await msg.delete()
                         print("[CLEAR] DM wiped.")
@@ -52,6 +53,10 @@ class ClearChat(commands.Cog):
                 "❌ This command can only be used in a DM or the trader-orders channel.",
                 ephemeral=True
             )
+
+
+async def setup(bot):
+    await bot.add_cog(ClearChat(bot))
 
 
 async def setup(bot):
