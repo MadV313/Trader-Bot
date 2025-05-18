@@ -430,6 +430,7 @@ class TraderCommand(commands.Cog):
         self.awaiting_payment = {}
         self.awaiting_storage = {}
         self.awaiting_pickup = {}
+        self.in_use_units = {}
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
