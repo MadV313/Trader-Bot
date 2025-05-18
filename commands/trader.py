@@ -525,7 +525,7 @@ class TraderCommand(commands.Cog):
                                 "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
                             )
                             await msg.add_reaction("⚠️")
-                            await asyncio.sleep(15)  # ⏳ Give player time to read it
+                            await asyncio.sleep(20)  # ⏳ Give player time to read it
         
                             async for m in self.player.dm_channel.history(limit=100):
                                 if m.author == self.bot.user:
@@ -558,7 +558,7 @@ class TraderCommand(commands.Cog):
                             "player": self.player,
                             "unit": self.unit
                         }
-                        await interaction.response.send_message("✅ Combo submitted. Player has been notified.", ephemeral=True)
+                        await interaction.response.send_message("✅ Combo submitted. Player has been notified.")
         
                         # ✅ Do NOT delete anything — Phase 4 handles this on ✅ reaction
                     except Exception as e:
