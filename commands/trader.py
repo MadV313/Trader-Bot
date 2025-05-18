@@ -515,39 +515,31 @@ class TraderCommand(commands.Cog):
                     return
                 print(f"[PHASE 3] data['player'] = {data['player']} (type={type(data['player'])})")
         
-                try:
-                    if not isinstance(reaction.message.channel, discord.DMChannel):
-                        await reaction.message.clear_reaction("🔴")
-                except discord.Forbidden:
-                    print("[PHASE 3] 🔴 Reaction not removed (Forbidden)")
-        
-                try:
-                    await reaction.message.add_reaction("✅")
-                    await asyncio.sleep(0.5)  # Let Discord process reaction
-                    await reaction.message.edit(
-                        content=reaction.message.content + f"\n\n✅ Payment confirmed by {user.mention}"
-                    )
-                    await asyncio.sleep(0.5)  # Let Discord process edit
-                    print("[PHASE 3] ✅ Reaction added and message edited successfully.")
-                except Exception as e:
-                    print("[PHASE 3] ❌ Failed during reaction/edit block")
-                    import traceback
-                    traceback.print_exc()
-        
-                await reaction.message.channel.send("🧪 Phase 3: Preparing dropdown...")
+                # No emoji edit here anymore
         
                 class StorageSelect(ui.Select):
-                    def __init__(self, bot, player):
+                    def __init__(self, bot, player, confirm_message, confirming_user):
                         options = [discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)] + \
                                   [discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)] + \
                                   [discord.SelectOption(label="Skip", value="skip")]
                         super().__init__(placeholder="Select a storage unit or skip", options=options)
                         self.bot = bot
                         self.player = player
+                        self.confirm_message = confirm_message
+                        self.confirming_user = confirming_user
         
                     async def callback(self, interaction: discord.Interaction):
                         choice = self.values[0]
                         print(f"[PHASE 3] Storage option selected: {choice}")
+        
+                        # Update original confirmation message AFTER selection
+                        try:
+                            await self.confirm_message.edit(
+                                content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {self.confirming_user.mention}"
+                            )
+                        except Exception as e:
+                            print(f"[PHASE 3] Could not update confirmation message: {e}")
+        
                         if choice == "skip":
                             try:
                                 msg = await self.player.send(
@@ -588,7 +580,7 @@ class TraderCommand(commands.Cog):
                             print(f"[PHASE 3] Combo DM Error: {e}")
         
                 try:
-                    dropdown = StorageSelect(self.bot, data["player"])
+                    dropdown = StorageSelect(self.bot, data["player"], reaction.message, user)
                     view = ui.View()
                     view.add_item(dropdown)
                     msg = await reaction.message.channel.send(
