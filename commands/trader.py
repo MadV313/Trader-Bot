@@ -432,7 +432,19 @@ class TraderCommand(commands.Cog):
         self.awaiting_pickup = {}
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
+    async def on_raw_reaction_add(self, payload):
+        if payload.user_id == self.bot.user.id:
+            return
+
+        emoji = str(payload.emoji.name)
+        message_id = payload.message_id
+        channel = self.bot.get_channel(payload.channel_id)
+        user = await self.bot.fetch_user(payload.user_id)
+        message = await channel.fetch_message(message_id)
+    
+        # Then call the exact same logic you have now,
+        # replacing `reaction.message.id` with `message_id`,
+        # and replacing `reaction.message` with `message`.
         print(f"[Reaction Detected] emoji={reaction.emoji} message_id={reaction.message.id} user={user}")
 
         if user.bot or not reaction.message:
@@ -497,6 +509,7 @@ class TraderCommand(commands.Cog):
             await payment_notice.add_reaction("🔴")
         
             # Store only player and total — no admin lock
+            print(f"[Storage Tracking] Stored payment msg ID {payment_notice.id} for player {data['player'].id}")
             self.awaiting_storage[payment_notice.id] = {
                 "player": data["player"],
                 "total": data["total"]
@@ -506,7 +519,9 @@ class TraderCommand(commands.Cog):
         elif emoji == "✅" and reaction.message.id in self.awaiting_storage:
             print(f"[✅ Storage Reaction] Triggered for message_id={reaction.message.id}")
             data = self.awaiting_storage.pop(reaction.message.id)
-        
+            print(f"[DEBUG] Checking for Phase 3... reaction msg ID: {reaction.message.id}")
+            print(f"[DEBUG] Current awaiting_storage keys: {list(self.awaiting_storage.keys())}")
+
             try:
                 if not isinstance(reaction.message.channel, discord.DMChannel):
                     await reaction.message.clear_reaction("🔴")
@@ -541,7 +556,9 @@ class TraderCommand(commands.Cog):
                         return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
         
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
-        
+                    if reaction.message.id not in self.awaiting_storage:
+                        print("[Phase 3 SKIPPED] Message ID not found in awaiting_storage!")
+
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
                 combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
         
