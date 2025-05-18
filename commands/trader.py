@@ -18,8 +18,6 @@ def extract_label_and_emoji(text):
     
 config = json.loads(os.environ.get("CONFIG_JSON"))
 
-TRADER_STATS_FILE = os.path.join("data", "trader_stats.json")
-
 PRICE_FILE = os.path.join("data", "Final price list.json")
 with open(PRICE_FILE, "r") as f:
     PRICE_DATA = json.load(f)["categories"]
@@ -450,19 +448,6 @@ class TraderCommand(commands.Cog):
                 await message.add_reaction("✅")
                 new_content = f"{message.content}\n\nOrder confirmed by {user.mention}"
                 await message.edit(content=new_content)
-                try:
-                    if os.path.exists(TRADER_STATS_FILE):
-                        with open(TRADER_STATS_FILE, "r") as f:
-                            stats = json.load(f)
-                    else:
-                        stats = {}
-                
-                    stats[str(user.id)] = stats.get(str(user.id), 0) + 1
-                
-                    with open(TRADER_STATS_FILE, "w") as f:
-                        json.dump(stats, f, indent=2)
-                except Exception as e:
-                    print(f"[Trader Stats] Failed to log admin confirm: {e}")
 
                 mentioned_users = message.mentions
                 total = None
@@ -679,41 +664,5 @@ class TraderCommand(commands.Cog):
             print(f"[Trader DM Start Error] {e}")
             await interaction.response.send_message("Trader session moved to your DMs.")
 
-# Trader of the Week Command
-class TraderOfTheWeek(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
-    @app_commands.command(name="traderoftheweek", description="Announce the admin with the most confirmed orders this week.")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def trader_of_the_week(self, interaction: discord.Interaction):
-        try:
-            if not os.path.exists(TRADER_STATS_FILE):
-                return await interaction.response.send_message("No data to show yet.")
-
-            with open(TRADER_STATS_FILE, "r") as f:
-                stats = json.load(f)
-
-            if not stats:
-                return await interaction.response.send_message("No trader activity recorded this week.")
-
-            top_admin_id = max(stats, key=stats.get)
-            count = stats[top_admin_id]
-            top_admin = await self.bot.fetch_user(int(top_admin_id))
-
-            with open(TRADER_STATS_FILE, "w") as f:
-                json.dump({}, f)
-
-            public_channel = self.bot.get_channel(config["trader_of_the_week_channel_id"])
-            await public_channel.send(
-                f"🏆 {top_admin.mention} was **Trader of the Week** with {count} confirmed orders!\nBe sure to thank them for supplying all your needs!"
-            )
-            await interaction.response.send_message("✅ Announcement posted and stats reset.")
-
-        except Exception as e:
-            print(f"[TOTW Error] {e}")
-            await interaction.response.send_message("❌ Failed to post trader of the week.")
-    
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
-    await bot.add_cog(TraderOfTheWeek(bot))
