@@ -501,7 +501,7 @@ class TraderCommand(commands.Cog):
                 "player": data["player"],
                 "admin": data["admin"],
                 "total": data["total"],
-                "channel": payment_notice.channel  # ⬅ Save this so we can send dropdown later
+                "channel": payment_notice.channel.id  # ⬅ Save this so we can send dropdown later
             }
 
         # Phase 3: Admin confirms payment received
@@ -596,14 +596,27 @@ class TraderCommand(commands.Cog):
         
             try:
                 dropdown = StorageSelect(self.bot, data["player"], data["admin"], data["total"])
-                view = ui.View()
+                view = ui.View(timeout=60)
                 view.add_item(dropdown)
-                await data["channel"].send(
+            
+                channel_id = data["channel"]
+                channel = self.bot.get_channel(channel_id)
+                if not channel:
+                    print(f"[Dropdown Error] Channel ID {channel_id} could not be resolved.")
+                    return
+                   
+                else:
+                    print(f"[Dropdown Success] Channel resolved: {channel.name}")
+
+                await channel.send(
                     f"{user.mention}, please select a **storage unit** to deliver the order for {data['player'].mention}:",
                     view=view
                 )
+                print("[Dropdown Sent]")
             except Exception as e:
-                print(f"[Phase 3 Dropdown Error] {e}")
+                import traceback
+                print("[Phase 3 Dropdown Error]")
+                traceback.print_exc()
                     
         # Phase 4: Player confirms pickup complete
         elif emoji == "✅" and reaction.message.id in self.awaiting_pickup:
