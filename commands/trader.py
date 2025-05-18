@@ -475,7 +475,7 @@ class TraderCommand(commands.Cog):
                     await user.send(
                         f"give user:{user.id} amount:{total} account:cash"
                     )
-
+                    
         # Phase 2: Player confirms payment
         elif emoji == "✅" and reaction.message.id in self.awaiting_payment:
             print(f"[✅ Payment Reaction] Player {user} reacted to message {reaction.message.id}")
@@ -513,7 +513,7 @@ class TraderCommand(commands.Cog):
                     try:
                         await self.confirm_message.edit(
                             content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {interaction.user.mention}",
-                            view=None  # 🧼 Remove dropdown
+                            view=None  # 🧼 Remove dropdown immediately
                         )
                     except Exception as e:
                         print(f"[PHASE 2/3] Could not update confirmation message: {e}")
@@ -525,26 +525,26 @@ class TraderCommand(commands.Cog):
                                 "Thanks for shopping with us, survivor! Stay Frosty! 🧭"
                             )
                             await msg.add_reaction("⚠️")
-                            await asyncio.sleep(20)
+                            await asyncio.sleep(15)  # ⏳ Give player time to read it
         
-                            # 🔁 Wipe all messages in DM
                             async for m in self.player.dm_channel.history(limit=100):
-                                await m.delete()
+                                if m.author == self.bot.user:
+                                    await m.delete()
                         except Exception as e:
                             print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
+        
                         return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
         
-                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice, self.confirm_message))
+                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
         
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
                 combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
         
-                def __init__(self, bot, player, unit, confirm_message):
+                def __init__(self, bot, player, unit):
                     super().__init__()
                     self.bot = bot
                     self.player = player
                     self.unit = unit
-                    self.confirm_message = confirm_message
         
                 async def on_submit(self, interaction: discord.Interaction):
                     try:
@@ -560,16 +560,7 @@ class TraderCommand(commands.Cog):
                         }
                         await interaction.response.send_message("✅ Combo submitted. Player has been notified.", ephemeral=True)
         
-                        # 🧼 Remove dropdown view if still attached
-                        try:
-                            await self.confirm_message.edit(view=None)
-                        except Exception as e:
-                            print(f"[PHASE 2/3] View cleanup after combo failed: {e}")
-        
-                        # 🔁 Wipe all messages in DM
-                        async for m in self.player.dm_channel.history(limit=100):
-                            await m.delete()
-        
+                        # ✅ Do NOT delete anything — Phase 4 handles this on ✅ reaction
                     except Exception as e:
                         print(f"[PHASE 2/3] Combo DM Error: {e}")
                         await interaction.response.send_message("❌ Failed to notify player.", ephemeral=True)
