@@ -101,7 +101,7 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         except ValueError:
             return await interaction.response.send_message("Invalid quantity.", ephemeral=True)
 
-        subtotal = self.price * quantity
+        subtotal = round((self.price / 3) * quantity)
         item_data = {
             "category": self.category,
             "subcategory": self.subcategory,
@@ -147,7 +147,7 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
 
         # Show separate "added to cart" confirmation
         confirm_msg = await interaction.followup.send(
-            content=f"🧺 Added: **{self.item}** x{quantity}", ephemeral=False
+            content=f"🧺 Added: **{self.item} ({self.variant})** x{quantity}", ephemeral=False
         )
         
         async def cleanup():
@@ -298,29 +298,38 @@ class SellTraderView(ui.View):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
     
+        await interaction.response.defer()  # Prevents interaction timeout
+    
         items = session_manager.get_session_items(self.user_id)
         if not items:
-            return await interaction.response.send_message("Your cart is already empty.", ephemeral=True)
+            return await interaction.followup.send("Your cart is already empty.", ephemeral=True)
     
         removed = items.pop()
         session_manager.set_session_items(self.user_id, items)
     
         # Update cart first
-        summary = "\n".join([f"• {i['item']} ({i['variant']}) x{i['quantity']} = ${i['subtotal']:,}" for i in items])
+        summary = "\n".join([
+            f"• {i['item']} ({i['variant']}) x{i['quantity']} = ${i['subtotal']:,}"
+            for i in items
+        ])
         total = sum(i["subtotal"] for i in items)
         summary += f"\n\n🛒 Cart Total: ${total:,}" if items else "\n🛒 Cart is now empty."
+    
         if self.cart_message:
             await self.cart_message.edit(content=summary)
     
-        # Then send and schedule deletion of the removal message
-        msg = await interaction.followup.send(content=f"🗑️ Removed {removed['item']}.", ephemeral=False)
-        
+        # 🧾 Send removal confirmation message
+        confirm_msg = await interaction.followup.send(
+            content=f"🗑️ Removed: **{removed['item']} ({removed['variant']})** x{removed['quantity']}",
+            ephemeral=False
+        )
+    
         async def cleanup():
             await asyncio.sleep(7)
             try:
-                await msg.delete()
+                await confirm_msg.delete()
             except Exception as e:
-                print(f"[Cleanup Error] {e}")
+                print(f"[Remove Confirmation Cleanup Error] {e}")
     
         asyncio.create_task(cleanup())
 
