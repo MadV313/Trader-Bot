@@ -711,7 +711,7 @@ class TraderCommand(commands.Cog):
                 await interaction.response.send_message("✅ **Thanks! Your pickup has been confirmed.**")
             
                 # ⏳ Delay cleanup to ensure visibility
-                await asyncio.sleep(10)
+                await asyncio.sleep(12)
                 try:
                     async for m in self.player.dm_channel.history(limit=100):
                         if m.author == self.bot.user:
