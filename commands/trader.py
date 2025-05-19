@@ -371,14 +371,14 @@ class TraderView(discord.ui.View):
             return await interaction.response.send_message("Trader channel not found.")
 
         order_message = await trader_channel.send(
-            f"<@&{config['trader_role_id']}> a new order is ready to be processed!\n\n"
+            f"<@&{config['trader_role_id']}> **a new order is ready to be processed!**\n\n"
             f"{interaction.user.mention} has submitted a new order:\n\n"
             f"{summary}\n\n"
-            f"Please confirm this message with a ✅ when the order is ready"
+            f"**Please confirm this message with a** ✅ **when the order is ready**"
         )
         await order_message.add_reaction("🔴")
 
-        await interaction.response.send_message("✅ Order submitted to trader channel.")
+        await interaction.response.send_message("✅ **Your order has been submitted to the trader channel. Please stand by...**")
 
         try:
             await interaction.message.delete()
@@ -460,10 +460,10 @@ class TraderCommand(commands.Cog):
                 if mentioned_users:
                     player = mentioned_users[0]
                     dm = await player.send(
-                        f"📦 **Your order is ready for pick-up!**\n\n"
+                        f"📦 **Your order has been processed!**\n\n"
                         f"💰 Please make a payment to {user.mention} for **${total}**.\n"
-                        f"📍 Make sure to send payment in <#{config['economy_channel_id']}> (copy/paste command below).\n\n"
-                        f"Once paid, react to this message with a ✅ to confirm."
+                        f"📍 Make sure to send payment in <#{config['economy_channel_id']}> (use /pay + copy/paste command below).\n\n"
+                        f"**Once paid, react to this message with a** ✅ **to confirm.**"
                     )
                     await dm.add_reaction("⚠️")
                     self.awaiting_payment[dm.id] = {
@@ -498,7 +498,7 @@ class TraderCommand(commands.Cog):
         
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
             payment_notice = await trader_channel.send(
-                f"{data['player'].mention} has confirmed payment.\nPlease select a storage unit below:"
+                f"{data['player'].mention} **has confirmed payment.** 💵\n**Please select a storage unit below:**"
             )
             print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
         
@@ -530,11 +530,11 @@ class TraderCommand(commands.Cog):
                                 content=(
                                     "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
                                     "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
-                                    "📦 Your order has been processed — no storage was assigned this time.\n"
-                                    "Thanks for shopping with us, survivor! Stay Frosty! 🧑‍🌾"
+                                    "📦 **Your order has been completed — no storage was assigned this time.**\n"
+                                    "**Thanks for using Trader! Stay Frosty out there survivor!**❄️"
                                 )
                             )
-                            await asyncio.sleep(15)
+                            await asyncio.sleep(60)
                             async for m in self.player.dm_channel.history(limit=100):
                                 if m.author == self.bot.user:
                                     await m.delete()
@@ -556,9 +556,9 @@ class TraderCommand(commands.Cog):
                 async def on_submit(self, interaction: discord.Interaction):
                     try:
                         dm = await self.player.send(
-                            f"{self.player.mention}, your order is ready for pick up!\n"
+                            f"{self.player.mention}, 📦**your order is ready for pick up!**\n"
                             f"Please proceed to **{self.unit.upper()}** and use code **{self.combo.value}** to unlock.\n"
-                            f"Please leave the lock with the same code when done!\n"
+                            f"**Please leave the lock with the same code when done!**🔐\n"
                         )
                         view = PickupConfirmView(self.bot, self.player, self.unit, dm)
                         await dm.edit(view=view)
@@ -566,7 +566,7 @@ class TraderCommand(commands.Cog):
                             "player": self.player,
                             "unit": self.unit
                         }
-                        await interaction.response.send_message("✅ Combo submitted. Player has been notified.")
+                        await interaction.response.send_message("✅ **Combo submitted. Player has been notified.**🔒")
                     except Exception as e:
                         print(f"[PHASE 2/3] Combo DM Error: {e}")
                         await interaction.response.send_message("❌ Failed to notify player.", ephemeral=True)
@@ -617,14 +617,14 @@ class TraderCommand(commands.Cog):
                         orders_channel = await self.bot.fetch_channel(config["trader_orders_channel_id"])
             
                     await orders_channel.send(
-                        f"<@&{config['trader_role_id']}> {self.player.mention} cleared **{self.unit.upper()}**!"
+                        f"<@&{config['trader_role_id']}> {self.player.mention} cleared **{self.unit.upper()}**!🔓"
                     )
                     print(f"[PHASE 4] ✅ Trader Orders message sent.")
                 except Exception as e:
                     print(f"[PHASE 4] Failed to notify trader orders channel: {e}")
             
                 # ✅ Acknowledge to user
-                await interaction.response.send_message("✅ Thanks! Your pickup has been confirmed.")
+                await interaction.response.send_message("✅ **Thanks! Your pickup has been confirmed.**")
             
                 # ⏳ Delay cleanup to ensure visibility
                 await asyncio.sleep(10)
@@ -650,7 +650,7 @@ class TraderCommand(commands.Cog):
                 "┏━━━━━━━━━━━━━━━━━━━━━━━┓\n"
                 "🛒 **BUYING SESSION STARTED!**\n"
                 "┗━━━━━━━━━━━━━━━━━━━━━━━┛\n"
-                "Use the buttons below to add/remove items,\nsubmit, or cancel your order."
+                "**Use the buttons below to add/remove items,\nsubmit, or cancel your order.**"
             )
 
             # Step 3: Send the interactive UI
@@ -665,10 +665,10 @@ class TraderCommand(commands.Cog):
             session["cart_messages"] = [gif_msg.id, start_msg.id, ui_msg.id]
             session["start_msg_id"] = start_msg.id
 
-            await interaction.response.send_message("Trader session moved to your DMs.")
+            await interaction.response.send_message("📬Trader session moved to your DMs.")
         except Exception as e:
             print(f"[Trader DM Start Error] {e}")
-            await interaction.response.send_message("Trader session moved to your DMs.")
+            await interaction.response.send_message("📬Trader session moved to your DMs.")
 
 async def setup(bot):
     await bot.add_cog(TraderCommand(bot))
