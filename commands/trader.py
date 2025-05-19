@@ -500,7 +500,7 @@ class TraderCommand(commands.Cog):
                     log_data[admin_id] = log_data.get(admin_id, 0) + 1
                     trader_logger.save_reaction_log(log_data)
 
-        # Phase 2: Player confirms payment
+        #Phase 2: Player confirms payment
         elif emoji == "✅" and reaction.message.id in self.awaiting_payment:
             print(f"[✅ Payment Reaction] Player {user} reacted to message {reaction.message.id}")
             data = self.awaiting_payment.pop(reaction.message.id)
@@ -516,10 +516,10 @@ class TraderCommand(commands.Cog):
         
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
         
-            # Step 1: Send MP4 separately
+            # Step 1: Send MP4 separately (Ka-Ching)
             await trader_channel.send("https://cdn.discordapp.com/attachments/1370152442183946311/1374096506055032943/ezgifcom-resize-2.mp4")
         
-            # Step 2: Send message text
+            # Step 2: Send payment confirmation message with dropdown
             payment_notice = await trader_channel.send(
                 content=(
                     f"{data['player'].mention} **has confirmed payment.** 💵\n"
@@ -527,17 +527,64 @@ class TraderCommand(commands.Cog):
                 )
             )
         
-            # ⏳ Auto-delete after 10 seconds
-            async def auto_delete_payment_notice():
-                await asyncio.sleep(10)
-                try:
-                    await payment_notice.delete()
-                except Exception as e:
-                    print(f"[Auto Delete Payment Message Error] {e}")
-        
-            asyncio.create_task(auto_delete_payment_notice())
-        
             print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
+        
+            # Storage dropdown logic
+            class StorageSelect(ui.Select):
+                def __init__(self, bot, player, confirm_message):
+                    options = [discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)] + \
+                              [discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)] + \
+                              [discord.SelectOption(label="Skip", value="skip")]
+                    super().__init__(placeholder="Select a storage unit or skip", options=options)
+                    self.bot = bot
+                    self.player = player
+                    self.confirm_message = confirm_message
+        
+                async def callback(self, interaction: discord.Interaction):
+                    choice = self.values[0]
+                    print(f"[PHASE 2/3] Storage option selected: {choice}")
+        
+                    # Remove dropdown view and confirm who clicked it
+                    try:
+                        await self.confirm_message.edit(
+                            content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {interaction.user.mention}",
+                            view=None
+                        )
+                    except Exception as e:
+                        print(f"[PHASE 2/3] Could not update confirmation message: {e}")
+        
+                    # Handle skip logic
+                    if choice == "skip":
+                        try:
+                            msg = await self.player.send(
+                                content=(
+                                    "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
+                                    "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
+                                    "📦 **Your order has been completed — no storage was assigned this time.**\n"
+                                    "**Thanks for using Trader! Stay Frosty out survivor!**❄️"
+                                )
+                            )
+                            await asyncio.sleep(60)
+                            async for m in self.player.dm_channel.history(limit=100):
+                                if m.author == self.bot.user:
+                                    await m.delete()
+                        except Exception as e:
+                            print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
+                        return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
+        
+                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
+        
+            # Attach dropdown view
+            try:
+                dropdown = StorageSelect(self.bot, data["player"], payment_notice)
+                view = ui.View(timeout=TRADER_TIMEOUT_SECONDS)
+                view.add_item(dropdown)
+                await payment_notice.edit(view=view)
+                print(f"[PHASE 2/3] Dropdown view attached to message ID: {payment_notice.id}")
+            except Exception as e:
+                print("[PHASE 2/3 DROPDOWN ERROR]")
+                import traceback
+                traceback.print_exc()
         
             class StorageSelect(ui.Select):
                 def __init__(self, bot, player, confirm_message):
