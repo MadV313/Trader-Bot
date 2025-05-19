@@ -426,7 +426,7 @@ class SellTraderView(ui.View):
                         "https://cdn.discordapp.com/attachments/1351365150287855739/1374120175049248940/ezgif.com-resize_2.gif"
                     )
                     await self.buyer.send(
-                        f"✅ **The payment for your used wares has been sent to <#{config['economy_channel_id']}>! Thanks for using Trader, stay frosty survivor!❄️**"
+                        f"✅ **The payment for your used wares has been sent to <#{config['economy_channel_id']}>! Thanks for using Trader! Stay frosty survivor!**❄️"
                     )
                     await asyncio.sleep(1)
                     await self.buyer.send(
