@@ -408,16 +408,17 @@ class SellTraderView(ui.View):
             async def confirm(self, i: discord.Interaction, button: discord.ui.Button):
                 if not i.user.guild_permissions.manage_messages:
                     return await i.response.send_message("You do not have permission.", ephemeral=True)
-
+            
                 await self.alert_msg.edit(content=self.alert_msg.content + f"\n\n✅ Confirmed by {i.user.mention}")
-
+            
                 # ✅ Log trader confirmation
-                from utils import trader_logger  # ensure this import is at the top of your file
+                from utils import trader_logger
                 log_data = trader_logger.load_reaction_log()
                 admin_id = str(i.user.id)
                 log_data[admin_id] = log_data.get(admin_id, 0) + 1
                 trader_logger.save_reaction_log(log_data)
-
+            
+                # ✅ Send DM to buyer
                 try:
                     await self.buyer.send(
                         "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
@@ -425,8 +426,24 @@ class SellTraderView(ui.View):
                     )
                 except:
                     pass
-
+            
                 await i.response.send_message("✅ Payout confirmed.", ephemeral=True)
+            
+                # 🧹 Begin 60-second DM cleanup for buyer
+                async def cleanup_dm():
+                    await asyncio.sleep(60)
+                    try:
+                        dm_channel = self.buyer.dm_channel or await self.buyer.create_dm()
+                        async for m in dm_channel.history(limit=50):
+                            if m.author == i.client.user:
+                                try:
+                                    await m.delete()
+                                except Exception as e:
+                                    print(f"[DM Cleanup Error] {e}")
+                    except Exception as e:
+                        print(f"[DM Cleanup Fetch Error] {e}")
+            
+                asyncio.create_task(cleanup_dm())
 
         await trader_channel.send(summary, view=ConfirmSellView(interaction.user, alert_msg))
         await interaction.response.send_message("✅ Sell order submitted and sent to trader channel.", ephemeral=False)
