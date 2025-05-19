@@ -32,9 +32,10 @@ def start_reminder_task(bot):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{timestamp}] [TraderBot] Scanning for unconfirmed orders...")
 
-        channel = bot.get_channel(TRADER_ORDERS_CHANNEL_ID)
-        if not channel:
-            print("[TraderBot] Trader orders channel not found.")
+        try:
+            channel = await bot.fetch_channel(TRADER_ORDERS_CHANNEL_ID)
+        except Exception as e:
+            print(f"[Reminder] Failed to fetch trader_orders_channel: {e}")
             log_reminder_event("Trader orders channel not found during reminder scan.")
             return
 
@@ -60,4 +61,3 @@ def start_reminder_task(bot):
 
     if not scan_for_incomplete_orders.is_running():
         scan_for_incomplete_orders.start()
-
