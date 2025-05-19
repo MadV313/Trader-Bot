@@ -456,7 +456,7 @@ class SellTraderCommand(commands.Cog):
             view.ui_message = ui_msg
             view.start_message = start_msg
             session_manager.start_session(interaction.user.id)
-            await interaction.response.send_message("✅ Sell session moved to your DMs.", ephemeral=False)
+            await interaction.response.send_message("📬 Sell session moved to your DMs.", ephemeral=False)
         except Exception as e:
             print(f"[SellTrader DM Error] {e}")
             await interaction.response.send_message("❌ Failed to start sell session in DMs.", ephemeral=False)
