@@ -479,8 +479,8 @@ class TraderCommand(commands.Cog):
                     player = mentioned_users[0]
                     dm = await player.send(
                         f"📦 **Your order has been processed!**\n\n"
-                        f"💰 Please make a payment to {user.mention} for **${total}**.\n"
-                        f"📍 Make sure to send payment in <#{config['economy_channel_id']}> (use /pay + copy/paste command below).\n\n"
+                        f"Please make a payment to {user.mention} for **${total}**.\n"
+                        f"Make sure to send payment in <#{config['economy_channel_id']}> (use /pay + copy/paste command below).\n\n"
                         f"**Once paid, react to this message with a** ✅ **to confirm.**"
                     )
                     await dm.add_reaction("⚠️")
@@ -517,7 +517,7 @@ class TraderCommand(commands.Cog):
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
         
             # Step 1: Send MP4 separately (Ka-Ching)
-            await trader_channel.send("https://cdn.discordapp.com/attachments/1370152442183946311/1374096506055032943/ezgifcom-resize-2.mp4")
+            await trader_channel.send("https://cdn.discordapp.com/attachments/1361109143041081507/1374110005841756301/ezgif.com-resize_2.gif")
         
             # Step 2: Send payment confirmation message with dropdown
             payment_notice = await trader_channel.send(
@@ -561,7 +561,7 @@ class TraderCommand(commands.Cog):
                                     "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
                                     "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
                                     "📦 **Your order has been completed — no storage was assigned this time.**\n"
-                                    "**Thanks for using Trader! Stay Frosty out survivor!**❄️"
+                                    "**Thanks for using Trader! Stay frosty survivor!**❄️"
                                 )
                             )
                             await asyncio.sleep(60)
@@ -686,7 +686,7 @@ class TraderCommand(commands.Cog):
                         content=(
                             "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
                             "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
-                            "✅ All set, see ya next time!"
+                            "✅ All set, stay frosty survivor!❄️"
                         ),
                         view=None
                     )
