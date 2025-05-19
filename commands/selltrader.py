@@ -264,7 +264,8 @@ class SellTraderView(ui.View):
             return await interaction.response.send_message("Mind your own order!", ephemeral=True)
         view = ui.View(timeout=600)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
-        await interaction.response.send_message("Select a category:", view=view)
+        dropdown_msg = await interaction.response.send_message("Select a category:", view=view)
+        self.dropdown_message = dropdown_msg
 
     @ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary)
     async def remove_item(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -353,7 +354,8 @@ class SellTraderView(ui.View):
 class SellTraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
+        self.dropdown_message = None
+        
     @app_commands.command(name="selltrader", description="Start a selling session with the trader.")
     async def selltrader(self, interaction: discord.Interaction):
         if interaction.channel.id != config["economy_channel_id"]:
