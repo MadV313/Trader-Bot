@@ -389,7 +389,7 @@ class SellTraderView(ui.View):
         # ✅ Admin alert message
         alert_msg = await trader_channel.send(
             f"<@&{config['trader_role_id']}> {interaction.user.mention} **has submitted an order to approve for sale!\n"
-            f"Please send payment (/pay + copy/paste-below ) in this channel here and confirm here once done**!"
+            f"Please send payment (/economy amoney user + copy/paste-below ) here in this channel and confirm with the button below once done!**"
         )
         
         # ✅ Proper payout command for admin use
@@ -422,7 +422,7 @@ class SellTraderView(ui.View):
                 try:
                     await self.buyer.send(
                         "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
-                        "✅ **The payment for your used wears has been sent!**"
+                        f"✅ **The payment for your used wares has been sent to <#{config['economy_channel_id']}>!**"
                     )
                 except:
                     pass
