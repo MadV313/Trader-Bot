@@ -123,6 +123,37 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         else:
             self.view_ref.cart_message = await interaction.followup.send(content=summary)
 
+class BackButton(discord.ui.Button):
+    def __init__(self, bot, user_id, current_stage, selected, view_ref):
+        super().__init__(label="Back", style=discord.ButtonStyle.secondary)
+        self.bot = bot
+        self.user_id = user_id
+        self.current_stage = current_stage
+        self.selected = selected
+        self.view_ref = view_ref
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("Not your session.", ephemeral=True)
+
+        if self.current_stage == "variant":
+            prev_stage = "item"
+        elif self.current_stage == "item":
+            prev_stage = "subcategory" if "subcategory" in self.selected else "category"
+        elif self.current_stage == "subcategory":
+            prev_stage = "category"
+        else:
+            return
+
+        dropdown = DynamicDropdown(self.bot, self.user_id, prev_stage, self.selected, self.view_ref)
+        view = discord.ui.View(timeout=600)
+        view.add_item(dropdown)
+
+        if prev_stage != "category":
+            view.add_item(BackButton(self.bot, self.user_id, prev_stage, self.selected, self.view_ref))
+
+        await interaction.response.edit_message(content="Back to previous selection:", view=view)
+
 class DynamicDropdown(ui.Select):
     def __init__(self, bot, user_id, stage, selected=None, view_ref=None):
         self.bot = bot
