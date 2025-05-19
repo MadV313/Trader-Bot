@@ -517,10 +517,8 @@ class TraderCommand(commands.Cog):
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
         
             # Step 1: Send MP4 separately (Ka-Ching)
-            embed = discord.Embed()
-            embed.set_image(url="https://cdn.discordapp.com/attachments/1361109143041081507/1374110005841756301/ezgif.com-resize_2.gif")
-            await trader_channel.send(embed=embed)
-        
+            await trader_channel.send("https://cdn.discordapp.com/attachments/1361109143041081507/1374110005841756301/ezgif.com-resize_2.gif")
+            
             # Step 2: Send payment confirmation message with dropdown
             payment_notice = await trader_channel.send(
                 content=(
