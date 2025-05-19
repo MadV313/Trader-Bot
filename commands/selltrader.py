@@ -389,7 +389,7 @@ class SellTraderView(ui.View):
         # ✅ Admin alert message
         alert_msg = await trader_channel.send(
             f"<@&{config['trader_role_id']}> {interaction.user.mention} **has submitted an order to approve for sale!\n"
-            f"Please send payment and confirm here once done**!"
+            f"Please send payment (/pay + copy/paste-below ) in this channel here and confirm here once done**!"
         )
         
         # ✅ Proper payout command for admin use
@@ -466,7 +466,7 @@ class SellTraderCommand(commands.Cog):
                 "┏━━━━━━━━━━━━━━━━━━━━━━━┓\n"
                 "💰 **SELLING SESSION STARTED!**\n"
                 "┗━━━━━━━━━━━━━━━━━━━━━━━┛\n"
-                "Use the buttons below to add/remove items,\nsubmit, or cancel your sell order."
+                "**Use the buttons below to add/remove items,\nsubmit, or cancel your sell order.**"
             )
             view = SellTraderView(self.bot, interaction.user.id)
             ui_msg = await interaction.user.send(view=view)
