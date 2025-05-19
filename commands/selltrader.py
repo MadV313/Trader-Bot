@@ -446,7 +446,7 @@ class SellTraderView(ui.View):
                 asyncio.create_task(cleanup_dm())
 
         await trader_channel.send(summary, view=ConfirmSellView(interaction.user, alert_msg))
-        await interaction.response.send_message("✅ **Sell order submitted and sent to trader channel.**", ephemeral=False)
+        await interaction.response.send_message("✅ **Your Sell order has been submitted and sent to the trader channel. Please stand by...**", ephemeral=False)
         session_manager.end_session(self.user_id)
         if self.ui_message:
             await self.ui_message.edit(view=None)
