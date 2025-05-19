@@ -423,10 +423,12 @@ class SellTraderView(ui.View):
                 # ✅ Send DM to buyer
                 try:
                     await self.buyer.send(
-                        f"https://cdn.discordapp.com/attachments/1351365150287855739/1374158383157016717/ka-ching-money.gif\n"
+                        "https://cdn.discordapp.com/attachments/1351365150287855739/1374120175049248940/ezgif.com-resize_2.gif"
+                    )
+                    await self.buyer.send(
                         f"✅ **The payment for your used wares has been sent to <#{config['economy_channel_id']}>!**"
                     )
-                    await asyncio.sleep(1)  # Optional: ensures next gif shows properly
+                    await asyncio.sleep(1)
                     await self.buyer.send(
                         "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/Trader2-ezgif.com-video-to-gif-converter.gif"
                     )
