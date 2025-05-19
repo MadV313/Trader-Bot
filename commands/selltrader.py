@@ -291,7 +291,13 @@ class SellTraderView(ui.View):
         summary = "\n".join([f"• {i['item']} ({i['variant']}) x{i['quantity']} = ${i['subtotal']:,}" for i in items])
         total = sum(i["subtotal"] for i in items)
         summary += f"\n\n🛒 Cart Total: ${total:,}" if items else "\n🛒 Cart is now empty."
-        await interaction.response.send_message(f"🗑️ Removed {removed['item']}.", ephemeral=True)
+        msg = await interaction.response.send_message(f"🗑️ Removed {removed['item']}.", ephemeral=False)
+        await asyncio.sleep(7)
+        try:
+            await msg.delete()
+        except Exception as e:
+            print(f"[Cleanup Error] {e}")
+
         if self.cart_message:
             await self.cart_message.edit(content=summary)
 
