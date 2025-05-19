@@ -3,9 +3,8 @@ from discord.ext import commands
 from discord import app_commands, ui
 import json
 import os
-import asyncio  # ✅ Needed for sleep/delay
+import asyncio
 
-# Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 
@@ -20,7 +19,7 @@ class ClearChat(commands.Cog):
 
         class ConfirmClearView(ui.View):
             def __init__(self):
-                super().__init__(timeout=30)
+                super().__init__(timeout=300)
 
             @ui.button(label="✅ Confirm Clear", style=discord.ButtonStyle.danger)
             async def confirm(self, interaction2: discord.Interaction, button: discord.ui.Button):
@@ -31,11 +30,15 @@ class ClearChat(commands.Cog):
 
                 try:
                     if isinstance(channel, discord.DMChannel):
-                        await asyncio.sleep(1)
-                        async for msg in channel.history(limit=200):
+                        await asyncio.sleep(10)  # Match cancel_order delay
+                        user_dm = await interaction2.user.create_dm()
+                        async for msg in user_dm.history(limit=100):
                             if msg.author == self.bot.user:
-                                await msg.delete()
-                        print("[CLEAR] DM wiped.")
+                                try:
+                                    await msg.delete()
+                                except:
+                                    pass
+                        print("[CLEAR] DM wiped via /clear command.")
                     elif channel.id == TRADER_ORDERS_CHANNEL_ID:
                         await channel.purge(limit=200, check=lambda m: True)
                         print("[CLEAR] trader-orders channel wiped.")
