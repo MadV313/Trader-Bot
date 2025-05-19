@@ -614,7 +614,7 @@ class TraderCommand(commands.Cog):
                                 content=(
                                     "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
                                     "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
-                                    "📦 **Your order has been completed — no storage was assigned this time.**\n"
+                                    "📦 **Your order has been completed, no storage was assigned this time.**\n"
                                     "**Thanks for using Trader! Stay frosty survivor!**❄️"
                                 )
                             )
