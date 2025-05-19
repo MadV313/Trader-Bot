@@ -144,6 +144,20 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         except Exception as e:
             print(f"[Cart Display Error] {e}")
             self.view_ref.cart_message = await interaction.followup.send(content=summary)
+
+        # Show separate "added to cart" confirmation
+        confirm_msg = await interaction.followup.send(
+            content=f"🧺 Added: **{self.item}** x{quantity}", ephemeral=False
+        )
+        
+        async def cleanup():
+            await asyncio.sleep(7)
+            try:
+                await confirm_msg.delete()
+            except Exception as e:
+                print(f"[Add Confirmation Cleanup Error] {e}")
+        
+        asyncio.create_task(cleanup())
             
 class BackButton(discord.ui.Button):
     def __init__(self, bot, user_id, current_stage, selected, view_ref):
