@@ -118,11 +118,16 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
         summary = "\n".join(lines) + f"\n\n🛒 Cart Total: ${cart_total:,}"
 
-        if self.view_ref.cart_message:
-            await self.view_ref.cart_message.edit(content=summary)
-        else:
+        try:
+            await interaction.response.defer()
+            if self.view_ref.cart_message:
+                await self.view_ref.cart_message.edit(content=summary)
+            else:
+                self.view_ref.cart_message = await interaction.followup.send(content=summary)
+        except Exception as e:
+            print(f"[Cart Display Error] {e}")
             self.view_ref.cart_message = await interaction.followup.send(content=summary)
-
+        
 class BackButton(discord.ui.Button):
     def __init__(self, bot, user_id, current_stage, selected, view_ref):
         super().__init__(label="Back", style=discord.ButtonStyle.secondary)
@@ -323,7 +328,7 @@ class SellTraderView(ui.View):
                 try:
                     await self.buyer.send(
                         "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
-                        "✅ **Thanks for using Trader! Stay frosty out there, survivor!**"
+                        "✅ **The payment for your used wears has been sent!**"
                     )
                 except:
                     pass
