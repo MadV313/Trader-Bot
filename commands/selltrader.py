@@ -147,7 +147,7 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
 
         # Show separate "added to cart" confirmation
         confirm_msg = await interaction.followup.send(
-            content=f"🧺 Added: **{self.item} ({self.variant})** x{quantity}", ephemeral=False
+            content=f"📦 Added: **{self.item} ({self.variant})** x{quantity}", ephemeral=False
         )
         
         async def cleanup():
@@ -391,12 +391,10 @@ class SellTraderView(ui.View):
             f"<@&{config['trader_role_id']}> {interaction.user.mention} has submitted an order to approve for sale!\n"
             f"Please send payment and confirm here once done!"
         )
-    
+        
         # ✅ Proper payout command for admin use
         admin_payout_line = f"give user:{interaction.user.id} amount:{total} account:cash"
-        await trader_channel.send(
-            f"📋 **Payout Format:**\n```{admin_payout_line}```"
-        )
+        await trader_channel.send(f"```{admin_payout_line}```")
     
         # (ConfirmSellView and rest of the method continue below...)
 
@@ -428,7 +426,7 @@ class SellTraderView(ui.View):
                 except:
                     pass
 
-                await i.response.send_message("✅ Payout confirmed.", ephemeral=False)
+                await i.response.send_message("✅ Payout confirmed.", ephemeral=True)
 
         await trader_channel.send(summary, view=ConfirmSellView(interaction.user, alert_msg))
         await interaction.response.send_message("✅ Sell order submitted and sent to trader channel.", ephemeral=False)
