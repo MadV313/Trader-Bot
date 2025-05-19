@@ -118,15 +118,25 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         lines = [f"• {item['item']} ({item['variant']}) x{item['quantity']} = ${item['subtotal']:,}" for item in items]
         summary = "\n".join(lines) + f"\n\n🛒 Cart Total: ${cart_total:,}"
 
+        await interaction.response.defer()
+
+        # Close any old dropdowns
+        if self.view_ref.ui_message:
+            try:
+                await self.view_ref.ui_message.edit(view=None)
+            except Exception as e:
+                print(f"[Dropdown Cleanup Error] {e}")
+
+        # Send or update cart message
         try:
-            await interaction.response.defer()
-            # Hide the dropdown after submitting the quantity
-            if self.view_ref.ui_message:
-                try:
-                    await self.view_ref.ui_message.edit(view=None)
-                except Exception as e:
-                    print(f"[Dropdown Cleanup Error] {e}")
-        
+            if self.view_ref.cart_message:
+                await self.view_ref.cart_message.edit(content=summary)
+            else:
+                self.view_ref.cart_message = await interaction.followup.send(content=summary)
+        except Exception as e:
+            print(f"[Cart Display Error] {e}")
+            self.view_ref.cart_message = await interaction.followup.send(content=summary)
+            
 class BackButton(discord.ui.Button):
     def __init__(self, bot, user_id, current_stage, selected, view_ref):
         super().__init__(label="Back", style=discord.ButtonStyle.secondary)
