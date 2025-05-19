@@ -476,7 +476,12 @@ class TraderCommand(commands.Cog):
                     await user.send(
                         f"give user:{user.id} amount:{total} account:cash"
                     )
-                    
+                    # ✅ Log payout confirmer
+                    log_data = trader_logger.load_reaction_log()
+                    admin_id = str(user.id)
+                    log_data[admin_id] = log_data.get(admin_id, 0) + 1
+                    trader_logger.save_reaction_log(log_data)
+
         # Phase 2: Player confirms payment
         elif emoji == "✅" and reaction.message.id in self.awaiting_payment:
             print(f"[✅ Payment Reaction] Player {user} reacted to message {reaction.message.id}")
