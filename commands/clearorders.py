@@ -3,10 +3,11 @@ from discord.ext import commands
 from discord import app_commands, ui
 import json
 import os
+import asyncio  # ✅ Needed for sleep/delay
 
+# Load config
 config = json.loads(os.environ.get("CONFIG_JSON"))
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
-
 
 class ClearChat(commands.Cog):
     def __init__(self, bot):
@@ -30,9 +31,7 @@ class ClearChat(commands.Cog):
 
                 try:
                     if isinstance(channel, discord.DMChannel):
-                        # Use larger history scope to catch ALL bot messages
-                        await asyncio.sleep(1)  # Let the message register
-
+                        await asyncio.sleep(1)
                         async for msg in channel.history(limit=200):
                             if msg.author == self.bot.user:
                                 await msg.delete()
@@ -43,7 +42,6 @@ class ClearChat(commands.Cog):
                 except Exception as e:
                     print(f"[CLEAR ERROR] {e}")
 
-        # DM or correct channel — show confirmation
         if isinstance(channel, discord.DMChannel) or channel.id == TRADER_ORDERS_CHANNEL_ID:
             await interaction.response.send_message(
                 "⚠️ Are you sure you want to clear this?",
@@ -55,11 +53,6 @@ class ClearChat(commands.Cog):
                 "❌ This command can only be used in a DM or the trader-orders channel.",
                 ephemeral=True
             )
-
-
-async def setup(bot):
-    await bot.add_cog(ClearChat(bot))
-
 
 async def setup(bot):
     await bot.add_cog(ClearChat(bot))
