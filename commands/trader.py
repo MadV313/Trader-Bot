@@ -5,6 +5,7 @@ import json
 import os
 import asyncio
 from utils import session_manager, variant_utils
+from utils import trader_logger
 
 import re
 
