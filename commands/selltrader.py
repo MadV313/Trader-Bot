@@ -15,6 +15,8 @@ except:
     with open("config.json") as f:
         config = json.load(f)
 
+TRADER_TIMEOUT_SECONDS = 259200  # 3 days
+
 PRICE_FILE = os.path.join("data", "Final price list.json")
 with open(PRICE_FILE, "r") as f:
     PRICE_DATA = json.load(f)["categories"]
@@ -182,7 +184,7 @@ class BackButton(discord.ui.Button):
             return
 
         dropdown = DynamicDropdown(self.bot, self.user_id, prev_stage, self.selected, self.view_ref)
-        view = discord.ui.View(timeout=600)
+        view = discord.ui.View(timeout=TRADER_TIMEOUT_SECONDS)
         view.add_item(dropdown)
 
         if prev_stage != "category":
@@ -265,7 +267,7 @@ class DynamicDropdown(ui.Select):
                 QuantityModal(self.bot, self.user_id, new_selection["category"], new_selection.get("subcategory"), new_selection["item"], new_selection["variant"], self.view_ref)
             )
 
-        view = discord.ui.View(timeout=600)
+        view = discord.ui.View(timeout=TRADER_TIMEOUT_SECONDS)
         view.add_item(dropdown)
         if dropdown.stage != "category":
             view.add_item(BackButton(self.bot, self.user_id, dropdown.stage, self.selected, self.view_ref))
@@ -278,7 +280,7 @@ class DynamicDropdown(ui.Select):
 
 class SellTraderView(ui.View):
     def __init__(self, bot, user_id):
-        super().__init__(timeout=600)
+        super().__init__(timeout=TRADER_TIMEOUT_SECONDS)
         self.bot = bot
         self.user_id = user_id
         self.cart_message = None
@@ -288,7 +290,7 @@ class SellTraderView(ui.View):
     async def add_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Mind your own order!", ephemeral=True)
-        view = ui.View(timeout=600)
+        view = ui.View(timeout=TRADER_TIMEOUT_SECONDS)
         view.add_item(DynamicDropdown(self.bot, self.user_id, "category", view_ref=self))
         dropdown_msg = await interaction.response.send_message("Select a category:", view=view)
         self.dropdown_message = dropdown_msg
@@ -421,8 +423,12 @@ class SellTraderView(ui.View):
                 # ✅ Send DM to buyer
                 try:
                     await self.buyer.send(
-                        "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
+                        f"https://cdn.discordapp.com/attachments/1351365150287855739/1374158383157016717/ka-ching-money.gif\n"
                         f"✅ **The payment for your used wares has been sent to <#{config['economy_channel_id']}>!**"
+                    )
+                    await asyncio.sleep(1)  # Optional: ensures next gif shows properly
+                    await self.buyer.send(
+                        "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/Trader2-ezgif.com-video-to-gif-converter.gif"
                     )
                 except:
                     pass
