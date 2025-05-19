@@ -516,8 +516,23 @@ class TraderCommand(commands.Cog):
         
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
             payment_notice = await trader_channel.send(
-                f"{data['player'].mention} **has confirmed payment.** 💵\n**Please select a storage unit below:**"
+                content=(
+                    "https://cdn.discordapp.com/attachments/1370152442183946311/1374096506055032943/ezgifcom-resize-2.mp4\n\n"
+                    f"{data['player'].mention} **has confirmed payment.** 💵\n"
+                    "**Please select a storage unit below:**"
+                )
             )
+            
+            # ⏳ Auto-delete after 10 seconds
+            async def auto_delete_payment_notice():
+                await asyncio.sleep(10)
+                try:
+                    await payment_notice.delete()
+                except Exception as e:
+                    print(f"[Auto Delete Payment Message Error] {e}")
+            
+            asyncio.create_task(auto_delete_payment_notice())
+
             print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
         
             class StorageSelect(ui.Select):
