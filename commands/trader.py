@@ -390,7 +390,7 @@ class TraderView(discord.ui.View):
             f"<@&{config['trader_role_id']}> **a new order is ready to be processed!**\n\n"
             f"{interaction.user.mention} has submitted a new order:\n\n"
             f"{summary}\n\n"
-            f"**Please confirm this message with a** ✅ **when the order is ready**"
+            f"Please confirm this message with a ✅ when the order is ready"
         )
         await order_message.add_reaction("🔴")
 
