@@ -147,9 +147,9 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
             ephemeral=False
         )
         
-        # 🧹 Clean up message after 7 seconds
+        # 🧹 Clean up message after 5 seconds
         async def cleanup():
-            await asyncio.sleep(7)
+            await asyncio.sleep(5)
             try:
                 await confirm_msg.delete()
             except Exception as e:
@@ -340,7 +340,7 @@ class TraderView(discord.ui.View):
 
             await interaction.response.send_message(f"🗑️ Removed {removed_item['item']}.")
             try:
-                await asyncio.sleep(6)
+                await asyncio.sleep(5)
                 deletion_target = await interaction.original_response()
                 await deletion_target.delete()
             except Exception as e:
