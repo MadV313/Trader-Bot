@@ -257,6 +257,10 @@ class DynamicDropdown(ui.Select):
             view.add_item(BackButton(self.bot, self.user_id, dropdown.stage, self.selected, self.view_ref))
 
         await interaction.response.edit_message(content="Select an option:", view=view)
+        try:
+            self.view_ref.dropdown_message = await interaction.original_response()
+        except Exception as e:
+            print(f"[Dropdown Tracking Error] {e}")
 
 class SellTraderView(ui.View):
     def __init__(self, bot, user_id):
