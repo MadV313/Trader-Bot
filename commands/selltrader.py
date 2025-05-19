@@ -370,23 +370,35 @@ class SellTraderView(ui.View):
         from discord.utils import escape_markdown
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
-
+    
         items = session_manager.get_session_items(self.user_id)
         if not items:
             return await interaction.response.send_message("Your cart is empty.", ephemeral=True)
-
+    
         total = sum(i["subtotal"] for i in items)
-        summary = "\n".join([f"• {i['item']} ({i['variant']}) x{i['quantity']} = ${i['subtotal']:,}" for i in items])
+        summary = "\n".join([
+            f"• {i['item']} ({i['variant']}) x{i['quantity']} = ${i['subtotal']:,}"
+            for i in items
+        ])
         summary += f"\n\n💰 **Total Payout: ${total:,}**"
-
+    
         trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
         if not trader_channel:
             return await interaction.response.send_message("Trader channel not found.")
-
+    
+        # ✅ Admin alert message
         alert_msg = await trader_channel.send(
             f"<@&{config['trader_role_id']}> {interaction.user.mention} has submitted an order to approve for sale!\n"
             f"Please send payment and confirm here once done!"
         )
+    
+        # ✅ Proper payout command for admin use
+        admin_payout_line = f"give user:{interaction.user.id} amount:{total} account:cash"
+        await trader_channel.send(
+            f"📋 **Payout Format:**\n```{admin_payout_line}```"
+        )
+    
+        # (ConfirmSellView and rest of the method continue below...)
 
         class ConfirmSellView(ui.View):
             def __init__(self, buyer, alert_msg):
