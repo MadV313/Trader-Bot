@@ -283,36 +283,64 @@ class SellTraderView(ui.View):
     async def remove_item(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
+    
         items = session_manager.get_session_items(self.user_id)
         if not items:
             return await interaction.response.send_message("Your cart is already empty.", ephemeral=True)
+    
         removed = items.pop()
         session_manager.set_session_items(self.user_id, items)
+    
+        # Update cart first
         summary = "\n".join([f"• {i['item']} ({i['variant']}) x{i['quantity']} = ${i['subtotal']:,}" for i in items])
         total = sum(i["subtotal"] for i in items)
         summary += f"\n\n🛒 Cart Total: ${total:,}" if items else "\n🛒 Cart is now empty."
-        msg = await interaction.response.send_message(f"🗑️ Removed {removed['item']}.", ephemeral=False)
-        await asyncio.sleep(7)
-        try:
-            await msg.delete()
-        except Exception as e:
-            print(f"[Cleanup Error] {e}")
         if self.cart_message:
             await self.cart_message.edit(content=summary)
+    
+        # Then send and schedule deletion of the removal message
+        msg = await interaction.followup.send(content=f"🗑️ Removed {removed['item']}.", ephemeral=False)
+        
+        async def cleanup():
+            await asyncio.sleep(7)
+            try:
+                await msg.delete()
+            except Exception as e:
+                print(f"[Cleanup Error] {e}")
+    
+        asyncio.create_task(cleanup())
 
     @ui.button(label="Cancel Order", style=discord.ButtonStyle.danger)
     async def cancel_order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
+    
         session_manager.end_session(self.user_id)
+    
         msg = await interaction.response.send_message("❌ Order cancelled.", ephemeral=False)
-        await asyncio.sleep(10)
-        try:
-            await msg.delete()
-        except Exception as e:
-            print(f"[Cancel Cleanup Error] {e}")
+    
+        # Immediately update the session UI (before delay)
         if self.ui_message:
-            await self.ui_message.edit(content="Session closed.", view=None)
+            try:
+                await self.ui_message.edit(content="Session closed.", view=None)
+            except:
+                pass
+    
+        # Run the deletion in background after 10 seconds
+        async def cleanup_dm():
+            await asyncio.sleep(10)
+            try:
+                dm_channel = interaction.user.dm_channel or await interaction.user.create_dm()
+                async for m in dm_channel.history(limit=50):  # Adjust limit as needed
+                    if m.author == interaction.client.user:
+                        try:
+                            await m.delete()
+                        except Exception as e:
+                            print(f"[DM Cleanup Error] {e}")
+            except Exception as e:
+                print(f"[DM Fetch Error] {e}")
+    
+        asyncio.create_task(cleanup_dm())
 
     @ui.button(label="Submit Order", style=discord.ButtonStyle.success)
     async def submit_order(self, interaction: discord.Interaction, button: discord.ui.Button):
