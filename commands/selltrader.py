@@ -120,13 +120,12 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
 
         try:
             await interaction.response.defer()
-            if self.view_ref.cart_message:
-                await self.view_ref.cart_message.edit(content=summary)
-            else:
-                self.view_ref.cart_message = await interaction.followup.send(content=summary)
-        except Exception as e:
-            print(f"[Cart Display Error] {e}")
-            self.view_ref.cart_message = await interaction.followup.send(content=summary)
+            # Hide the dropdown after submitting the quantity
+            if self.view_ref.ui_message:
+                try:
+                    await self.view_ref.ui_message.edit(view=None)
+                except Exception as e:
+                    print(f"[Dropdown Cleanup Error] {e}")
         
 class BackButton(discord.ui.Button):
     def __init__(self, bot, user_id, current_stage, selected, view_ref):
