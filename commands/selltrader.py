@@ -297,7 +297,6 @@ class SellTraderView(ui.View):
             await msg.delete()
         except Exception as e:
             print(f"[Cleanup Error] {e}")
-
         if self.cart_message:
             await self.cart_message.edit(content=summary)
 
@@ -306,7 +305,12 @@ class SellTraderView(ui.View):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
         session_manager.end_session(self.user_id)
-        await interaction.response.send_message("❌ Order cancelled.", ephemeral=True)
+        msg = await interaction.response.send_message("❌ Order cancelled.", ephemeral=False)
+        await asyncio.sleep(10)
+        try:
+            await msg.delete()
+        except Exception as e:
+            print(f"[Cancel Cleanup Error] {e}")
         if self.ui_message:
             await self.ui_message.edit(content="Session closed.", view=None)
 
