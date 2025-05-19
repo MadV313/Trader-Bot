@@ -490,7 +490,7 @@ class TraderCommand(commands.Cog):
                     }
 
                     await user.send(
-                        f"give user:{user.id} amount:{total} account:cash"
+                        f"user:{user.id} amount:{total}"
                     )
                     # ✅ Log payout confirmer
                     log_data = trader_logger.load_reaction_log()
@@ -547,7 +547,7 @@ class TraderCommand(commands.Cog):
                                     "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
                                     "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
                                     "📦 **Your order has been completed — no storage was assigned this time.**\n"
-                                    "**Thanks for using Trader! Stay Frosty out there survivor!**❄️"
+                                    "**Thanks for using Trader! Stay Frosty out survivor!**❄️"
                                 )
                             )
                             await asyncio.sleep(60)
