@@ -151,7 +151,7 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
         )
         
         async def cleanup():
-            await asyncio.sleep(7)
+            await asyncio.sleep(5)
             try:
                 await confirm_msg.delete()
             except Exception as e:
@@ -325,7 +325,7 @@ class SellTraderView(ui.View):
         )
     
         async def cleanup():
-            await asyncio.sleep(7)
+            await asyncio.sleep(5)
             try:
                 await confirm_msg.delete()
             except Exception as e:
@@ -340,7 +340,7 @@ class SellTraderView(ui.View):
     
         session_manager.end_session(self.user_id)
     
-        msg = await interaction.response.send_message("❌ Order cancelled.", ephemeral=False)
+        msg = await interaction.response.send_message("❌ Order cancelled. This session will auto-close in 10 seconds...", ephemeral=False)
     
         # Immediately update the session UI (before delay)
         if self.ui_message:
@@ -388,13 +388,13 @@ class SellTraderView(ui.View):
     
         # ✅ Admin alert message
         alert_msg = await trader_channel.send(
-            f"<@&{config['trader_role_id']}> {interaction.user.mention} has submitted an order to approve for sale!\n"
-            f"Please send payment and confirm here once done!"
+            f"<@&{config['trader_role_id']}> {interaction.user.mention} **has submitted an order to approve for sale!\n"
+            f"Please send payment and confirm here once done**!"
         )
         
         # ✅ Proper payout command for admin use
         admin_payout_line = f"give user:{interaction.user.id} amount:{total} account:cash"
-        await trader_channel.send(f"```{admin_payout_line}```")
+        await trader_channel.send(f"{admin_payout_line}")
     
         # (ConfirmSellView and rest of the method continue below...)
 
@@ -446,7 +446,7 @@ class SellTraderView(ui.View):
                 asyncio.create_task(cleanup_dm())
 
         await trader_channel.send(summary, view=ConfirmSellView(interaction.user, alert_msg))
-        await interaction.response.send_message("✅ Sell order submitted and sent to trader channel.", ephemeral=False)
+        await interaction.response.send_message("✅ **Sell order submitted and sent to trader channel.**", ephemeral=False)
         session_manager.end_session(self.user_id)
         if self.ui_message:
             await self.ui_message.edit(view=None)
