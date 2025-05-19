@@ -393,10 +393,10 @@ class SellTraderView(ui.View):
                 except:
                     pass
 
-                await i.response.send_message("✅ Payout confirmed.", ephemeral=True)
+                await i.response.send_message("✅ Payout confirmed.", ephemeral=False)
 
         await trader_channel.send(summary, view=ConfirmSellView(interaction.user, alert_msg))
-        await interaction.response.send_message("✅ Sell order submitted and sent to trader channel.", ephemeral=True)
+        await interaction.response.send_message("✅ Sell order submitted and sent to trader channel.", ephemeral=False)
         session_manager.end_session(self.user_id)
         if self.ui_message:
             await self.ui_message.edit(view=None)
@@ -423,10 +423,10 @@ class SellTraderCommand(commands.Cog):
             view.ui_message = ui_msg
             view.start_message = start_msg
             session_manager.start_session(interaction.user.id)
-            await interaction.response.send_message("✅ Sell session moved to your DMs.", ephemeral=True)
+            await interaction.response.send_message("✅ Sell session moved to your DMs.", ephemeral=False)
         except Exception as e:
             print(f"[SellTrader DM Error] {e}")
-            await interaction.response.send_message("❌ Failed to start sell session in DMs.", ephemeral=True)
+            await interaction.response.send_message("❌ Failed to start sell session in DMs.", ephemeral=False)
 
 async def setup(bot):
     await bot.add_cog(SellTraderCommand(bot))
