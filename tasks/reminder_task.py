@@ -9,7 +9,7 @@ config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
 MENTION_ROLES = " ".join(config["mention_roles"])
-ORDER_REMINDER_HOURS = config.get("order_reminder_hours", 12)  # Fallback to 12 hours if not set
+ORDER_REMINDER_HOURS = config.get("order_reminder_hours", 6)  # Fallback to 6 hours if not set
 
 LOG_DIR = "data/logs"
 REMINDER_LOG_FILE = os.path.join(LOG_DIR, "reminder_events.log")
@@ -27,7 +27,7 @@ def log_reminder_event(message):
 
 
 def start_reminder_task(bot):
-    @tasks.loop(hours=1)
+    @tasks.loop(hours=ORDER_REMINDER_HOURS)
     async def scan_for_incomplete_orders():
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{timestamp}] [TraderBot] Scanning for unconfirmed orders...")
@@ -47,11 +47,17 @@ def start_reminder_task(bot):
                             f"{MENTION_ROLES}\nPlease check for any incomplete trader orders!"
                         )
                         log_reminder_event("Reminder sent for incomplete trader orders.")
-                        break  # Only send one reminder per scan
+                        break
         except Exception as e:
             error_message = f"Reminder scan failed: {e}"
             print(f"[TraderBot] {error_message}")
             log_reminder_event(error_message)
 
+    @scan_for_incomplete_orders.before_loop
+    async def before_first_scan():
+        await bot.wait_until_ready()
+        await scan_for_incomplete_orders()  # 🔥 Run first scan immediately on startup
+
     if not scan_for_incomplete_orders.is_running():
         scan_for_incomplete_orders.start()
+
