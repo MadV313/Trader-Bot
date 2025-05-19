@@ -127,6 +127,14 @@ class QuantityModal(ui.Modal, title="Enter Quantity"):
             except Exception as e:
                 print(f"[Dropdown Cleanup Error] {e}")
 
+        # Clean up previous dropdown message
+        if hasattr(self.view_ref, "dropdown_message") and self.view_ref.dropdown_message:
+            try:
+                await self.view_ref.dropdown_message.delete()
+                self.view_ref.dropdown_message = None
+            except Exception as e:
+                print(f"[Dropdown Cleanup Error] {e}")
+
         # Send or update cart message
         try:
             if self.view_ref.cart_message:
