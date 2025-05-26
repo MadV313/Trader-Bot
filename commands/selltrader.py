@@ -411,6 +411,10 @@ class SellTraderView(ui.View):
                 if not i.user.guild_permissions.manage_messages:
                     return await i.response.send_message("You do not have permission.", ephemeral=True)
             
+                if self.alert_msg.id in self.bot.get_cog("SellTraderCommand").confirmed_payouts:
+                    return await i.response.send_message("This order has already been confirmed.", ephemeral=True)
+                
+                self.bot.get_cog("SellTraderCommand").confirmed_payouts.add(self.alert_msg.id)
                 await self.alert_msg.edit(content=self.alert_msg.content + f"\n\n✅ Confirmed by {i.user.mention}")
             
                 # ✅ Log trader confirmation
@@ -463,7 +467,8 @@ class SellTraderCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.dropdown_message = None
-        
+        self.confirmed_payouts = set()  # ✅ prevent duplicate payout confirms
+  
     @app_commands.command(name="selltrader", description="Start a selling session with the trader.")
     async def selltrader(self, interaction: discord.Interaction):
         if interaction.channel.id != config["economy_channel_id"]:
