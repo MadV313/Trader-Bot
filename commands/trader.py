@@ -449,32 +449,39 @@ class TraderCommand(commands.Cog):
         self.awaiting_payment = {}
         self.awaiting_storage = {}
         self.awaiting_pickup = {}
+        self.confirmed_orders = set()
+        self.confirmed_payments = set()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         print(f"[Reaction Detected] emoji={reaction.emoji} message_id={reaction.message.id} user={user}")
-
+    
         if user.bot or not reaction.message:
             return
-
+    
         message = reaction.message
         emoji = str(reaction.emoji)
-
+    
         # Phase 1: Admin confirms order
         if message.channel.id == config["trader_orders_channel_id"] and emoji == "✅":
-            if "Please confirm this message with a ✅ when the order is ready" in message.content and message.id not in self.awaiting_payment:
+            if (
+                "Please confirm this message with a ✅ when the order is ready" in message.content
+                and message.id not in self.awaiting_payment
+                and message.id not in self.confirmed_orders
+            ):
+                self.confirmed_orders.add(message.id)
                 await message.clear_reaction("🔴")
                 await message.add_reaction("✅")
                 new_content = f"{message.content}\n\nOrder confirmed by {user.mention}"
                 await message.edit(content=new_content)
-
+    
                 mentioned_users = message.mentions
                 total = None
                 for line in message.content.splitlines():
                     if "Total:" in line:
                         total = line.split("$")[-1].replace(",", "")
                         break
-
+    
                 if mentioned_users:
                     player = mentioned_users[0]
                     dm = await player.send(
@@ -490,46 +497,47 @@ class TraderCommand(commands.Cog):
                         "total": total,
                         "original_message": message
                     }
-
-                    await user.send(
-                        f"user:{user.id} amount:{total}"
-                    )
-                    # ✅ Log payout confirmer
+    
+                    await user.send(f"user:{user.id} amount:{total}")
+    
                     log_data = trader_logger.load_reaction_log()
                     admin_id = str(user.id)
                     log_data[admin_id] = log_data.get(admin_id, 0) + 1
                     trader_logger.save_reaction_log(log_data)
-
-        #Phase 2: Player confirms payment
+    
+        # Phase 2: Player confirms payment
         elif emoji == "✅" and reaction.message.id in self.awaiting_payment:
+            if reaction.message.id in self.confirmed_payments:
+                return  # Already confirmed
+            self.confirmed_payments.add(reaction.message.id)
+    
             print(f"[✅ Payment Reaction] Player {user} reacted to message {reaction.message.id}")
             data = self.awaiting_payment.pop(reaction.message.id)
-        
+    
             try:
                 if not isinstance(reaction.message.channel, discord.DMChannel):
                     await reaction.message.clear_reaction("🔴")
             except discord.Forbidden:
                 pass
-        
+    
             await reaction.message.add_reaction("✅")
             await reaction.message.edit(content=reaction.message.content + "\n\n✅ Payment confirmed! Please stand by.")
-        
+    
             trader_channel = self.bot.get_channel(config["trader_orders_channel_id"])
-        
-            # Step 1: Send MP4 separately (Ka-Ching)
+    
+            # Step 1: Send MP4 (Ka-Ching)
             await trader_channel.send("https://cdn.discordapp.com/attachments/1351365150287855739/1374120175049248940/ezgif.com-resize_2.gif")
-            
-            # Step 2: Send payment confirmation message with dropdown
+    
+            # Step 2: Confirm message with trader role mention
             payment_notice = await trader_channel.send(
                 content=(
-                    f"{data['player'].mention} **has confirmed payment.** 💵\n"
+                    f"<@&{config['trader_role_id']}> {data['player'].mention} **has confirmed payment.** 💵\n"
                     "**Please select a storage unit below:**"
                 )
             )
-        
+    
             print(f"[PHASE 2] Posted payment confirmation message with ID: {payment_notice.id}")
-        
-            # Storage dropdown logic
+    
             class StorageSelect(ui.Select):
                 def __init__(self, bot, player, confirm_message):
                     options = [discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)] + \
@@ -539,12 +547,10 @@ class TraderCommand(commands.Cog):
                     self.bot = bot
                     self.player = player
                     self.confirm_message = confirm_message
-        
+    
                 async def callback(self, interaction: discord.Interaction):
                     choice = self.values[0]
                     print(f"[PHASE 2/3] Storage option selected: {choice}")
-        
-                    # Remove dropdown view and confirm who clicked it
                     try:
                         await self.confirm_message.edit(
                             content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {interaction.user.mention}",
@@ -552,8 +558,7 @@ class TraderCommand(commands.Cog):
                         )
                     except Exception as e:
                         print(f"[PHASE 2/3] Could not update confirmation message: {e}")
-        
-                    # Handle skip logic
+    
                     if choice == "skip":
                         try:
                             msg = await self.player.send(
@@ -571,10 +576,9 @@ class TraderCommand(commands.Cog):
                         except Exception as e:
                             print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
                         return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
-        
+    
                     await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
-        
-            # Attach dropdown view
+    
             try:
                 dropdown = StorageSelect(self.bot, data["player"], payment_notice)
                 view = ui.View(timeout=TRADER_TIMEOUT_SECONDS)
@@ -585,48 +589,6 @@ class TraderCommand(commands.Cog):
                 print("[PHASE 2/3 DROPDOWN ERROR]")
                 import traceback
                 traceback.print_exc()
-        
-            class StorageSelect(ui.Select):
-                def __init__(self, bot, player, confirm_message):
-                    options = [discord.SelectOption(label=f"Shed {i}", value=f"shed{i}") for i in range(1, 5)] + \
-                              [discord.SelectOption(label=f"Container {i}", value=f"container{i}") for i in range(1, 7)] + \
-                              [discord.SelectOption(label="Skip", value="skip")]
-                    super().__init__(placeholder="Select a storage unit or skip", options=options)
-                    self.bot = bot
-                    self.player = player
-                    self.confirm_message = confirm_message
-        
-                async def callback(self, interaction: discord.Interaction):
-                    choice = self.values[0]
-                    print(f"[PHASE 2/3] Storage option selected: {choice}")
-        
-                    try:
-                        await self.confirm_message.edit(
-                            content=self.confirm_message.content + f"\n\n✅ Payment confirmed by {interaction.user.mention}",
-                            view=None
-                        )
-                    except Exception as e:
-                        print(f"[PHASE 2/3] Could not update confirmation message: {e}")
-        
-                    if choice == "skip":
-                        try:
-                            msg = await self.player.send(
-                                content=(
-                                    "https://cdn.discordapp.com/attachments/1351365150287855739/1373723922809491476/"
-                                    "Trader2-ezgif.com-video-to-gif-converter.gif\n\n"
-                                    "📦 **Your order has been completed - no storage was assigned this time.**\n"
-                                    "**Thanks for using Trader! Stay frosty survivor!**❄️"
-                                )
-                            )
-                            await asyncio.sleep(60)
-                            async for m in self.player.dm_channel.history(limit=100):
-                                if m.author == self.bot.user:
-                                    await m.delete()
-                        except Exception as e:
-                            print(f"[PHASE 2/3] Skip DM Cleanup Error: {e}")
-                        return await interaction.response.send_message("✅ Skip acknowledged.", ephemeral=True)
-        
-                    await interaction.response.send_modal(ComboInputModal(self.bot, self.player, choice))
         
             class ComboInputModal(ui.Modal, title="Enter 4-digit Combo"):
                 combo = ui.TextInput(label="4-digit combo", placeholder="e.g. 1234", max_length=4, min_length=4)
