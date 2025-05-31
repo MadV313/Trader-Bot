@@ -205,16 +205,16 @@ async def handle_payment_confirmation(bot, message, admin_member):
             except asyncio.TimeoutError:
                 await interaction.followup.send("Timed out waiting for code input.", ephemeral=True)
 
-        elif choice == "skip_delivery":
+                        elif choice == "skip_delivery":
             eco_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
             await eco_channel.send(f"{player.mention}, your order is complete. See you next time!")
-            await interaction.response.send_message("Player notified in economy channel.", ephemeral=True)
+            await interaction.followup.send("Player notified in economy channel.", ephemeral=True)  # FIXED HERE
 
         # 🔥 EXPLOSIVE ALERT — after delivery choice
         explosive_keywords = ["40mm Explosive Grenade", "M79", "Plastic Explosives", "Landmines", "Claymores"]
         explosive_count = 0
         for line in message.content.lower().splitlines():
-            if any(keyword in line for keyword in explosive_keywords):
+            if any(keyword.lower() in line for keyword in explosive_keywords):
                 if "x" in line:
                     try:
                         qty = int(line.split("x")[0].strip().replace("-", "").replace("*", ""))
