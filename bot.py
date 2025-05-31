@@ -31,6 +31,8 @@ extensions_loaded = False
 
 from handlers.reaction_handler import setup_reaction_handler
 from tasks.reminder_task import start_reminder_task
+from tasks.explosives_scanner import ExplosiveScanner  # ✅ New
+
 setup_reaction_handler(bot)
 
 TRADER_STATS_FILE = os.path.join("data", "trader_stats.json")
@@ -102,6 +104,10 @@ async def on_ready():
     )
     scheduler.start()
     print("[TOTW] Scheduler started for every Sunday at 12 PM EST.")
+
+    # ✅ Start Explosives Scanner Loop
+    ExplosiveScanner(bot)
+    print("[ExplosiveScanner] Active - scanning every 5 minutes.")
 
 @bot.event
 async def on_disconnect():
