@@ -14,6 +14,7 @@ ADMIN_ROLE_IDS = config["admin_role_ids"]
 ORDERS_FILE = "data/orders.json"
 LOG_DIR = "data/logs"
 LOG_FILE = os.path.join(LOG_DIR, "order_events.log")
+EXPLOSIVE_ALERT_CHANNEL_ID = 1172556655150506075  # 💥 Public alert channel
 
 
 def ensure_log_dir():
@@ -208,5 +209,23 @@ async def handle_payment_confirmation(bot, message, admin_member):
             eco_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
             await eco_channel.send(f"{player.mention}, your order is complete. See you next time!")
             await interaction.response.send_message("Player notified in economy channel.", ephemeral=True)
+
+        # 🔥 EXPLOSIVE ALERT — after delivery choice
+        explosive_keywords = ["40mm Explosive Grenade", "M79", "Plastic Explosives", "Landmines", "Claymores"]
+        explosive_count = 0
+        for line in message.content.lower().splitlines():
+            if any(keyword in line for keyword in explosive_keywords):
+                if "x" in line:
+                    try:
+                        qty = int(line.split("x")[0].strip().replace("-", "").replace("*", ""))
+                        explosive_count += qty
+                    except:
+                        explosive_count += 1  # fallback count
+        if explosive_count >= 3:
+            alert_channel = bot.get_channel(EXPLOSIVE_ALERT_CHANNEL_ID)
+            if alert_channel:
+                await alert_channel.send(
+                    f"@everyone {player.mention} has just bought enough boom to waltz through your front door! 💥"
+                )
 
     bot.add_listener(on_button_click, "on_interaction")
