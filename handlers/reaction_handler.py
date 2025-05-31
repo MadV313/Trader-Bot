@@ -205,7 +205,7 @@ async def handle_payment_confirmation(bot, message, admin_member):
             except asyncio.TimeoutError:
                 await interaction.followup.send("Timed out waiting for code input.", ephemeral=True)
 
-                        elif choice == "skip_delivery":
+        elif choice == "skip_delivery":
             eco_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
             await eco_channel.send(f"{player.mention}, your order is complete. See you next time!")
             await interaction.followup.send("Player notified in economy channel.", ephemeral=True)  # FIXED HERE
