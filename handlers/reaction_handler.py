@@ -206,9 +206,10 @@ async def handle_payment_confirmation(bot, message, admin_member):
                 await interaction.followup.send("Timed out waiting for code input.", ephemeral=True)
 
         elif choice == "skip_delivery":
+            await interaction.response.defer(ephemeral=True)
             eco_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
             await eco_channel.send(f"{player.mention}, your order is complete. See you next time!")
-            await interaction.followup.send("Player notified in economy channel.", ephemeral=True)  # FIXED HERE
+            await interaction.followup.send("✅ Skip acknowledged. Player notified in economy channel.", ephemeral=True)
 
         # 🔥 EXPLOSIVE ALERT — after delivery choice
         explosive_keywords = ["40mm Explosive Grenade", "M79", "Plastic Explosives", "Landmines", "Claymores"]
