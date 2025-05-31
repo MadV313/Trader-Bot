@@ -207,9 +207,20 @@ async def handle_payment_confirmation(bot, message, admin_member):
 
         elif choice == "skip_delivery":
             await interaction.response.defer(ephemeral=True)
-            eco_channel = bot.get_channel(ECONOMY_CHANNEL_ID)
-            await eco_channel.send(f"{player.mention}, your order is complete. See you next time!")
-            await interaction.followup.send("✅ Skip acknowledged. Player notified in economy channel.", ephemeral=True)
+            try:
+                order_items = latest_unpaid.get("items", [])
+                item_details = "\n".join(
+                    f"- {i['quantity']}x {i['item']} ({i['variant']})" for i in order_items
+                ) if order_items else "No item details available."
+
+                await player.send(
+                    f"{player.mention}, your order is ready for pickup!\n\n"
+                    f"**Items:**\n{item_details}\n\n"
+                    f"No storage unit was assigned. Please meet a trader to collect."
+                )
+                await interaction.followup.send("✅ Skip acknowledged. Player notified via DM.", ephemeral=True)
+            except:
+                await interaction.followup.send("❌ Skip acknowledged, but failed to DM the player.", ephemeral=True)
 
         # 🔥 EXPLOSIVE ALERT — after delivery choice
         explosive_keywords = ["40mm Explosive Grenade", "M79", "Plastic Explosives", "Landmines", "Claymores"]
