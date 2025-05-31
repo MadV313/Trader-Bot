@@ -225,7 +225,7 @@ async def handle_payment_confirmation(bot, message, admin_member):
             alert_channel = bot.get_channel(EXPLOSIVE_ALERT_CHANNEL_ID)
             if alert_channel:
                 await alert_channel.send(
-                    f"@everyone {player.mention} has just bought enough boom to waltz through your front door! 💥"
+                    f"@everyone stay frosty! {player.mention} has just bought enough boom to waltz through your front door! 💥"
                 )
 
     bot.add_listener(on_button_click, "on_interaction")
