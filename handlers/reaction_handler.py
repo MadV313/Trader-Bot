@@ -206,44 +206,45 @@ async def handle_payment_confirmation(bot, message, admin_member):
                 await interaction.followup.send("Timed out waiting for code input.", ephemeral=True)
 
         elif choice == "skip_delivery":
-        try:
-            order_items = latest_unpaid.get("items", [])
-            item_details = "\n".join(
-                f"- {i['quantity']}x {i['item']} ({i['variant']})" for i in order_items
-            ) if order_items else "No item details available."
+            try:
+                order_items = latest_unpaid.get("items", [])
+                item_details = "\n".join(
+                    f"- {i['quantity']}x {i['item']} ({i['variant']})" for i in order_items
+                ) if order_items else "No item details available."
 
-            await player.send(
-                f"{player.mention}, your order is ready for pickup!\n\n"
-                f"**Items:**\n{item_details}\n\n"
-                f"No storage unit was assigned. Please meet a trader to collect."
-            )
-
-            if not interaction.response.is_done():
-                await interaction.response.send_message("✅ Skip acknowledged. Player notified via DM.", ephemeral=True)
-            else:
-                await interaction.followup.send("✅ Skip acknowledged. Player notified via DM.", ephemeral=True)
-
-        except:
-            if not interaction.response.is_done():
-                await interaction.response.send_message("❌ Skip acknowledged, but failed to DM the player.", ephemeral=True)
-            else:
-                await interaction.followup.send("❌ Skip acknowledged, but failed to DM the player.", ephemeral=True)
-        # 🔥 EXPLOSIVE ALERT — after delivery choice
-        explosive_keywords = ["40mm Explosive Grenade", "M79", "Plastic Explosives", "Landmines", "Claymores"]
-        explosive_count = 0
-        for line in message.content.lower().splitlines():
-            if any(keyword.lower() in line for keyword in explosive_keywords):
-                if "x" in line:
-                    try:
-                        qty = int(line.split("x")[0].strip().replace("-", "").replace("*", ""))
-                        explosive_count += qty
-                    except:
-                        explosive_count += 1  # fallback count
-        if explosive_count >= 3:
-            alert_channel = bot.get_channel(EXPLOSIVE_ALERT_CHANNEL_ID)
-            if alert_channel:
-                await alert_channel.send(
-                    f"@everyone stay frosty! {player.mention} has just bought enough boom to waltz through your front door! 💥"
+                await player.send(
+                    f"{player.mention}, your order is ready for pickup!\n\n"
+                    f"**Items:**\n{item_details}\n\n"
+                    f"No storage unit was assigned. Please meet a trader to collect."
                 )
+
+                if not interaction.response.is_done():
+                    await interaction.response.send_message("✅ Skip acknowledged. Player notified via DM.", ephemeral=True)
+                else:
+                    await interaction.followup.send("✅ Skip acknowledged. Player notified via DM.", ephemeral=True)
+
+            except:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message("❌ Skip acknowledged, but failed to DM the player.", ephemeral=True)
+                else:
+                    await interaction.followup.send("❌ Skip acknowledged, but failed to DM the player.", ephemeral=True)
+
+            # 🔥 EXPLOSIVE ALERT — after delivery choice
+            explosive_keywords = ["40mm Explosive Grenade", "M79", "Plastic Explosives", "Landmines", "Claymores"]
+            explosive_count = 0
+            for line in message.content.lower().splitlines():
+                if any(keyword.lower() in line for keyword in explosive_keywords):
+                    if "x" in line:
+                        try:
+                            qty = int(line.split("x")[0].strip().replace("-", "").replace("*", ""))
+                            explosive_count += qty
+                        except:
+                            explosive_count += 1  # fallback count
+            if explosive_count >= 3:
+                alert_channel = bot.get_channel(EXPLOSIVE_ALERT_CHANNEL_ID)
+                if alert_channel:
+                    await alert_channel.send(
+                        f"@everyone stay frosty! {player.mention} has just bought enough boom to waltz through your front door! 💥"
+                    )
 
     bot.add_listener(on_button_click, "on_interaction")
