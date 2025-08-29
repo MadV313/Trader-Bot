@@ -889,6 +889,9 @@
       },
       "USG45": {
         "Default": 20000
+      },
+      "RAK": {
+        "Default": 10000
       }
     },
     "Weapons_SemiAutoRifles <:emoji:1372669405686661331>": {
@@ -916,6 +919,9 @@
         "Standard <:emoji:1372395385397579899>": 5000
       },
       "Vaiga": {
+        "Default": 5000
+      },
+      "R 12": {
         "Default": 5000
       }
     }
