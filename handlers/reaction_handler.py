@@ -9,6 +9,7 @@ from discord.ui import View, Button
 config = json.loads(os.environ.get("CONFIG_JSON"))
 
 TRADER_ORDERS_CHANNEL_ID = config["trader_orders_channel_id"]
+TRADEPOST_ORDERS_CHANNEL_ID = config.get("tradepost_orders_channel_id")
 ECONOMY_CHANNEL_ID = config["economy_channel_id"]
 ADMIN_ROLE_IDS = config["admin_role_ids"]
 ORDERS_FILE = "data/orders.json"
@@ -44,7 +45,11 @@ def save_orders(data):
 def setup_reaction_handler(bot):
     @bot.event
     async def on_raw_reaction_add(payload):
-        if payload.channel_id != TRADER_ORDERS_CHANNEL_ID or str(payload.emoji.name) != "✅":
+         allowed_channels = [TRADER_ORDERS_CHANNEL_ID]
+        if TRADEPOST_ORDERS_CHANNEL_ID:
+            allowed_channels.append(TRADEPOST_ORDERS_CHANNEL_ID)
+
+        if payload.channel_id not in allowed_channels or str(payload.emoji.name) != "✅":
             return
 
         guild = bot.get_guild(payload.guild_id)
