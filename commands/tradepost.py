@@ -88,18 +88,26 @@ def tp_get_price_for_mode(item_data: dict, mode: str) -> Optional[int]:
 def _fmt_price(n: int) -> str:
     return f"{n:,}"
 
-def fmt_cart(items, mode: str):
+def _cart_lines_from_session(items: List[dict]) -> (str, int):
     """
-    items: list of dicts {category,item,qty,unit,total}
-    mode: "Buy" or "Sell"
+    Mirror /trader rendering:
+    • NAME (variant) xQ = $SUBTOTAL
+    Returns (text, total)
     """
-    lines = [f"**Mode:** {mode}"]
+    if not items:
+        return "Your cart is currently empty.", 0
+    lines = []
     total = 0
     for it in items:
-        # Show unit price too
-        lines.append(f"• {it['item']} x{it['qty']} — { _fmt_price(it['total']) } (unit {_fmt_price(it['unit'])})")
-        total += it['total']
-    lines.append(f"\n**Cart Total:** {_fmt_price(total)}")
+        name = it.get("item", "Item")
+        variant = it.get("variant", "Default")
+        qty = it.get("quantity", 1)
+        sub = int(it.get("subtotal", 0))
+        total += sub
+        # show variant only if not Default
+        vtxt = f" ({variant})" if variant and variant != "Default" else ""
+        lines.append(f"• {name}{vtxt} x{qty} = ${_fmt_price(sub)}")
+    lines.append(f"\n🛒 Cart Total: ${_fmt_price(total)}")
     return "\n".join(lines), total
 
 # ---------- UI ----------
@@ -158,7 +166,7 @@ class DynamicDropdown(ui.Select):
                         opts.append(
                             discord.SelectOption(
                                 label=item,
-                                description=f"{mode} price: {_fmt_price(price)}"
+                                description=f"{mode} price: ${_fmt_price(price)}"
                             )
                         )
                     else:
@@ -203,6 +211,10 @@ class TradePostView(ui.View):
         self.msg = msg
 
     async def add_current_selection(self, qty: int):
+        """
+        IMPORTANT: mirror /trader session schema so later reads work.
+        We store: item, variant, quantity, subtotal (and optional category/subcategory)
+        """
         mode = self.state.get("mode")            # "Buy" / "Sell"
         c = self.state.get("category")
         i = self.state.get("item")
@@ -212,13 +224,19 @@ class TradePostView(ui.View):
             # If somehow missing, just refresh view
             await self.refresh(next_level="item")
             return
-        total = unit * qty
 
-        # persist item into session cart
+        subtotal = unit * qty
+        # Persist using the SAME API and KEYS as /trader
         session_manager.start_session(self.user_id)
-        items = session_manager.get_session_items(self.user_id)
-        items.append({"category": c, "item": i, "qty": qty, "unit": unit, "total": total})
-        session_manager.set_session_items(self.user_id, items)
+        item_payload = {
+            "category": c,
+            "subcategory": None,
+            "item": i,
+            "variant": "Default",     # TradePost has no variants; keep shape compatible
+            "quantity": qty,
+            "subtotal": subtotal
+        }
+        session_manager.add_item(self.user_id, item_payload)
 
         # After add, jump back to item pick (keep same category)
         await self.refresh(next_level="item")
@@ -237,19 +255,16 @@ class TradePostView(ui.View):
         else:
             self.add_item(DynamicDropdown(self.bot, self.user_id, next_level, self))
 
-        # Cart summary
+        # Cart summary (mirror /trader text, but shown inside an embed)
         session_manager.start_session(self.user_id)
         items = session_manager.get_session_items(self.user_id)
         mode = self.state.get("mode", "Buy")
 
         title = f"Trade Post — {mode}"
         embed = discord.Embed(title=title, color=0x70a0f0)
-        if items:
-            body, _ = fmt_cart(items, mode)
-            embed.description = body
-            embed.set_footer(text=f"Items: {len(items)} | Type: tradepost")
-        else:
-            embed.description = "Use the dropdowns to add items."
+        cart_text, _ = _cart_lines_from_session(items)
+        embed.description = cart_text
+        embed.set_footer(text=f"Items: {len(items)} | Type: tradepost")
 
         # Edit the persistent DM message
         if self.msg:
@@ -275,20 +290,27 @@ class TradePostView(ui.View):
             return await interaction.response.send_message("Not your session.", ephemeral=True)
         await interaction.response.defer()
 
+        # Read items exactly like /trader does
         items = session_manager.get_session_items(self.user_id)
         if not items:
             return await interaction.followup.send("Your cart is empty.")
 
+        body_text, total = _cart_lines_from_session(items)
         mode = self.state.get("mode", "Buy")
-        body, total = fmt_cart(items, mode)
         order_text = (
             f"**Trade Post Order — {mode}**\n"
             f"**Customer:** {interaction.user.mention}\n\n"
-            f"{body}\n\n"
+            f"{body_text}\n\n"
             f"_please confirm this message with a ✅ when the order is ready_"
         )
 
+        # Robust channel fetch (cache or HTTP)
         ch = interaction.client.get_channel(TRADEPOST_ORDERS_CHANNEL_ID)
+        if not ch:
+            try:
+                ch = await interaction.client.fetch_channel(TRADEPOST_ORDERS_CHANNEL_ID)
+            except Exception:
+                ch = None
         if not ch:
             return await interaction.followup.send("Trade Post orders channel not found.")
 
@@ -353,10 +375,14 @@ class TradePostCommand(commands.Cog):
 
         # 2) Open the DM session with interactive view
         try:
+            # Start the session up front (mirrors /trader)
+            session_manager.start_session(interaction.user.id)
+
             view = TradePostView(self.bot, interaction.user.id, catalog)
             embed = discord.Embed(
                 title="Trade Post",
-                description="Select **Buy** or **Sell** to begin.",
+                description="Select **Buy** or **Sell** to begin.\n\n"
+                            "Your cart will appear here as you add items.",
                 color=0x70a0f0
             )
             dm_msg = await interaction.user.send(embed=embed, view=view)
