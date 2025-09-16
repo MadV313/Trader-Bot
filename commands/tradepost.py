@@ -23,7 +23,6 @@ def _load_config() -> Dict[str, Any]:
 CONFIG = _load_config()
 
 ECONOMY_CHANNEL_ID = int(CONFIG["economy_channel_id"])
-# Optional: allow None so import doesn't crash if it's not set yet
 TRADEPOST_ORDERS_CHANNEL_ID: Optional[int] = (
     int(CONFIG["tradepost_orders_channel_id"])
     if str(CONFIG.get("tradepost_orders_channel_id", "")).strip()
@@ -110,7 +109,10 @@ class QuantityModal(ui.Modal, title="Quantity"):
         except Exception:
             return await interaction.response.send_message("Enter a valid positive number.", ephemeral=True)
 
+        # Defer so we can edit the DM message and then send a follow-up
+        await interaction.response.defer()
         await self.view_ref.add_current_selection(q, interaction)
+        await interaction.followup.send("Item added to cart", wait=True)
 
 class DynamicDropdown(ui.Select):
     """
@@ -146,17 +148,22 @@ class DynamicDropdown(ui.Select):
             return await interaction.response.send_message("Not your session.", ephemeral=True)
 
         choice = self.values[0]
+
+        # Defer so we can edit the DM message safely
+        await interaction.response.defer()
+
         if self.level == "mode":
             self.view_ref.state = {"mode": choice}
-            await self.view_ref.refresh(interaction, next_level="category")
+            await self.view_ref.refresh(next_level="category")
 
         elif self.level == "category":
             self.view_ref.state["category"] = choice
-            await self.view_ref.refresh(interaction, next_level="item")
+            await self.view_ref.refresh(next_level="item")
 
         else:  # item
             self.view_ref.state["item"] = choice
-            await interaction.response.send_modal(QuantityModal(self.user_id, self.view_ref))
+            # Ask quantity via modal (modal will handle its own defer)
+            await interaction.followup.send_modal(QuantityModal(self.user_id, self.view_ref))
 
 class TradePostView(ui.View):
     def __init__(self, bot, user_id: int, catalog: Dict[str, Any]):
@@ -164,12 +171,17 @@ class TradePostView(ui.View):
         self.bot = bot
         self.user_id = user_id
         self.catalog = catalog
-        # state keys: mode, category, item
-        self.state = {}
+        self.state = {}  # keys: mode, category, item
         self.start_ts = time.time()
+        self.msg: Optional[discord.Message] = None  # DM message we keep editing
 
         # Start at mode selection
         self.add_item(DynamicDropdown(self.bot, self.user_id, "mode", self))
+        # Navigation
+        self.add_item(discord.ui.Button(label="◀️ Back to Category", style=discord.ButtonStyle.secondary, custom_id="tp_back_category"))
+
+    def attach_message(self, msg: discord.Message):
+        self.msg = msg
 
     async def add_current_selection(self, qty: int, interaction: discord.Interaction):
         mode = self.state.get("mode")            # "Buy" / "Sell"
@@ -178,7 +190,8 @@ class TradePostView(ui.View):
         item_data = tp_get_item_data(self.catalog, c, i)
         unit = tp_get_price_for_mode(item_data, mode or "Buy")
         if unit is None:
-            return await interaction.response.send_message("No price found for that selection.", ephemeral=True)
+            await interaction.followup.send("No price found for that selection.")
+            return
         total = unit * qty
 
         # persist item into session cart
@@ -188,9 +201,9 @@ class TradePostView(ui.View):
         session_manager.set_session_items(self.user_id, items)
 
         # After add, jump back to item pick (keep same category)
-        await self.refresh(interaction, next_level="item", just_added=True)
+        await self.refresh(next_level="item")
 
-    async def refresh(self, interaction: discord.Interaction, next_level: str, just_added: bool=False):
+    async def refresh(self, next_level: str):
         # rebuild components
         for c in list(self.children):
             self.remove_item(c)
@@ -202,6 +215,9 @@ class TradePostView(ui.View):
             self.add_item(DynamicDropdown(self.bot, self.user_id, "category", self))
         else:
             self.add_item(DynamicDropdown(self.bot, self.user_id, next_level, self))
+
+        # Navigation button always present
+        self.add_item(discord.ui.Button(label="◀️ Back to Category", style=discord.ButtonStyle.secondary, custom_id="tp_back_category"))
 
         # Cart summary
         session_manager.start_session(self.user_id)
@@ -222,24 +238,25 @@ class TradePostView(ui.View):
         self.add_item(discord.ui.Button(label="Remove Last Item", style=discord.ButtonStyle.secondary, custom_id="tp_remove"))
         self.add_item(discord.ui.Button(label="Cancel", style=discord.ButtonStyle.danger, custom_id="tp_cancel"))
 
-        if interaction.response.is_done():
-            await interaction.followup.send(embed=embed, view=self, ephemeral=True)
-        else:
-            await interaction.response.edit_message(embed=embed, view=self)
+        # Edit the persistent DM message
+        if self.msg:
+            try:
+                await self.msg.edit(embed=embed, view=self)
+            except Exception as e:
+                print(f"[tradepost] Failed to edit DM message: {e}")
 
-    @ui.button(label="Submit Order", style=discord.ButtonStyle.success, custom_id="tp_submit", row=1)
+    @ui.button(label="Submit Order", style=discord.ButtonStyle.success, custom_id="tp_submit", row=3)
     async def _submit(self, interaction: discord.Interaction, _: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
+        await interaction.response.defer()
 
         if TRADEPOST_ORDERS_CHANNEL_ID is None:
-            return await interaction.response.send_message(
-                "Trade Post orders channel is not configured.", ephemeral=True
-            )
+            return await interaction.followup.send("Trade Post orders channel is not configured.")
 
         items = session_manager.get_session_items(self.user_id)
         if not items:
-            return await interaction.response.send_message("Your cart is empty.", ephemeral=True)
+            return await interaction.followup.send("Your cart is empty.")
 
         mode = self.state.get("mode", "Buy")
         body, total = fmt_cart(items, mode)
@@ -252,7 +269,7 @@ class TradePostView(ui.View):
 
         ch = interaction.client.get_channel(TRADEPOST_ORDERS_CHANNEL_ID)
         if not ch:
-            return await interaction.response.send_message("Trade Post orders channel not found.", ephemeral=True)
+            return await interaction.followup.send("Trade Post orders channel not found.")
 
         msg = await ch.send(order_text)
         await msg.add_reaction("🔴")  # baseline behavior
@@ -260,30 +277,43 @@ class TradePostView(ui.View):
         session_manager.log(f"[TradePost] mode={mode} user={interaction.user.id} total={total}")
         session_manager.end_session(self.user_id)
 
-        await interaction.response.send_message("📦 Your Trade Post order has been placed!", ephemeral=True)
+        await interaction.followup.send("📦 Your Trade Post order has been placed!")
         self.stop()
 
-    @ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary, custom_id="tp_remove", row=1)
+    @ui.button(label="Remove Last Item", style=discord.ButtonStyle.secondary, custom_id="tp_remove", row=3)
     async def _remove(self, interaction: discord.Interaction, _: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
+        await interaction.response.defer()
 
         items = session_manager.get_session_items(self.user_id)
         if not items:
-            return await interaction.response.send_message("Cart is already empty.", ephemeral=True)
+            await interaction.followup.send("Cart is already empty.")
+            return
+
         removed = items.pop()
         session_manager.set_session_items(self.user_id, items)
-        await interaction.response.send_message(f"Removed: {removed['item']}", ephemeral=True)
-        next_level = "item" if self.state.get("category") else ("category" if self.state.get("mode") else "mode")
-        await self.refresh(interaction, next_level=next_level)
+        await self.refresh(next_level="item" if self.state.get("category") else "category")
+        await interaction.followup.send("Item removed from cart")
 
-    @ui.button(label="Cancel", style=discord.ButtonStyle.danger, custom_id="tp_cancel", row=1)
+    @ui.button(label="Cancel", style=discord.ButtonStyle.danger, custom_id="tp_cancel", row=3)
     async def _cancel(self, interaction: discord.Interaction, _: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
+        await interaction.response.defer()
         session_manager.end_session(self.user_id)
-        await interaction.response.send_message("❌ Trade Post session canceled.", ephemeral=True)
+        await interaction.followup.send("❌ Trade Post session canceled.")
         self.stop()
+
+    @ui.button(label="◀️ Back to Category", style=discord.ButtonStyle.secondary, custom_id="tp_back_category", row=2)
+    async def _back_category(self, interaction: discord.Interaction, _: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("Not your session.", ephemeral=True)
+        await interaction.response.defer()
+        # Keep mode, reset to category step
+        mode = self.state.get("mode")
+        self.state = {"mode": mode} if mode else {}
+        await self.refresh(next_level="category")
 
 class TradePostCommand(commands.Cog):
     def __init__(self, bot):
@@ -291,7 +321,7 @@ class TradePostCommand(commands.Cog):
 
     @app_commands.command(name="tradepost", description="Open the Trade Post menu (economy channel only).")
     async def tradepost(self, interaction: discord.Interaction):
-        # Restrict to economy channel like existing flows
+        # Restrict to economy channel
         if interaction.channel_id != ECONOMY_CHANNEL_ID:
             return await interaction.response.send_message(
                 f"Use this in <#{ECONOMY_CHANNEL_ID}>.", ephemeral=True
@@ -305,18 +335,32 @@ class TradePostCommand(commands.Cog):
                 "Trade Post catalog is unavailable right now. Please try again later.", ephemeral=True
             )
 
-        # Start ephemeral UI in-channel
-        session_manager.start_session(interaction.user.id)
-        view = TradePostView(self.bot, interaction.user.id, catalog)
-        embed = discord.Embed(
-            title="Trade Post",
-            description="Select **Buy** or **Sell** to begin.",
-            color=0x70a0f0
+        # 1) Tell the channel we're moving to DMs
+        await interaction.response.send_message(
+            f"{interaction.user.mention} your Trade Post session has been moved to your DMs."
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+        # 2) Open the DM session with interactive view
+        try:
+            view = TradePostView(self.bot, interaction.user.id, catalog)
+            embed = discord.Embed(
+                title="Trade Post",
+                description="Select **Buy** or **Sell** to begin.",
+                color=0x70a0f0
+            )
+            dm_msg = await interaction.user.send(embed=embed, view=view)
+            view.attach_message(dm_msg)
+        except discord.Forbidden:
+            # DMs closed
+            await interaction.followup.send(
+                "I couldn’t DM you. Please enable DMs from server members and try again.", ephemeral=True
+            )
+        except Exception as e:
+            print(f"[tradepost] Failed to open DM session: {e}")
+            await interaction.followup.send(
+                "Something went wrong opening your DM session.", ephemeral=True
+            )
 
 async def setup(bot):
-    # If this import had been failing earlier (file not found / key error), the cog never registered,
-    # which is why the command didn't appear. With lazy file IO above, import is safe.
     await bot.add_cog(TradePostCommand(bot))
     print("[tradepost] Cog loaded and command registered")
