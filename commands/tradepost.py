@@ -109,7 +109,7 @@ class QuantityModal(ui.Modal, title="Quantity"):
         except Exception:
             return await interaction.response.send_message("Enter a valid positive number.", ephemeral=True)
 
-        # Defer so we can edit the DM message and then send a follow-up
+        # We'll update the DM embed and then acknowledge
         await interaction.response.defer()
         await self.view_ref.add_current_selection(q, interaction)
         await interaction.followup.send("Item added to cart", wait=True)
@@ -149,21 +149,20 @@ class DynamicDropdown(ui.Select):
 
         choice = self.values[0]
 
-        # Defer so we can edit the DM message safely
+        if self.level == "item":
+            # Open modal immediately (can't open a modal after deferring)
+            self.view_ref.state["item"] = choice
+            return await interaction.response.send_modal(QuantityModal(self.user_id, self.view_ref))
+
+        # Other levels can defer and then refresh
         await interaction.response.defer()
 
         if self.level == "mode":
             self.view_ref.state = {"mode": choice}
             await self.view_ref.refresh(next_level="category")
-
         elif self.level == "category":
             self.view_ref.state["category"] = choice
             await self.view_ref.refresh(next_level="item")
-
-        else:  # item
-            self.view_ref.state["item"] = choice
-            # Ask quantity via modal (modal will handle its own defer)
-            await interaction.followup.send_modal(QuantityModal(self.user_id, self.view_ref))
 
 class TradePostView(ui.View):
     def __init__(self, bot, user_id: int, catalog: Dict[str, Any]):
@@ -177,8 +176,6 @@ class TradePostView(ui.View):
 
         # Start at mode selection
         self.add_item(DynamicDropdown(self.bot, self.user_id, "mode", self))
-        # Navigation
-        self.add_item(discord.ui.Button(label="◀️ Back to Category", style=discord.ButtonStyle.secondary, custom_id="tp_back_category"))
 
     def attach_message(self, msg: discord.Message):
         self.msg = msg
@@ -204,20 +201,18 @@ class TradePostView(ui.View):
         await self.refresh(next_level="item")
 
     async def refresh(self, next_level: str):
-        # rebuild components
+        # Remove only existing selects; keep the buttons (defined via @ui.button)
         for c in list(self.children):
-            self.remove_item(c)
+            if isinstance(c, discord.ui.Select):
+                self.remove_item(c)
 
-        # progress: mode -> category -> item
+        # progress: mode -> category -> item (re-add the single Select)
         if not self.state.get("mode"):
             self.add_item(DynamicDropdown(self.bot, self.user_id, "mode", self))
         elif not self.state.get("category"):
             self.add_item(DynamicDropdown(self.bot, self.user_id, "category", self))
         else:
             self.add_item(DynamicDropdown(self.bot, self.user_id, next_level, self))
-
-        # Navigation button always present
-        self.add_item(discord.ui.Button(label="◀️ Back to Category", style=discord.ButtonStyle.secondary, custom_id="tp_back_category"))
 
         # Cart summary
         session_manager.start_session(self.user_id)
@@ -233,17 +228,23 @@ class TradePostView(ui.View):
         else:
             embed.description = "Use the dropdowns to add items."
 
-        # Controls
-        self.add_item(discord.ui.Button(label="Submit Order", style=discord.ButtonStyle.success, custom_id="tp_submit"))
-        self.add_item(discord.ui.Button(label="Remove Last Item", style=discord.ButtonStyle.secondary, custom_id="tp_remove"))
-        self.add_item(discord.ui.Button(label="Cancel", style=discord.ButtonStyle.danger, custom_id="tp_cancel"))
-
         # Edit the persistent DM message
         if self.msg:
             try:
                 await self.msg.edit(embed=embed, view=self)
             except Exception as e:
                 print(f"[tradepost] Failed to edit DM message: {e}")
+
+    # ----- Buttons (defined ONCE; do not add in refresh) -----
+
+    @ui.button(label="◀️ Back to Category", style=discord.ButtonStyle.secondary, custom_id="tp_back_category", row=2)
+    async def _back_category(self, interaction: discord.Interaction, _: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("Not your session.", ephemeral=True)
+        await interaction.response.defer()
+        mode = self.state.get("mode")
+        self.state = {"mode": mode} if mode else {}
+        await self.refresh(next_level="category")
 
     @ui.button(label="Submit Order", style=discord.ButtonStyle.success, custom_id="tp_submit", row=3)
     async def _submit(self, interaction: discord.Interaction, _: discord.ui.Button):
@@ -291,7 +292,7 @@ class TradePostView(ui.View):
             await interaction.followup.send("Cart is already empty.")
             return
 
-        removed = items.pop()
+        items.pop()
         session_manager.set_session_items(self.user_id, items)
         await self.refresh(next_level="item" if self.state.get("category") else "category")
         await interaction.followup.send("Item removed from cart")
@@ -304,16 +305,6 @@ class TradePostView(ui.View):
         session_manager.end_session(self.user_id)
         await interaction.followup.send("❌ Trade Post session canceled.")
         self.stop()
-
-    @ui.button(label="◀️ Back to Category", style=discord.ButtonStyle.secondary, custom_id="tp_back_category", row=2)
-    async def _back_category(self, interaction: discord.Interaction, _: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("Not your session.", ephemeral=True)
-        await interaction.response.defer()
-        # Keep mode, reset to category step
-        mode = self.state.get("mode")
-        self.state = {"mode": mode} if mode else {}
-        await self.refresh(next_level="category")
 
 class TradePostCommand(commands.Cog):
     def __init__(self, bot):
