@@ -4,6 +4,7 @@
   "trader_orders_channel_id": 1370152442183946311,
   "economy_channel_id": 1173028001085145198,
   "trader_of_the_week_channel_id": "1172556655150506075",
+  "tradepost_catalog_path": "data/tradepost_catalog.json",
 
   "admin_role_ids": [
     "1370152166366642297"
