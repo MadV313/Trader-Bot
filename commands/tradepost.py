@@ -5,43 +5,77 @@ from discord import app_commands, ui
 import json
 import os
 import time
+from typing import Dict, Any, Optional, List
 
 from utils import session_manager
 
-# --- Config ---
-try:
-    CONFIG = json.loads(os.environ.get("CONFIG_JSON"))
-except (TypeError, json.JSONDecodeError):
-    with open("config.json") as f:
-        CONFIG = json.load(f)
+# --- Config (ENV first, then file) ---
+def _load_config() -> Dict[str, Any]:
+    try:
+        raw = os.environ.get("CONFIG_JSON")
+        if raw:
+            return json.loads(raw)
+    except Exception as e:
+        print(f"[tradepost] CONFIG_JSON parse error: {e}")
+    with open("config.json", "r", encoding="utf-8") as f:
+        return json.load(f)
 
-ECONOMY_CHANNEL_ID = CONFIG["economy_channel_id"]
-TRADEPOST_ORDERS_CHANNEL_ID = CONFIG["tradepost_orders_channel_id"]
+CONFIG = _load_config()
+
+ECONOMY_CHANNEL_ID = int(CONFIG["economy_channel_id"])
+# Optional: allow None so import doesn't crash if it's not set yet
+TRADEPOST_ORDERS_CHANNEL_ID: Optional[int] = (
+    int(CONFIG["tradepost_orders_channel_id"])
+    if str(CONFIG.get("tradepost_orders_channel_id", "")).strip()
+    else None
+)
 TRADEPOST_CATALOG_PATH = CONFIG.get("tradepost_catalog_path", "data/tradepost_catalog.json")
-SESSION_TIMEOUT_SECONDS = CONFIG.get("session_timeout_minutes", 15) * 60
+SESSION_TIMEOUT_SECONDS = int(CONFIG.get("session_timeout_minutes", 15)) * 60
 
-# --- Catalog ---
-with open(TRADEPOST_CATALOG_PATH, "r") as f:
-    TRADEPOST_DATA = json.load(f)["categories"]
+# --- Catalog lazy loader ---
+_CATALOG_CACHE: Optional[Dict[str, Any]] = None  # {"categories": {...}}
 
-def tp_get_categories():
-    return list(TRADEPOST_DATA.keys())
+def _load_catalog() -> Optional[Dict[str, Any]]:
+    global _CATALOG_CACHE
+    if _CATALOG_CACHE is not None:
+        return _CATALOG_CACHE
+    try:
+        with open(TRADEPOST_CATALOG_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if not isinstance(data, dict) or "categories" not in data:
+                print("[tradepost] Catalog missing 'categories' root")
+                return None
+            _CATALOG_CACHE = data
+            return _CATALOG_CACHE
+    except FileNotFoundError:
+        print(f"[tradepost] Catalog file not found: {TRADEPOST_CATALOG_PATH}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"[tradepost] Catalog JSON error: {e}")
+        return None
+    except Exception as e:
+        print(f"[tradepost] Catalog load error: {e}")
+        return None
 
-def tp_get_items(category):
-    sub = TRADEPOST_DATA.get(category, {})
+# --- Helpers that read from a provided catalog dict (no top-level file IO) ---
+def tp_get_categories(cat: Dict[str, Any]) -> List[str]:
+    return list(cat.get("categories", {}).keys())
+
+def tp_get_items(cat: Dict[str, Any], category: str) -> List[str]:
+    sub = cat.get("categories", {}).get(category, {})
     return [k for k, v in sub.items() if isinstance(v, dict)]
 
-def tp_get_item_data(category, item):
-    return TRADEPOST_DATA.get(category, {}).get(item, {})
+def tp_get_item_data(cat: Dict[str, Any], category: str, item: str) -> Dict[str, Any]:
+    return cat.get("categories", {}).get(category, {}).get(item, {}) or {}
 
-def tp_get_price_for_mode(item_data: dict, mode: str):
+def tp_get_price_for_mode(item_data: dict, mode: str) -> Optional[int]:
     # item_data like {"Buy": 100, "Sell": 50} or {"Default": 200}
     if not isinstance(item_data, dict):
         return None
     if mode in item_data:
-        return item_data[mode]
+        return int(item_data[mode])
     if "Default" in item_data:
-        return item_data["Default"]
+        return int(item_data["Default"])
     return None
 
 def fmt_cart(items, mode: str):
@@ -88,18 +122,20 @@ class DynamicDropdown(ui.Select):
         self.level = level
         self.view_ref = view_ref
 
+        cat = self.view_ref.catalog  # guaranteed present
+
         if level == "mode":
             opts = [discord.SelectOption(label="Buy"), discord.SelectOption(label="Sell")]
             ph = "Choose Buy or Sell"
         elif level == "category":
-            opts = [discord.SelectOption(label=c) for c in tp_get_categories()]
+            opts = [discord.SelectOption(label=c) for c in tp_get_categories(cat)]
             ph = "Choose a category"
         else:
             # item
             if not self.view_ref.state.get("category"):
                 opts = []
             else:
-                items = tp_get_items(self.view_ref.state["category"])
+                items = tp_get_items(cat, self.view_ref.state["category"])
                 opts = [discord.SelectOption(label=i) for i in items]
             ph = "Choose an item"
 
@@ -111,7 +147,6 @@ class DynamicDropdown(ui.Select):
 
         choice = self.values[0]
         if self.level == "mode":
-            # Lock mode first
             self.view_ref.state = {"mode": choice}
             await self.view_ref.refresh(interaction, next_level="category")
 
@@ -121,14 +156,14 @@ class DynamicDropdown(ui.Select):
 
         else:  # item
             self.view_ref.state["item"] = choice
-            # ask qty immediately (no variant step; mode determines price)
             await interaction.response.send_modal(QuantityModal(self.user_id, self.view_ref))
 
 class TradePostView(ui.View):
-    def __init__(self, bot, user_id: int):
+    def __init__(self, bot, user_id: int, catalog: Dict[str, Any]):
         super().__init__(timeout=SESSION_TIMEOUT_SECONDS)
         self.bot = bot
         self.user_id = user_id
+        self.catalog = catalog
         # state keys: mode, category, item
         self.state = {}
         self.start_ts = time.time()
@@ -140,7 +175,7 @@ class TradePostView(ui.View):
         mode = self.state.get("mode")            # "Buy" / "Sell"
         c = self.state.get("category")
         i = self.state.get("item")
-        item_data = tp_get_item_data(c, i)
+        item_data = tp_get_item_data(self.catalog, c, i)
         unit = tp_get_price_for_mode(item_data, mode or "Buy")
         if unit is None:
             return await interaction.response.send_message("No price found for that selection.", ephemeral=True)
@@ -152,7 +187,7 @@ class TradePostView(ui.View):
         items.append({"category": c, "item": i, "qty": qty, "unit": unit, "total": total})
         session_manager.set_session_items(self.user_id, items)
 
-        # After add, jump back to item pick (keep same category). If you prefer jump to category, set next_level="category"
+        # After add, jump back to item pick (keep same category)
         await self.refresh(interaction, next_level="item", just_added=True)
 
     async def refresh(self, interaction: discord.Interaction, next_level: str, just_added: bool=False):
@@ -197,6 +232,11 @@ class TradePostView(ui.View):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
 
+        if TRADEPOST_ORDERS_CHANNEL_ID is None:
+            return await interaction.response.send_message(
+                "Trade Post orders channel is not configured.", ephemeral=True
+            )
+
         items = session_manager.get_session_items(self.user_id)
         if not items:
             return await interaction.response.send_message("Your cart is empty.", ephemeral=True)
@@ -210,7 +250,6 @@ class TradePostView(ui.View):
             f"_please confirm this message with a ✅ when the order is ready_"
         )
 
-        # Post to Trade Post Orders channel
         ch = interaction.client.get_channel(TRADEPOST_ORDERS_CHANNEL_ID)
         if not ch:
             return await interaction.response.send_message("Trade Post orders channel not found.", ephemeral=True)
@@ -218,7 +257,6 @@ class TradePostView(ui.View):
         msg = await ch.send(order_text)
         await msg.add_reaction("🔴")  # baseline behavior
 
-        # minimal persistence / cleanup
         session_manager.log(f"[TradePost] mode={mode} user={interaction.user.id} total={total}")
         session_manager.end_session(self.user_id)
 
@@ -236,7 +274,6 @@ class TradePostView(ui.View):
         removed = items.pop()
         session_manager.set_session_items(self.user_id, items)
         await interaction.response.send_message(f"Removed: {removed['item']}", ephemeral=True)
-        # After removal, keep current category if set; otherwise rebuild from mode/category
         next_level = "item" if self.state.get("category") else ("category" if self.state.get("mode") else "mode")
         await self.refresh(interaction, next_level=next_level)
 
@@ -260,9 +297,17 @@ class TradePostCommand(commands.Cog):
                 f"Use this in <#{ECONOMY_CHANNEL_ID}>.", ephemeral=True
             )
 
+        # Load catalog lazily & safely
+        catalog = _load_catalog()
+        if not catalog:
+            print("[tradepost] Cannot open UI — catalog failed to load.")
+            return await interaction.response.send_message(
+                "Trade Post catalog is unavailable right now. Please try again later.", ephemeral=True
+            )
+
         # Start ephemeral UI in-channel
         session_manager.start_session(interaction.user.id)
-        view = TradePostView(self.bot, interaction.user.id)
+        view = TradePostView(self.bot, interaction.user.id, catalog)
         embed = discord.Embed(
             title="Trade Post",
             description="Select **Buy** or **Sell** to begin.",
@@ -271,4 +316,7 @@ class TradePostCommand(commands.Cog):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 async def setup(bot):
+    # If this import had been failing earlier (file not found / key error), the cog never registered,
+    # which is why the command didn't appear. With lazy file IO above, import is safe.
     await bot.add_cog(TradePostCommand(bot))
+    print("[tradepost] Cog loaded and command registered")
