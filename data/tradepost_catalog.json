@@ -1,0 +1,119 @@
+{
+  "categories": {
+    "Food & Produce": {
+      "Pumpkin Slices": { "Buy": 100, "Sell": 50 },
+      "Apple": { "Buy": 150, "Sell": 75 },
+      "Pear": { "Buy": 150, "Sell": 75 },
+      "Plum": { "Buy": 200, "Sell": 100 },
+      "Tomato": { "Buy": 200, "Sell": 100 },
+      "Zucchini": { "Buy": 200, "Sell": 100 },
+      "Potato": { "Buy": 200, "Sell": 100 },
+      "Pepper": { "Buy": 250, "Sell": 125 },
+      "Banana": { "Buy": 250, "Sell": 125 },
+      "Orange": { "Buy": 250, "Sell": 125 },
+      "Peach": { "Buy": 250, "Sell": 125 },
+      "Pumpkin": { "Buy": 500, "Sell": 250 },
+      "Canned Sardines": { "Buy": 600, "Sell": 300 },
+      "Canned Tuna": { "Buy": 700, "Sell": 350 },
+      "Canned Crab": { "Buy": 900, "Sell": 450 },
+      "Honey": { "Buy": 1000, "Sell": 500 },
+      "Bag of Rice": { "Buy": 1500, "Sell": 750 }
+    },
+    "Animal & Fish Meat": {
+      "Chicken": { "Buy": 300, "Sell": 150 },
+      "Bitterling": { "Buy": 400, "Sell": 200 },
+      "Boar": { "Buy": 500, "Sell": 250 },
+      "Carp": { "Buy": 500, "Sell": 250 },
+      "Sardine": { "Buy": 500, "Sell": 250 },
+      "Goat": { "Buy": 600, "Sell": 300 },
+      "Sheep": { "Buy": 600, "Sell": 300 },
+      "Pig": { "Buy": 600, "Sell": 300 },
+      "Mackerel": { "Buy": 600, "Sell": 300 },
+      "Shrimp": { "Buy": 700, "Sell": 350 },
+      "Cow": { "Buy": 800, "Sell": 400 },
+      "Deer": { "Buy": 800, "Sell": 400 },
+      "Trout": { "Buy": 900, "Sell": 450 },
+      "Wolf": { "Buy": 1000, "Sell": 500 },
+      "Rabbit": { "Buy": 1500, "Sell": 750 },
+      "Bear": { "Buy": 2000, "Sell": 1000 },
+      "Caviar": { "Buy": 5000, "Sell": 2500 }
+    },
+    "Pelts": {
+      "Hare Pelt": { "Buy": 500, "Sell": 250 },
+      "Goat Pelt": { "Buy": 800, "Sell": 400 },
+      "Pig Pelt": { "Buy": 800, "Sell": 400 },
+      "Sheep Pelt": { "Buy": 800, "Sell": 400 },
+      "Boar Pelt": { "Buy": 1000, "Sell": 500 },
+      "Cow Pelt": { "Buy": 1200, "Sell": 600 },
+      "Fox Pelt": { "Buy": 1500, "Sell": 750 },
+      "Wolf Pelt": { "Buy": 1500, "Sell": 750 },
+      "Reindeer Pelt": { "Buy": 1800, "Sell": 900 },
+      "Bear Pelt": { "Buy": 3000, "Sell": 1500 }
+    },
+    "Drinks": {
+      "Pipsi": { "Buy": 300, "Sell": 150 },
+      "Cola": { "Buy": 300, "Sell": 150 },
+      "Lemonade": { "Buy": 300, "Sell": 150 },
+      "Sprite": { "Buy": 300, "Sell": 150 },
+      "Kvass (beer)": { "Buy": 300, "Sell": 150 }
+    },
+    "Seeds & Farming": {
+      "Garden Lime": { "Buy": 400, "Sell": 200 },
+      "Tomato Seeds": { "Buy": 500, "Sell": 250 },
+      "Zucchini Seeds": { "Buy": 500, "Sell": 250 },
+      "Pepper Seeds": { "Buy": 500, "Sell": 250 },
+      "Pumpkin Seeds": { "Buy": 750, "Sell": 375 },
+      "Cannabis Seeds": { "Buy": 10000, "Sell": 5000 }
+    },
+    "Survival Gear": {
+      "Improvised Bolts (x5)": { "Buy": 300, "Sell": 150 },
+      "Matches (Full Box)": { "Buy": 400, "Sell": 200 },
+      "Crossbow Bolts (x5)": { "Buy": 500, "Sell": 250 },
+      "Cooking Stand": { "Buy": 600, "Sell": 300 },
+      "Rope": { "Buy": 600, "Sell": 300 },
+      "Gas Burner": { "Buy": 600, "Sell": 300 },
+      "Large Propane Tank": { "Buy": 600, "Sell": 300 },
+      "Frying Pan": { "Buy": 800, "Sell": 400 },
+      "Cooking Pot": { "Buy": 1000, "Sell": 500 },
+      "Gas Lamp": { "Buy": 1500, "Sell": 750 },
+      "Drybag Backpack": { "Buy": 2500, "Sell": 1250 },
+      "Crossbow": { "Buy": 7500, "Sell": 3750 },
+      "Medium Tent": { "Buy": 8000, "Sell": 4000 }
+    },
+    "Traps": {
+      "Snare Trap": { "Buy": 800, "Sell": 400 },
+      "Small Fish Trap": { "Buy": 800, "Sell": 400 },
+      "Tripwire Trap": { "Buy": 1000, "Sell": 500 },
+      "Fish Net Trap": { "Buy": 1200, "Sell": 600 },
+      "Bear Trap": { "Buy": 3000, "Sell": 1500 }
+    },
+    "Tools": {
+      "Fange Knife": { "Buy": 800, "Sell": 400 },
+      "Machete": { "Buy": 1000, "Sell": 500 },
+      "Hoe": { "Buy": 1000, "Sell": 500 },
+      "Shovel": { "Buy": 1200, "Sell": 600 },
+      "Hunting Knife": { "Buy": 1200, "Sell": 600 },
+      "Kukri": { "Buy": 1500, "Sell": 750 }
+    },
+    "Power & Electrical": {
+      "Metal Wire": { "Buy": 500, "Sell": 250 },
+      "Cable Reel": { "Buy": 1000, "Sell": 500 },
+      "Car Battery": { "Buy": 2500, "Sell": 1250 },
+      "Battery Charger": { "Buy": 4000, "Sell": 2000 },
+      "Generator": { "Buy": 10000, "Sell": 5000 }
+    },
+    "Tiered Bundled Kits": {
+      "Cooking Kit — Basic (Frying Pan + Rope)": { "Buy": 1200, "Sell": 600 },
+      "Cooking Kit — Standard (Cooking Pot + Frying Pan + Gas Burner)": { "Buy": 2000, "Sell": 1000 },
+      "Cooking Kit — Advanced (Cooking Pot + Frying Pan + Gas Burner + Propane Tank)": { "Buy": 2500, "Sell": 1250 },
+
+      "Hunting Kit — Standard (Crossbow + 10 Bolts)": { "Buy": 8000, "Sell": 4000 },
+      "Hunting Kit — Advanced (Crossbow + 10 Bolts + Rope + Drybag Backpack)": { "Buy": 10000, "Sell": 5000 },
+
+      "Camping Kit — Standard (Medium Tent + Rope)": { "Buy": 8500, "Sell": 4250 },
+      "Camping Kit — Advanced (Medium Tent + Drybag + Rope + Cooking Pot + Cooking Stand + Gas Lamp)": { "Buy": 12000, "Sell": 6000 },
+
+      "Master Survival Kit — All-in-One (Adv. Cooking + Adv. Hunting + Adv. Camping)": { "Buy": 20000, "Sell": 10000 }
+    }
+  }
+}
