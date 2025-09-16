@@ -5,6 +5,7 @@ from discord import app_commands, ui
 import json
 import os
 import time
+import asyncio
 from typing import Dict, Any, Optional, List
 
 from utils import session_manager
@@ -23,6 +24,7 @@ def _load_config() -> Dict[str, Any]:
 CONFIG = _load_config()
 
 ECONOMY_CHANNEL_ID = int(CONFIG["economy_channel_id"])
+ADMIN_ROLE_IDS: List[int] = [int(x) for x in CONFIG.get("admin_role_ids", [])]  # optional
 
 # Accept both keys and include your hard-coded fallback
 def _resolve_tradepost_channel_id(cfg: Dict[str, Any]) -> int:
@@ -102,16 +104,16 @@ def fmt_cart(items: List[dict], mode: str) -> (str, int):
         if "subtotal" in it:  # trader schema
             qty = it.get("quantity", 1)
             unit = int(it["subtotal"]) // max(qty, 1)
-            lines.append(f"• {it['item']} x{qty} — {_fmt_price(it['subtotal'])} (unit {_fmt_price(unit)})")
+            lines.append(f"• {it['item']} x{qty} — ${_fmt_price(it['subtotal'])} (unit ${_fmt_price(unit)})")
             total += int(it["subtotal"])
         else:  # legacy tradepost schema
             qty = it.get("qty", 1)
             unit = it.get("unit", 0)
             tot = it.get("total", unit * qty)
-            lines.append(f"• {it['item']} x{qty} — {_fmt_price(tot)} (unit {_fmt_price(unit)})")
+            lines.append(f"• {it['item']} x{qty} — ${_fmt_price(tot)} (unit ${_fmt_price(unit)})")
             total += int(tot)
 
-    lines.append(f"\n**Cart Total:** {_fmt_price(total)}")
+    lines.append(f"\n**Cart Total:** ${_fmt_price(total)}")
     return "\n".join(lines), total
 
 # ---------- UI ----------
@@ -133,10 +135,17 @@ class QuantityModal(ui.Modal, title="Quantity"):
         except Exception:
             return await interaction.response.send_message("Enter a valid positive number.", ephemeral=True)
 
-        # Update cart + then ack
+        # Update cart + then ack (DMs don't support ephemerals; delete after 15s)
         await interaction.response.defer()
         await self.view_ref.add_current_selection(q)
-        await interaction.followup.send("Item added to cart", wait=True)
+        msg = await interaction.followup.send("Item added to cart", wait=True)
+        async def _cleanup():
+            await asyncio.sleep(15)
+            try:
+                await msg.delete()
+            except Exception:
+                pass
+        asyncio.create_task(_cleanup())
 
 class DynamicDropdown(ui.Select):
     """
@@ -167,7 +176,7 @@ class DynamicDropdown(ui.Select):
                     item_data = tp_get_item_data(cat, category, item)
                     price = tp_get_price_for_mode(item_data, mode)
                     if price is not None:
-                        opts.append(discord.SelectOption(label=item, description=f"{mode}: {_fmt_price(price)}"))
+                        opts.append(discord.SelectOption(label=item, description=f"{mode}: ${_fmt_price(price)}"))
                     else:
                         opts.append(discord.SelectOption(label=item))
         super().__init__(placeholder=ph, options=opts, min_values=1, max_values=1, row=0)
@@ -219,7 +228,7 @@ class TradePostView(ui.View):
             await self.refresh(next_level="item")
             return
 
-        # Use the same schema as /trader for compatibility with your session_manager helpers
+        # Use Trader-style schema for compatibility with your session_manager helpers
         subtotal = unit * qty
         item_payload = {
             "category": c,
@@ -230,10 +239,7 @@ class TradePostView(ui.View):
             "subtotal": subtotal,
         }
 
-        # IMPORTANT: do NOT restart the session here. Just append.
-        session_manager.add_item(self.user_id, item_payload)
-
-        # After add, jump back to item pick (keep same category)
+        session_manager.add_item(self.user_id, item_payload)  # do not restart session here
         await self.refresh(next_level="item")
 
     async def refresh(self, next_level: str):
@@ -321,13 +327,28 @@ class TradePostView(ui.View):
 
         items = session_manager.get_session_items(self.user_id) or []
         if not items:
-            await interaction.followup.send("Cart is already empty.")
+            msg = await interaction.followup.send("Your cart is empty.")
+            async def _cleanup():
+                await asyncio.sleep(15)
+                try:
+                    await msg.delete()
+                except Exception:
+                    pass
+            asyncio.create_task(_cleanup())
             return
 
         items.pop()
         session_manager.set_session_items(self.user_id, items)
         await self.refresh(next_level="item" if self.state.get("category") else "category")
-        await interaction.followup.send("Item removed from cart")
+
+        msg = await interaction.followup.send("Item removed from cart")
+        async def _cleanup():
+            await asyncio.sleep(15)
+            try:
+                await msg.delete()
+            except Exception:
+                pass
+        asyncio.create_task(_cleanup())
 
     @ui.button(label="Cancel", style=discord.ButtonStyle.danger, custom_id="tp_cancel", row=3)
     async def _cancel(self, interaction: discord.Interaction, _: discord.ui.Button):
@@ -341,6 +362,77 @@ class TradePostView(ui.View):
 class TradePostCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    # ✅ Mirror trader: allow admins to confirm orders in #trading-post-orders
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        try:
+            if payload.channel_id != TRADEPOST_ORDERS_CHANNEL_ID:
+                return
+            if str(payload.emoji.name) != "✅":
+                return
+            if payload.user_id == self.bot.user.id:
+                return
+
+            guild = self.bot.get_guild(payload.guild_id)
+            if not guild:
+                return
+            member = guild.get_member(payload.user_id)
+            if not member:
+                return
+
+            # If admin roles configured, restrict to admins
+            if ADMIN_ROLE_IDS:
+                if not any(r.id in ADMIN_ROLE_IDS for r in member.roles):
+                    return
+
+            channel = self.bot.get_channel(payload.channel_id)
+            message = await channel.fetch_message(payload.message_id)
+
+            # Only handle our order posts
+            if "please confirm this message with a ✅" not in message.content.lower():
+                return
+            if "Order confirmed by" in message.content:
+                return
+
+            # Clean reactions and mark confirmed
+            try:
+                await message.clear_reaction("🔴")
+            except Exception:
+                pass
+            try:
+                await message.add_reaction("✅")
+            except Exception:
+                pass
+
+            edit_text = f"{message.content}\n\nOrder confirmed by {member.mention}"
+            await message.edit(content=edit_text)
+
+            # DM customer (first mention in the message is the customer)
+            if message.mentions:
+                player = message.mentions[0]
+                # extract total from message content
+                total_line = None
+                for line in message.content.splitlines():
+                    if "Cart Total:" in line:
+                        total_line = line
+                        break
+                total_amount = None
+                if total_line:
+                    # "Cart Total: 52,400" or "Cart Total: $52,400"
+                    total_amount = total_line.split(":")[-1].strip().lstrip("$")
+                try:
+                    dm = await player.send(
+                        f"📦 **Your Trade Post order is ready!**\n\n"
+                        f"Please make a payment to {member.mention} for **${total_amount}**.\n"
+                        f"Make sure to send payment in <#{ECONOMY_CHANNEL_ID}> (use /pay + copy/paste command).\n\n"
+                        f"**Once paid, react to this message with a** ✅ **to confirm.**"
+                    )
+                    await dm.add_reaction("⚠️")
+                except Exception as e:
+                    print(f"[tradepost] Failed to DM player: {e}")
+        except Exception as e:
+            print(f"[tradepost] on_raw_reaction_add error: {e}")
 
     @app_commands.command(name="tradepost", description="Open the Trade Post menu (economy channel only).")
     async def tradepost(self, interaction: discord.Interaction):
