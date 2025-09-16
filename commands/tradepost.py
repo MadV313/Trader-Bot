@@ -4,10 +4,9 @@ from discord.ext import commands
 from discord import app_commands, ui
 import json
 import os
-import asyncio
 import time
 
-from utils import session_manager, variant_utils
+from utils import session_manager
 
 # --- Config ---
 try:
@@ -30,29 +29,30 @@ def tp_get_categories():
 
 def tp_get_items(category):
     sub = TRADEPOST_DATA.get(category, {})
-    # items are direct keys when values are dicts with variants/prices
     return [k for k, v in sub.items() if isinstance(v, dict)]
 
 def tp_get_item_data(category, item):
     return TRADEPOST_DATA.get(category, {}).get(item, {})
 
-def tp_get_variant_price(item_data, variant):
-    # item_data looks like {"Default": 200} or {"20-Round": 220, "60-Round": 600}
+def tp_get_price_for_mode(item_data: dict, mode: str):
+    # item_data like {"Buy": 100, "Sell": 50} or {"Default": 200}
     if not isinstance(item_data, dict):
         return None
-    if variant in item_data:
-        return item_data[variant]
+    if mode in item_data:
+        return item_data[mode]
     if "Default" in item_data:
         return item_data["Default"]
     return None
 
-def fmt_cart(items):
-    # items: list of dicts {category,item,variant,qty,unit,total}
-    lines = []
+def fmt_cart(items, mode: str):
+    """
+    items: list of dicts {category,item,qty,unit,total}
+    mode: "Buy" or "Sell"
+    """
+    lines = [f"**Mode:** {mode}"]
     total = 0
     for it in items:
-        v = f" ({it['variant']})" if it['variant'] != "Default" else ""
-        lines.append(f"• {it['item']}{v} x{it['qty']} — {it['total']}")
+        lines.append(f"• {it['item']} x{it['qty']} — {it['total']}")
         total += it['total']
     lines.append(f"\n**Cart Total:** {total}")
     return "\n".join(lines), total
@@ -79,32 +79,29 @@ class QuantityModal(ui.Modal, title="Quantity"):
         await self.view_ref.add_current_selection(q, interaction)
 
 class DynamicDropdown(ui.Select):
+    """
+    level: "mode" | "category" | "item"
+    """
     def __init__(self, bot, user_id: int, level: str, view_ref: "TradePostView"):
-        # level: "category" | "item" | "variant"
         self.bot = bot
         self.user_id = user_id
         self.level = level
         self.view_ref = view_ref
 
-        if level == "category":
+        if level == "mode":
+            opts = [discord.SelectOption(label="Buy"), discord.SelectOption(label="Sell")]
+            ph = "Choose Buy or Sell"
+        elif level == "category":
             opts = [discord.SelectOption(label=c) for c in tp_get_categories()]
             ph = "Choose a category"
-        elif level == "item":
+        else:
+            # item
             if not self.view_ref.state.get("category"):
                 opts = []
             else:
                 items = tp_get_items(self.view_ref.state["category"])
                 opts = [discord.SelectOption(label=i) for i in items]
             ph = "Choose an item"
-        else:
-            # variant
-            c = self.view_ref.state.get("category")
-            i = self.view_ref.state.get("item")
-            variants = ["Default"]
-            if c and i:
-                variants = variant_utils.get_variants(tp_get_item_data(c, i))
-            opts = [discord.SelectOption(label=v) for v in variants]
-            ph = "Choose a variant"
 
         super().__init__(placeholder=ph, options=opts, min_values=1, max_values=1, row=0)
 
@@ -113,17 +110,18 @@ class DynamicDropdown(ui.Select):
             return await interaction.response.send_message("Not your session.", ephemeral=True)
 
         choice = self.values[0]
-        if self.level == "category":
-            self.view_ref.state = {"category": choice}
+        if self.level == "mode":
+            # Lock mode first
+            self.view_ref.state = {"mode": choice}
+            await self.view_ref.refresh(interaction, next_level="category")
+
+        elif self.level == "category":
+            self.view_ref.state["category"] = choice
             await self.view_ref.refresh(interaction, next_level="item")
 
-        elif self.level == "item":
+        else:  # item
             self.view_ref.state["item"] = choice
-            await self.view_ref.refresh(interaction, next_level="variant")
-
-        else:
-            self.view_ref.state["variant"] = choice
-            # ask qty
+            # ask qty immediately (no variant step; mode determines price)
             await interaction.response.send_modal(QuantityModal(self.user_id, self.view_ref))
 
 class TradePostView(ui.View):
@@ -131,18 +129,19 @@ class TradePostView(ui.View):
         super().__init__(timeout=SESSION_TIMEOUT_SECONDS)
         self.bot = bot
         self.user_id = user_id
-        self.state = {}  # category/item/variant
-        self.cart_messages = []
+        # state keys: mode, category, item
+        self.state = {}
         self.start_ts = time.time()
 
-        self.add_item(DynamicDropdown(self.bot, self.user_id, "category", self))
+        # Start at mode selection
+        self.add_item(DynamicDropdown(self.bot, self.user_id, "mode", self))
 
     async def add_current_selection(self, qty: int, interaction: discord.Interaction):
+        mode = self.state.get("mode")            # "Buy" / "Sell"
         c = self.state.get("category")
         i = self.state.get("item")
-        v = self.state.get("variant", "Default")
         item_data = tp_get_item_data(c, i)
-        unit = tp_get_variant_price(item_data, v)
+        unit = tp_get_price_for_mode(item_data, mode or "Buy")
         if unit is None:
             return await interaction.response.send_message("No price found for that selection.", ephemeral=True)
         total = unit * qty
@@ -150,25 +149,34 @@ class TradePostView(ui.View):
         # persist item into session cart
         session_manager.start_session(self.user_id)
         items = session_manager.get_session_items(self.user_id)
-        items.append({"category": c, "item": i, "variant": v, "qty": qty, "unit": unit, "total": total})
+        items.append({"category": c, "item": i, "qty": qty, "unit": unit, "total": total})
         session_manager.set_session_items(self.user_id, items)
 
-        await self.refresh(interaction, next_level="category", just_added=True)
+        # After add, jump back to item pick (keep same category). If you prefer jump to category, set next_level="category"
+        await self.refresh(interaction, next_level="item", just_added=True)
 
     async def refresh(self, interaction: discord.Interaction, next_level: str, just_added: bool=False):
         # rebuild components
         for c in list(self.children):
             self.remove_item(c)
 
-        self.add_item(DynamicDropdown(self.bot, self.user_id, next_level, self))
+        # progress: mode -> category -> item
+        if not self.state.get("mode"):
+            self.add_item(DynamicDropdown(self.bot, self.user_id, "mode", self))
+        elif not self.state.get("category"):
+            self.add_item(DynamicDropdown(self.bot, self.user_id, "category", self))
+        else:
+            self.add_item(DynamicDropdown(self.bot, self.user_id, next_level, self))
 
         # Cart summary
         session_manager.start_session(self.user_id)
         items = session_manager.get_session_items(self.user_id)
+        mode = self.state.get("mode", "Buy")
 
-        embed = discord.Embed(title="Trade Post — Build Your Cart", color=0x70a0f0)
+        title = f"Trade Post — {mode}"
+        embed = discord.Embed(title=title, color=0x70a0f0)
         if items:
-            body, total = fmt_cart(items)
+            body, total = fmt_cart(items, mode)
             embed.description = body
             embed.set_footer(text=f"Items: {len(items)} | Type: tradepost")
         else:
@@ -193,9 +201,10 @@ class TradePostView(ui.View):
         if not items:
             return await interaction.response.send_message("Your cart is empty.", ephemeral=True)
 
-        body, total = fmt_cart(items)
+        mode = self.state.get("mode", "Buy")
+        body, total = fmt_cart(items, mode)
         order_text = (
-            f"**Trade Post Order**\n"
+            f"**Trade Post Order — {mode}**\n"
             f"**Customer:** {interaction.user.mention}\n\n"
             f"{body}\n\n"
             f"_please confirm this message with a ✅ when the order is ready_"
@@ -209,11 +218,9 @@ class TradePostView(ui.View):
         msg = await ch.send(order_text)
         await msg.add_reaction("🔴")  # baseline behavior
 
-        # write to orders.json via session_manager log
-        session_manager.log(f"[TradePost] user={interaction.user.id} total={total}")
-        session = session_manager.get_session(self.user_id)
-        # minimal persistence (keep parity with your existing orders.json usage)
-        session_manager.end_session(self.user_id)  # clean
+        # minimal persistence / cleanup
+        session_manager.log(f"[TradePost] mode={mode} user={interaction.user.id} total={total}")
+        session_manager.end_session(self.user_id)
 
         await interaction.response.send_message("📦 Your Trade Post order has been placed!", ephemeral=True)
         self.stop()
@@ -229,7 +236,9 @@ class TradePostView(ui.View):
         removed = items.pop()
         session_manager.set_session_items(self.user_id, items)
         await interaction.response.send_message(f"Removed: {removed['item']}", ephemeral=True)
-        await self.refresh(interaction, next_level="category")
+        # After removal, keep current category if set; otherwise rebuild from mode/category
+        next_level = "item" if self.state.get("category") else ("category" if self.state.get("mode") else "mode")
+        await self.refresh(interaction, next_level=next_level)
 
     @ui.button(label="Cancel", style=discord.ButtonStyle.danger, custom_id="tp_cancel", row=1)
     async def _cancel(self, interaction: discord.Interaction, _: discord.ui.Button):
@@ -251,12 +260,12 @@ class TradePostCommand(commands.Cog):
                 f"Use this in <#{ECONOMY_CHANNEL_ID}>.", ephemeral=True
             )
 
-        # Start ephemeral UI in-channel (no DM needed, but you can DM if you prefer)
+        # Start ephemeral UI in-channel
         session_manager.start_session(interaction.user.id)
         view = TradePostView(self.bot, interaction.user.id)
         embed = discord.Embed(
             title="Trade Post",
-            description="Use the dropdowns to build your cart.",
+            description="Select **Buy** or **Sell** to begin.",
             color=0x70a0f0
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
