@@ -28,11 +28,11 @@ ECONOMY_CHANNEL_ID = int(CONFIG["economy_channel_id"])
 def _resolve_tradepost_channel_id(cfg: Dict[str, Any]) -> int:
     cand = cfg.get("tradepost_orders_channel_id")
     if not cand:
-        cand = cfg.get("tradepost_order_channel_id")  # your config.json key
+        cand = cfg.get("tradepost_order_channel_id")  # legacy key in your config.json
     try:
         return int(cand)
     except Exception:
-        return 1417541688133419118  # <-- fallback hard-coded as requested
+        return 1417541688133419118  # fallback as requested
 
 TRADEPOST_ORDERS_CHANNEL_ID: int = _resolve_tradepost_channel_id(CONFIG)
 
@@ -64,7 +64,7 @@ def _load_catalog() -> Optional[Dict[str, Any]]:
         print(f"[tradepost] Catalog load error: {e}")
         return None
 
-# --- Helpers that read from a provided catalog dict (no top-level file IO) ---
+# --- Helpers operating on catalog dict ---
 def tp_get_categories(cat: Dict[str, Any]) -> List[str]:
     return list(cat.get("categories", {}).keys())
 
@@ -88,26 +88,30 @@ def tp_get_price_for_mode(item_data: dict, mode: str) -> Optional[int]:
 def _fmt_price(n: int) -> str:
     return f"{n:,}"
 
-def _cart_lines_from_session(items: List[dict]) -> (str, int):
+def fmt_cart(items: List[dict], mode: str) -> (str, int):
     """
-    Mirror /trader rendering:
-    • NAME (variant) xQ = $SUBTOTAL
-    Returns (text, total)
+    Accepts either Trader-style items:
+      {"item","variant","quantity","subtotal", ...}
+    or TradePost-style items:
+      {"item","qty","unit","total", ...}
     """
-    if not items:
-        return "Your cart is currently empty.", 0
-    lines = []
+    lines = [f"**Mode:** {mode}"]
     total = 0
+
     for it in items:
-        name = it.get("item", "Item")
-        variant = it.get("variant", "Default")
-        qty = it.get("quantity", 1)
-        sub = int(it.get("subtotal", 0))
-        total += sub
-        # show variant only if not Default
-        vtxt = f" ({variant})" if variant and variant != "Default" else ""
-        lines.append(f"• {name}{vtxt} x{qty} = ${_fmt_price(sub)}")
-    lines.append(f"\n🛒 Cart Total: ${_fmt_price(total)}")
+        if "subtotal" in it:  # trader schema
+            qty = it.get("quantity", 1)
+            unit = int(it["subtotal"]) // max(qty, 1)
+            lines.append(f"• {it['item']} x{qty} — {_fmt_price(it['subtotal'])} (unit {_fmt_price(unit)})")
+            total += int(it["subtotal"])
+        else:  # legacy tradepost schema
+            qty = it.get("qty", 1)
+            unit = it.get("unit", 0)
+            tot = it.get("total", unit * qty)
+            lines.append(f"• {it['item']} x{qty} — {_fmt_price(tot)} (unit {_fmt_price(unit)})")
+            total += int(tot)
+
+    lines.append(f"\n**Cart Total:** {_fmt_price(total)}")
     return "\n".join(lines), total
 
 # ---------- UI ----------
@@ -163,12 +167,7 @@ class DynamicDropdown(ui.Select):
                     item_data = tp_get_item_data(cat, category, item)
                     price = tp_get_price_for_mode(item_data, mode)
                     if price is not None:
-                        opts.append(
-                            discord.SelectOption(
-                                label=item,
-                                description=f"{mode} price: ${_fmt_price(price)}"
-                            )
-                        )
+                        opts.append(discord.SelectOption(label=item, description=f"{mode}: {_fmt_price(price)}"))
                     else:
                         opts.append(discord.SelectOption(label=item))
         super().__init__(placeholder=ph, options=opts, min_values=1, max_values=1, row=0)
@@ -211,31 +210,27 @@ class TradePostView(ui.View):
         self.msg = msg
 
     async def add_current_selection(self, qty: int):
-        """
-        IMPORTANT: mirror /trader session schema so later reads work.
-        We store: item, variant, quantity, subtotal (and optional category/subcategory)
-        """
         mode = self.state.get("mode")            # "Buy" / "Sell"
         c = self.state.get("category")
         i = self.state.get("item")
         item_data = tp_get_item_data(self.catalog, c, i)
         unit = tp_get_price_for_mode(item_data, mode or "Buy")
         if unit is None:
-            # If somehow missing, just refresh view
             await self.refresh(next_level="item")
             return
 
+        # Use the same schema as /trader for compatibility with your session_manager helpers
         subtotal = unit * qty
-        # Persist using the SAME API and KEYS as /trader
-        session_manager.start_session(self.user_id)
         item_payload = {
             "category": c,
-            "subcategory": None,
+            "subcategory": None,      # tradepost doesn't use it, keep key for parity
             "item": i,
-            "variant": "Default",     # TradePost has no variants; keep shape compatible
+            "variant": "Default",
             "quantity": qty,
-            "subtotal": subtotal
+            "subtotal": subtotal,
         }
+
+        # IMPORTANT: do NOT restart the session here. Just append.
         session_manager.add_item(self.user_id, item_payload)
 
         # After add, jump back to item pick (keep same category)
@@ -255,16 +250,18 @@ class TradePostView(ui.View):
         else:
             self.add_item(DynamicDropdown(self.bot, self.user_id, next_level, self))
 
-        # Cart summary (mirror /trader text, but shown inside an embed)
-        session_manager.start_session(self.user_id)
-        items = session_manager.get_session_items(self.user_id)
+        # Cart summary (no session restart here)
+        items = session_manager.get_session_items(self.user_id) or []
         mode = self.state.get("mode", "Buy")
 
         title = f"Trade Post — {mode}"
         embed = discord.Embed(title=title, color=0x70a0f0)
-        cart_text, _ = _cart_lines_from_session(items)
-        embed.description = cart_text
-        embed.set_footer(text=f"Items: {len(items)} | Type: tradepost")
+        if items:
+            body, _ = fmt_cart(items, mode)
+            embed.description = body
+            embed.set_footer(text=f"Items: {len(items)} | Type: tradepost")
+        else:
+            embed.description = "Use the dropdowns to add items."
 
         # Edit the persistent DM message
         if self.msg:
@@ -290,27 +287,20 @@ class TradePostView(ui.View):
             return await interaction.response.send_message("Not your session.", ephemeral=True)
         await interaction.response.defer()
 
-        # Read items exactly like /trader does
-        items = session_manager.get_session_items(self.user_id)
+        items = session_manager.get_session_items(self.user_id) or []
         if not items:
             return await interaction.followup.send("Your cart is empty.")
 
-        body_text, total = _cart_lines_from_session(items)
         mode = self.state.get("mode", "Buy")
+        body, total = fmt_cart(items, mode)
         order_text = (
             f"**Trade Post Order — {mode}**\n"
             f"**Customer:** {interaction.user.mention}\n\n"
-            f"{body_text}\n\n"
+            f"{body}\n\n"
             f"_please confirm this message with a ✅ when the order is ready_"
         )
 
-        # Robust channel fetch (cache or HTTP)
         ch = interaction.client.get_channel(TRADEPOST_ORDERS_CHANNEL_ID)
-        if not ch:
-            try:
-                ch = await interaction.client.fetch_channel(TRADEPOST_ORDERS_CHANNEL_ID)
-            except Exception:
-                ch = None
         if not ch:
             return await interaction.followup.send("Trade Post orders channel not found.")
 
@@ -329,7 +319,7 @@ class TradePostView(ui.View):
             return await interaction.response.send_message("Not your session.", ephemeral=True)
         await interaction.response.defer()
 
-        items = session_manager.get_session_items(self.user_id)
+        items = session_manager.get_session_items(self.user_id) or []
         if not items:
             await interaction.followup.send("Cart is already empty.")
             return
@@ -375,14 +365,13 @@ class TradePostCommand(commands.Cog):
 
         # 2) Open the DM session with interactive view
         try:
-            # Start the session up front (mirrors /trader)
+            # Start the session ONCE here (do not restart it inside the view)
             session_manager.start_session(interaction.user.id)
 
             view = TradePostView(self.bot, interaction.user.id, catalog)
             embed = discord.Embed(
                 title="Trade Post",
-                description="Select **Buy** or **Sell** to begin.\n\n"
-                            "Your cart will appear here as you add items.",
+                description="Select **Buy** or **Sell** to begin.",
                 color=0x70a0f0
             )
             dm_msg = await interaction.user.send(embed=embed, view=view)
