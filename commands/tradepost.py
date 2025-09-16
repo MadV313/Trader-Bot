@@ -23,11 +23,19 @@ def _load_config() -> Dict[str, Any]:
 CONFIG = _load_config()
 
 ECONOMY_CHANNEL_ID = int(CONFIG["economy_channel_id"])
-TRADEPOST_ORDERS_CHANNEL_ID: Optional[int] = (
-    int(CONFIG["tradepost_orders_channel_id"])
-    if str(CONFIG.get("tradepost_orders_channel_id", "")).strip()
-    else None
-)
+
+# Accept both keys and include your hard-coded fallback
+def _resolve_tradepost_channel_id(cfg: Dict[str, Any]) -> int:
+    cand = cfg.get("tradepost_orders_channel_id")
+    if not cand:
+        cand = cfg.get("tradepost_order_channel_id")  # your config.json key
+    try:
+        return int(cand)
+    except Exception:
+        return 1417541688133419118  # <-- fallback hard-coded as requested
+
+TRADEPOST_ORDERS_CHANNEL_ID: int = _resolve_tradepost_channel_id(CONFIG)
+
 TRADEPOST_CATALOG_PATH = CONFIG.get("tradepost_catalog_path", "data/tradepost_catalog.json")
 SESSION_TIMEOUT_SECONDS = int(CONFIG.get("session_timeout_minutes", 15)) * 60
 
@@ -77,6 +85,9 @@ def tp_get_price_for_mode(item_data: dict, mode: str) -> Optional[int]:
         return int(item_data["Default"])
     return None
 
+def _fmt_price(n: int) -> str:
+    return f"{n:,}"
+
 def fmt_cart(items, mode: str):
     """
     items: list of dicts {category,item,qty,unit,total}
@@ -85,9 +96,10 @@ def fmt_cart(items, mode: str):
     lines = [f"**Mode:** {mode}"]
     total = 0
     for it in items:
-        lines.append(f"• {it['item']} x{it['qty']} — {it['total']}")
+        # Show unit price too
+        lines.append(f"• {it['item']} x{it['qty']} — { _fmt_price(it['total']) } (unit {_fmt_price(it['unit'])})")
         total += it['total']
-    lines.append(f"\n**Cart Total:** {total}")
+    lines.append(f"\n**Cart Total:** {_fmt_price(total)}")
     return "\n".join(lines), total
 
 # ---------- UI ----------
@@ -109,9 +121,9 @@ class QuantityModal(ui.Modal, title="Quantity"):
         except Exception:
             return await interaction.response.send_message("Enter a valid positive number.", ephemeral=True)
 
-        # We'll update the DM embed and then acknowledge
+        # Update cart + then ack
         await interaction.response.defer()
-        await self.view_ref.add_current_selection(q, interaction)
+        await self.view_ref.add_current_selection(q)
         await interaction.followup.send("Item added to cart", wait=True)
 
 class DynamicDropdown(ui.Select):
@@ -133,14 +145,24 @@ class DynamicDropdown(ui.Select):
             opts = [discord.SelectOption(label=c) for c in tp_get_categories(cat)]
             ph = "Choose a category"
         else:
-            # item
-            if not self.view_ref.state.get("category"):
-                opts = []
-            else:
-                items = tp_get_items(cat, self.view_ref.state["category"])
-                opts = [discord.SelectOption(label=i) for i in items]
+            # item — show price for the selected mode in the option description
+            opts = []
             ph = "Choose an item"
-
+            mode = self.view_ref.state.get("mode", "Buy")
+            category = self.view_ref.state.get("category")
+            if category:
+                for item in tp_get_items(cat, category):
+                    item_data = tp_get_item_data(cat, category, item)
+                    price = tp_get_price_for_mode(item_data, mode)
+                    if price is not None:
+                        opts.append(
+                            discord.SelectOption(
+                                label=item,
+                                description=f"{mode} price: {_fmt_price(price)}"
+                            )
+                        )
+                    else:
+                        opts.append(discord.SelectOption(label=item))
         super().__init__(placeholder=ph, options=opts, min_values=1, max_values=1, row=0)
 
     async def callback(self, interaction: discord.Interaction):
@@ -180,14 +202,15 @@ class TradePostView(ui.View):
     def attach_message(self, msg: discord.Message):
         self.msg = msg
 
-    async def add_current_selection(self, qty: int, interaction: discord.Interaction):
+    async def add_current_selection(self, qty: int):
         mode = self.state.get("mode")            # "Buy" / "Sell"
         c = self.state.get("category")
         i = self.state.get("item")
         item_data = tp_get_item_data(self.catalog, c, i)
         unit = tp_get_price_for_mode(item_data, mode or "Buy")
         if unit is None:
-            await interaction.followup.send("No price found for that selection.")
+            # If somehow missing, just refresh view
+            await self.refresh(next_level="item")
             return
         total = unit * qty
 
@@ -222,7 +245,7 @@ class TradePostView(ui.View):
         title = f"Trade Post — {mode}"
         embed = discord.Embed(title=title, color=0x70a0f0)
         if items:
-            body, total = fmt_cart(items, mode)
+            body, _ = fmt_cart(items, mode)
             embed.description = body
             embed.set_footer(text=f"Items: {len(items)} | Type: tradepost")
         else:
@@ -251,9 +274,6 @@ class TradePostView(ui.View):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("Not your session.", ephemeral=True)
         await interaction.response.defer()
-
-        if TRADEPOST_ORDERS_CHANNEL_ID is None:
-            return await interaction.followup.send("Trade Post orders channel is not configured.")
 
         items = session_manager.get_session_items(self.user_id)
         if not items:
