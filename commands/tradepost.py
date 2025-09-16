@@ -6,7 +6,7 @@ import json
 import os
 import time
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 
 from utils import session_manager
 
@@ -25,6 +25,11 @@ CONFIG = _load_config()
 
 ECONOMY_CHANNEL_ID = int(CONFIG["economy_channel_id"])
 ADMIN_ROLE_IDS: List[int] = [int(x) for x in CONFIG.get("admin_role_ids", [])]  # optional
+TRADER_ROLE_ID: Optional[int] = int(CONFIG.get("trader_role_id", 0)) or None
+
+# Optional coords for final pickup DM
+PICKUP_X = str(CONFIG.get("tradepost_pickup_x", "0"))
+PICKUP_Y = str(CONFIG.get("tradepost_pickup_y", "0"))
 
 # Accept both keys and include your hard-coded fallback
 def _resolve_tradepost_channel_id(cfg: Dict[str, Any]) -> int:
@@ -90,7 +95,7 @@ def tp_get_price_for_mode(item_data: dict, mode: str) -> Optional[int]:
 def _fmt_price(n: int) -> str:
     return f"{n:,}"
 
-def fmt_cart(items: List[dict], mode: str) -> (str, int):
+def fmt_cart(items: List[dict], mode: str) -> Tuple[str, int]:
     """
     Accepts either Trader-style items:
       {"item","variant","quantity","subtotal", ...}
@@ -362,75 +367,146 @@ class TradePostView(ui.View):
 class TradePostCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        # map: dm_payment_message_id -> {"player": Member/User, "admin_id": int}
+        self.awaiting_payment: Dict[int, Dict[str, Any]] = {}
+        # track completion messages in orders channel that still need staff ✅
+        self.awaiting_final_confirm: Dict[int, Dict[str, Any]] = {}
+        # simple dedupe
+        self._handled_messages: set[int] = set()
 
-    # ✅ Mirror trader: allow admins to confirm orders in #trading-post-orders
+    # ✅ Staff confirms the original order in orders channel
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         try:
-            if payload.channel_id != TRADEPOST_ORDERS_CHANNEL_ID:
-                return
-            if str(payload.emoji.name) != "✅":
-                return
-            if payload.user_id == self.bot.user.id:
-                return
-
-            guild = self.bot.get_guild(payload.guild_id)
-            if not guild:
-                return
-            member = guild.get_member(payload.user_id)
-            if not member:
-                return
-
-            # If admin roles configured, restrict to admins
-            if ADMIN_ROLE_IDS:
-                if not any(r.id in ADMIN_ROLE_IDS for r in member.roles):
+            # Case A: staff reacts in orders channel to confirm an order post
+            if payload.guild_id and payload.channel_id == TRADEPOST_ORDERS_CHANNEL_ID and str(payload.emoji.name) == "✅":
+                guild = self.bot.get_guild(payload.guild_id)
+                if not guild:
+                    return
+                member = guild.get_member(payload.user_id)
+                if not member or member.bot:
+                    return
+                if ADMIN_ROLE_IDS and not any(r.id in ADMIN_ROLE_IDS for r in member.roles):
                     return
 
-            channel = self.bot.get_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
+                channel = self.bot.get_channel(payload.channel_id)
+                message = await channel.fetch_message(payload.message_id)
+                content_lower = message.content.lower()
 
-            # Only handle our order posts
-            if "please confirm this message with a ✅" not in message.content.lower():
-                return
-            if "Order confirmed by" in message.content:
-                return
+                # A1: first confirm on the original order post
+                if "please confirm this message with a ✅" in content_lower and "order confirmed by" not in content_lower:
+                    try:
+                        await message.clear_reaction("🔴")
+                    except Exception:
+                        pass
+                    try:
+                        await message.add_reaction("✅")
+                    except Exception:
+                        pass
 
-            # Clean reactions and mark confirmed
-            try:
-                await message.clear_reaction("🔴")
-            except Exception:
-                pass
-            try:
-                await message.add_reaction("✅")
-            except Exception:
-                pass
+                    new_text = f"{message.content}\n\nOrder confirmed by {member.mention}"
+                    await message.edit(content=new_text)
 
-            edit_text = f"{message.content}\n\nOrder confirmed by {member.mention}"
-            await message.edit(content=edit_text)
+                    # DM the customer requesting payment
+                    if message.mentions:
+                        player = message.mentions[0]
+                        total_line = None
+                        for line in message.content.splitlines():
+                            if "cart total:" in line.lower():
+                                total_line = line
+                                break
+                        total_amount = None
+                        if total_line:
+                            total_amount = total_line.split(":")[-1].strip().lstrip("$")
 
-            # DM customer (first mention in the message is the customer)
-            if message.mentions:
-                player = message.mentions[0]
-                # extract total from message content
-                total_line = None
-                for line in message.content.splitlines():
-                    if "Cart Total:" in line:
-                        total_line = line
-                        break
-                total_amount = None
-                if total_line:
-                    # "Cart Total: 52,400" or "Cart Total: $52,400"
-                    total_amount = total_line.split(":")[-1].strip().lstrip("$")
+                        try:
+                            dm = await player.send(
+                                "📦 **Your Trade Post order is ready!**\n\n"
+                                f"Please make a payment to {member.mention} for **${total_amount or 'the total'}**.\n"
+                                f"Make sure to send payment in <#{ECONOMY_CHANNEL_ID}> (use /pay + copy/paste command).\n\n"
+                                "**Once paid, react to this message with a ✅ to confirm.**"
+                            )
+                            await dm.add_reaction("⚠️")
+                            self.awaiting_payment[dm.id] = {
+                                "player": player,
+                                "admin_id": member.id
+                            }
+                        except Exception as e:
+                            print(f"[tradepost] Failed to DM player payment prompt: {e}")
+                    return
+
+                # A2: staff reacts on the "payment confirmed" follow-up message to finalize
+                if payload.message_id in self.awaiting_final_confirm and "✅" == str(payload.emoji.name):
+                    if payload.message_id in self._handled_messages:
+                        return
+                    self._handled_messages.add(payload.message_id)
+
+                    data = self.awaiting_final_confirm.pop(payload.message_id)
+                    follow_msg = await channel.fetch_message(payload.message_id)
+                    try:
+                        await follow_msg.clear_reaction("🔴")
+                    except Exception:
+                        pass
+                    try:
+                        await follow_msg.add_reaction("✅")
+                    except Exception:
+                        pass
+
+                    player = data.get("player")
+                    # Final DM to customer with pickup coordinates
+                    try:
+                        await player.send(
+                            "✅ **Your order is ready for pick up!**\n"
+                            f"Location: **X: {PICKUP_X}  |  Y: {PICKUP_Y}**\n\n"
+                            "Thank you for your business!"
+                        )
+                    except Exception as e:
+                        print(f"[tradepost] Final DM failed: {e}")
+                    return
+
+            # Case B: customer reacts ✅ in DM to the payment prompt
+            if payload.guild_id is None and str(payload.emoji.name) == "✅":
+                # fetch the DM message
+                channel = await self.bot.fetch_channel(payload.channel_id)
+                if not isinstance(channel, (discord.DMChannel, discord.PartialMessageable)):
+                    return
                 try:
-                    dm = await player.send(
-                        f"📦 **Your Trade Post order is ready!**\n\n"
-                        f"Please make a payment to {member.mention} for **${total_amount}**.\n"
-                        f"Make sure to send payment in <#{ECONOMY_CHANNEL_ID}> (use /pay + copy/paste command).\n\n"
-                        f"**Once paid, react to this message with a** ✅ **to confirm.**"
+                    msg = await channel.fetch_message(payload.message_id)
+                except Exception:
+                    return
+                if msg.author.id != self.bot.user.id:
+                    return  # only handle our own payment prompt msgs
+                if payload.message_id not in self.awaiting_payment:
+                    return
+
+                data = self.awaiting_payment.pop(payload.message_id)
+                player = data["player"]
+                admin_id = data["admin_id"]
+
+                # acknowledge in the DM thread
+                try:
+                    await msg.add_reaction("✅")
+                    await msg.edit(content=msg.content + "\n\n✅ Payment confirmed! Please stand by.")
+                except Exception:
+                    pass
+
+                # notify orders channel for final staff confirm
+                orders_ch = self.bot.get_channel(TRADEPOST_ORDERS_CHANNEL_ID)
+                if orders_ch is None:
+                    try:
+                        orders_ch = await self.bot.fetch_channel(TRADEPOST_ORDERS_CHANNEL_ID)
+                    except Exception:
+                        orders_ch = None
+
+                if orders_ch:
+                    mention_role = f"<@&{TRADER_ROLE_ID}>" if TRADER_ROLE_ID else ""
+                    notice = await orders_ch.send(
+                        f"{mention_role} {player.mention} **has confirmed payment.** 💵\n"
+                        "React with ✅ to complete the order and notify the customer."
                     )
-                    await dm.add_reaction("⚠️")
-                except Exception as e:
-                    print(f"[tradepost] Failed to DM player: {e}")
+                    await notice.add_reaction("🔴")
+                    self.awaiting_final_confirm[notice.id] = {"player": player}
+            # done
         except Exception as e:
             print(f"[tradepost] on_raw_reaction_add error: {e}")
 
