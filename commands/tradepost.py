@@ -27,10 +27,6 @@ ECONOMY_CHANNEL_ID = int(CONFIG["economy_channel_id"])
 ADMIN_ROLE_IDS: List[int] = [int(x) for x in CONFIG.get("admin_role_ids", [])]  # optional
 TRADER_ROLE_ID: Optional[int] = int(CONFIG.get("trader_role_id", 0)) or None
 
-# Optional coords for final pickup DM
-PICKUP_X = str(CONFIG.get("tradepost_pickup_x", "0"))
-PICKUP_Y = str(CONFIG.get("tradepost_pickup_y", "0"))
-
 # Accept both keys and include your hard-coded fallback
 def _resolve_tradepost_channel_id(cfg: Dict[str, Any]) -> int:
     cand = cfg.get("tradepost_orders_channel_id")
@@ -457,7 +453,7 @@ class TradePostCommand(commands.Cog):
                     try:
                         await player.send(
                             "✅ **Your order is ready for pick up!**\n"
-                            f"Location: **X: {PICKUP_X}  |  Y: {PICKUP_Y}**\n\n"
+                            f"Location: 📍 **X: {0.24}  |  Y: {0.36}**\n\n"
                             "Thank you for your business!"
                         )
                     except Exception as e:
@@ -538,10 +534,18 @@ class TradePostCommand(commands.Cog):
 
             view = TradePostView(self.bot, interaction.user.id, catalog)
             embed = discord.Embed(
-                title="Trade Post",
-                description="Select **Buy** or **Sell** to begin.",
+                title="Ironfang Trade Post",
+                description=(
+                    "Ironfang does not give for free. All trades must be fair:\n\n"
+                    "• Food & Hides → exchanged for ammo, meds, or construction supplies.\n"
+                    "• Crates → traded crate-for-crate.\n"
+                    "• Special Items → bartered at agreed value.\n"
+                    "• Coin is always welcome no trade necessary."
+                ),
                 color=0x70a0f0
             )
+            embed.set_image(url="https://cdn.discordapp.com/attachments/1351365150287855739/1417598686728421547/Ironfang.gif?ex=68cb1128&is=68c9bfa8&hm=b0ee86a58198b29c6cd8de30bbf18c1b7be6b2fd881cbb4039514848ad26eedb&")
+            embed.set_footer(text="Select Buy or Sell to begin.")
             dm_msg = await interaction.user.send(embed=embed, view=view)
             view.attach_message(dm_msg)
         except discord.Forbidden:
