@@ -419,7 +419,7 @@ class TradePostCommand(commands.Cog):
                             dm = await player.send(
                                 "📦 **Your Trade Post order is ready!**\n\n"
                                 f"Please make a payment to {member.mention} for **${total_amount or 'the total'}**.\n"
-                                f"Make sure to send payment in <#{ECONOMY_CHANNEL_ID}> (use /pay + copy/paste command).\n\n"
+                                f"Make sure to send payment in <#{ECONOMY_CHANNEL_ID}> (use /pay command and enter the amount total).\n\n"
                                 "**Once paid, react to this message with a ✅ to confirm.**"
                             )
                             await dm.add_reaction("⚠️")
