@@ -141,7 +141,7 @@ class QuantityModal(ui.Modal, title="Quantity"):
         await self.view_ref.add_current_selection(q)
         msg = await interaction.followup.send("Item added to cart", wait=True)
         async def _cleanup():
-            await asyncio.sleep(15)
+            await asyncio.sleep(10)
             try:
                 await msg.delete()
             except Exception:
@@ -451,11 +451,17 @@ class TradePostCommand(commands.Cog):
                     player = data.get("player")
                     # Final DM to customer with pickup coordinates
                     try:
-                        await player.send(
-                            "✅ **Your order is ready for pick up!**\n"
-                            f"Location: 📍 **X: {0.24}  |  Y: {0.36}**\n\n"
-                            "Thank you for your business!"
+                        embed = discord.Embed(
+                            description=(
+                                "✅ **Your order is ready for pick up!**\n"
+                                "Location: 📍 **(0.24, 0.36)**\n\n"
+                                "Ironfang thanks you for your business!"
+                            ),
+                            color=0x70a0f0
                         )
+                        embed.set_image(url="https://cdn.discordapp.com/attachments/1351365150287855739/1417598686728421547/Ironfang.gif?ex=68cb1128&is=68c9bfa8&hm=b0ee86a58198b29c6cd8de30bbf18c1b7be6b2fd881cbb4039514848ad26eedb&")
+                    
+                        await player.send(embed=embed)
                     except Exception as e:
                         print(f"[tradepost] Final DM failed: {e}")
                     return
