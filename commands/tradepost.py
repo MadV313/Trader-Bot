@@ -27,7 +27,7 @@ ECONOMY_CHANNEL_ID = int(CONFIG["economy_channel_id"])
 ADMIN_ROLE_IDS: List[int] = [int(x) for x in CONFIG.get("admin_role_ids", [])]  # optional
 TRADER_ROLE_ID: Optional[int] = int(CONFIG.get("trader_role_id", 0)) or None
 
-# Accept both keys and include your hard-coded fallback
+# Accept both keys and include your hard-coded fallback for tradepost orders
 def _resolve_tradepost_channel_id(cfg: Dict[str, Any]) -> int:
     cand = cfg.get("tradepost_orders_channel_id")
     if not cand:
@@ -39,8 +39,15 @@ def _resolve_tradepost_channel_id(cfg: Dict[str, Any]) -> int:
 
 TRADEPOST_ORDERS_CHANNEL_ID: int = _resolve_tradepost_channel_id(CONFIG)
 
+# Payouts channel for SELL flow (falls back to orders channel if not provided)
+PAYOUTS_CHANNEL_ID: int = int(CONFIG.get("payouts_channel_id", TRADEPOST_ORDERS_CHANNEL_ID))
+
 TRADEPOST_CATALOG_PATH = CONFIG.get("tradepost_catalog_path", "data/tradepost_catalog.json")
 SESSION_TIMEOUT_SECONDS = int(CONFIG.get("session_timeout_minutes", 15)) * 60
+
+IRONFANG_GIF = ("https://cdn.discordapp.com/attachments/1351365150287855739/"
+                "1417598686728421547/Ironfang.gif?ex=68cb1128&is=68c9bfa8&"
+                "hm=b0ee86a58198b29c6cd8de30bbf18c1b7be6b2fd881cbb4039514848ad26eedb&")
 
 # --- Catalog lazy loader ---
 _CATALOG_CACHE: Optional[Dict[str, Any]] = None  # {"categories": {...}}
@@ -136,12 +143,12 @@ class QuantityModal(ui.Modal, title="Quantity"):
         except Exception:
             return await interaction.response.send_message("Enter a valid positive number.", ephemeral=True)
 
-        # Update cart + then ack (DMs don't support ephemerals; delete after 15s)
+        # Update cart + then ack (DMs don't support ephemerals; delete after 5s)
         await interaction.response.defer()
         await self.view_ref.add_current_selection(q)
         msg = await interaction.followup.send("Item added to cart", wait=True)
         async def _cleanup():
-            await asyncio.sleep(10)
+            await asyncio.sleep(5)
             try:
                 await msg.delete()
             except Exception:
@@ -300,14 +307,28 @@ class TradePostView(ui.View):
 
         mode = self.state.get("mode", "Buy")
         body, total = fmt_cart(items, mode)
-        order_text = (
-            f"**Trade Post Order — {mode}**\n"
-            f"**Customer:** {interaction.user.mention}\n\n"
-            f"{body}\n\n"
-            f"_please confirm this message with a ✅ when the order is ready_"
-        )
 
-        ch = interaction.client.get_channel(TRADEPOST_ORDERS_CHANNEL_ID)
+        if mode.lower() == "sell":
+            # SELL -> post to payouts channel with staff confirmation instructions
+            order_text = (
+                f"**Trade Post Order — Sell**\n"
+                f"**Customer:** {interaction.user.mention}\n\n"
+                f"{body}\n\n"
+                f"Please use the **/pay** command in <#{ECONOMY_CHANNEL_ID}> "
+                f"and **staff should confirm here with a ✅ when the payout is complete**."
+            )
+            ch_id = PAYOUTS_CHANNEL_ID
+        else:
+            # BUY -> normal orders channel + staff confirm flow
+            order_text = (
+                f"**Trade Post Order — {mode}**\n"
+                f"**Customer:** {interaction.user.mention}\n\n"
+                f"{body}\n\n"
+                f"_please confirm this message with a ✅ when the order is ready_"
+            )
+            ch_id = TRADEPOST_ORDERS_CHANNEL_ID
+
+        ch = interaction.client.get_channel(ch_id)
         if not ch:
             return await interaction.followup.send("Trade Post orders channel not found.")
 
@@ -330,7 +351,7 @@ class TradePostView(ui.View):
         if not items:
             msg = await interaction.followup.send("Your cart is empty.")
             async def _cleanup():
-                await asyncio.sleep(15)
+                await asyncio.sleep(5)
                 try:
                     await msg.delete()
                 except Exception:
@@ -344,7 +365,7 @@ class TradePostView(ui.View):
 
         msg = await interaction.followup.send("Item removed from cart")
         async def _cleanup():
-            await asyncio.sleep(15)
+            await asyncio.sleep(5)
             try:
                 await msg.delete()
             except Exception:
@@ -370,11 +391,13 @@ class TradePostCommand(commands.Cog):
         # simple dedupe
         self._handled_messages: set[int] = set()
 
-    # ✅ Staff confirms the original order in orders channel
+    # ✅ Reaction handler (orders + payouts + DM confirms)
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         try:
-            # Case A: staff reacts in orders channel to confirm an order post
+            # -------------------------
+            # Case A: staff reacts ✅ in orders channel to confirm a BUY order
+            # -------------------------
             if payload.guild_id and payload.channel_id == TRADEPOST_ORDERS_CHANNEL_ID and str(payload.emoji.name) == "✅":
                 guild = self.bot.get_guild(payload.guild_id)
                 if not guild:
@@ -389,8 +412,8 @@ class TradePostCommand(commands.Cog):
                 message = await channel.fetch_message(payload.message_id)
                 content_lower = message.content.lower()
 
-                # A1: first confirm on the original order post
-                if "please confirm this message with a ✅" in content_lower and "order confirmed by" not in content_lower:
+                # A1: first confirm on the original order post (BUY)
+                if "trade post order — buy" in content_lower and "please confirm this message with a ✅" in content_lower and "order confirmed by" not in content_lower:
                     try:
                         await message.clear_reaction("🔴")
                     except Exception:
@@ -431,7 +454,7 @@ class TradePostCommand(commands.Cog):
                             print(f"[tradepost] Failed to DM player payment prompt: {e}")
                     return
 
-                # A2: staff reacts on the "payment confirmed" follow-up message to finalize
+                # A2: staff reacts on the "payment confirmed" follow-up to finalize BUY
                 if payload.message_id in self.awaiting_final_confirm and "✅" == str(payload.emoji.name):
                     if payload.message_id in self._handled_messages:
                         return
@@ -449,7 +472,7 @@ class TradePostCommand(commands.Cog):
                         pass
 
                     player = data.get("player")
-                    # Final DM to customer with pickup coordinates
+                    # Final DM to customer with pickup coordinates + GIF
                     try:
                         embed = discord.Embed(
                             description=(
@@ -459,14 +482,64 @@ class TradePostCommand(commands.Cog):
                             ),
                             color=0x70a0f0
                         )
-                        embed.set_image(url="https://cdn.discordapp.com/attachments/1351365150287855739/1417598686728421547/Ironfang.gif?ex=68cb1128&is=68c9bfa8&hm=b0ee86a58198b29c6cd8de30bbf18c1b7be6b2fd881cbb4039514848ad26eedb&")
-                    
+                        embed.set_image(url=IRONFANG_GIF)
                         await player.send(embed=embed)
                     except Exception as e:
                         print(f"[tradepost] Final DM failed: {e}")
                     return
 
-            # Case B: customer reacts ✅ in DM to the payment prompt
+            # -------------------------
+            # Case B: **staff** reacts ✅ in PAYOUTS channel to confirm the SELL payout
+            # -------------------------
+            if payload.guild_id and payload.channel_id == PAYOUTS_CHANNEL_ID and str(payload.emoji.name) == "✅":
+                guild = self.bot.get_guild(payload.guild_id)
+                if not guild:
+                    return
+                member = guild.get_member(payload.user_id)
+                if not member or member.bot:
+                    return
+                if ADMIN_ROLE_IDS and not any(r.id in ADMIN_ROLE_IDS for r in member.roles):
+                    return
+
+                channel = self.bot.get_channel(payload.channel_id)
+                message = await channel.fetch_message(payload.message_id)
+                content_lower = message.content.lower()
+
+                # Only act on our SELL posts in payouts
+                if "trade post order — sell" in content_lower and "confirm here" in content_lower:
+                    try:
+                        await message.clear_reaction("🔴")
+                    except Exception:
+                        pass
+                    try:
+                        await message.add_reaction("✅")
+                    except Exception:
+                        pass
+                    try:
+                        await message.edit(content=message.content + f"\n\nPayout confirmed by {member.mention}")
+                    except Exception:
+                        pass
+
+                    # Final DM to seller confirming payout with GIF
+                    try:
+                        if message.mentions:
+                            player = message.mentions[0]
+                            embed = discord.Embed(
+                                description=(
+                                    "✅ **You have been properly paid for your wares!**\n"
+                                    "Ironfang thanks you for your business!"
+                                ),
+                                color=0x70a0f0
+                            )
+                            embed.set_image(url=IRONFANG_GIF)
+                            await player.send(embed=embed)
+                    except Exception as e:
+                        print(f"[tradepost] Sell final DM failed: {e}")
+                    return
+
+            # -------------------------
+            # Case C: customer reacts ✅ in DM to the BUY payment prompt
+            # -------------------------
             if payload.guild_id is None and str(payload.emoji.name) == "✅":
                 # fetch the DM message
                 channel = await self.bot.fetch_channel(payload.channel_id)
@@ -483,7 +556,6 @@ class TradePostCommand(commands.Cog):
 
                 data = self.awaiting_payment.pop(payload.message_id)
                 player = data["player"]
-                admin_id = data["admin_id"]
 
                 # acknowledge in the DM thread
                 try:
@@ -492,7 +564,7 @@ class TradePostCommand(commands.Cog):
                 except Exception:
                     pass
 
-                # notify orders channel for final staff confirm
+                # notify orders channel for final staff confirm (BUY)
                 orders_ch = self.bot.get_channel(TRADEPOST_ORDERS_CHANNEL_ID)
                 if orders_ch is None:
                     try:
@@ -546,11 +618,11 @@ class TradePostCommand(commands.Cog):
                     "• Food & Hides → exchanged for ammo, meds, or construction supplies.\n"
                     "• Crates → traded crate-for-crate.\n"
                     "• Special Items → bartered at agreed value.\n"
-                    "• Coin is always welcome no trade necessary."
+                    "• Coin is always welcome, no trade necessary."
                 ),
                 color=0x70a0f0
             )
-            embed.set_image(url="https://cdn.discordapp.com/attachments/1351365150287855739/1417598686728421547/Ironfang.gif?ex=68cb1128&is=68c9bfa8&hm=b0ee86a58198b29c6cd8de30bbf18c1b7be6b2fd881cbb4039514848ad26eedb&")
+            embed.set_image(url=IRONFANG_GIF)
             embed.set_footer(text="Select Buy or Sell to begin.")
             dm_msg = await interaction.user.send(embed=embed, view=view)
             view.attach_message(dm_msg)
