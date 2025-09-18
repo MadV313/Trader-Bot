@@ -3,19 +3,15 @@
 
   "trader_orders_channel_id": 1370152442183946311,
   "economy_channel_id": 1173028001085145198,
-  "trader_of_the_week_channel_id": "1172556655150506075",
+  "trader_of_the_week_channel_id": 1172556655150506075,
+
   "tradepost_catalog_path": "data/tradepost_catalog.json",
-  "tradepost_order_channel_id": 1417541688133419118,
+  "tradepost_orders_channel_id": 1417541688133419118,
+  "payouts_channel_id": 1417541688133419118,
 
-  "admin_role_ids": [
-    "1370152166366642297"
-  ],
-
-  "mention_roles": [
-    "<@&1370152166366642297>"
-  ],
-
-  "trader_role_id": "1370152166366642297",
+  "admin_role_ids": [1370152166366642297, 1418236075847192827],
+  "mention_roles": ["<@&1370152166366642297>"],
+  "trader_role_id": 1370152166366642297,
 
   "session_timeout_minutes": 15,
   "order_reminder_hours": 12,
